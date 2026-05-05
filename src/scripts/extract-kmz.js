@@ -4,63 +4,75 @@ const path = require('path')
 const JSZip = require('jszip')
 const { XMLParser } = require('fast-xml-parser')
 
-// Instale as dependências: npm install jszip fast-xml-parser
-
 async function extractKMZ(kmzPath, outputJsonPath) {
   try {
-    // 1. Ler e descompactar KMZ
+    console.log(`📦 Lendo KMZ: ${kmzPath}`)
     const kmzBuffer = fs.readFileSync(kmzPath)
     const zip = await JSZip.loadAsync(kmzBuffer)
     
-    // 2. Encontrar arquivo .kml dentro do ZIP
     const kmlFile = Object.keys(zip.files).find(f => f.endsWith('.kml'))
     if (!kmlFile) throw new Error('Arquivo .kml não encontrado no KMZ')
     
+    console.log(`🔍 Encontrado: ${kmlFile}`)
     const kmlContent = await zip.file(kmlFile).async('string')
     
-    // 3. Parsear XML
-    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
+    const parser = new XMLParser({ 
+      ignoreAttributes: false, 
+      attributeNamePrefix: '@_',
+      allowBooleanAttributes: true
+    })
     const kmlData = parser.parse(kmlContent)
     
-    // 4. Extrair Placemarks com coordenadas
     const placemarks = []
-    const items = kmlData.kml.Document?.Placemark || []
-    const placemarkArray = Array.isArray(items) ? items : [items]
+    const items = kmlData.kml?.Document?.Placemark || []
+    const placemarkArray = Array.isArray(items) ? items : [items].filter(Boolean)
+    
+    console.log(`📍 Processando ${placemarkArray.length} placemarks...`)
     
     for (const pm of placemarkArray) {
       const name = pm.name
       const description = pm.description
       const coordinatesRaw = pm.Point?.coordinates
       
-      if (coordinatesRaw) {
+      if (coordinatesRaw && typeof coordinatesRaw === 'string') {
         const [lng, lat] = coordinatesRaw.split(',').map(Number)
-        placemarks.push({
-          name: name || 'Sem nome',
-          description: description || '',
-          latitude: lat,
-          longitude: lng,
-          // Coordenadas percentuais serão calculadas depois
-          mapa_coords_x: null,
-          mapa_coords_y: null
-        })
+        if (!isNaN(lat) && !isNaN(lng)) {
+          placemarks.push({
+            name: name || 'Sem nome',
+            description: typeof description === 'string' ? description : '',
+            latitude: lat,
+            longitude: lng,
+            mapa_coords_x: null,
+            mapa_coords_y: null
+          })
+        }
       }
     }
     
-    // 5. Salvar resultado
+    // Garantir que a pasta de saída existe
+    const outputDir = path.dirname(outputJsonPath)
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
+    }
+    
     fs.writeFileSync(outputJsonPath, JSON.stringify(placemarks, null, 2), 'utf-8')
-    console.log(`✅ ${placemarks.length} coordenadas extraídas para ${outputJsonPath}`)
+    console.log(`✅ Sucesso! ${placemarks.length} coordenadas salvas em ${outputJsonPath}`)
     return placemarks
     
   } catch (err) {
-    console.error('❌ Erro ao extrair KMZ:', err.message)
+    console.error('❌ Erro crítico:', err.message)
+    console.error('💡 Dica: Verifique se o arquivo KMZ existe e se as dependências estão instaladas')
     process.exit(1)
   }
 }
 
-// Uso: node scripts/extract-kmz.js ./mapa-condominio.kmz ./output/coords.json
+// Execução via CLI
 const [_, __, kmzFile, outputFile] = process.argv
 if (kmzFile && outputFile) {
+  console.log('🚀 Iniciando extração do KMZ...')
   extractKMZ(kmzFile, outputFile)
+} else {
+  console.log('Uso: node scripts/extract-kmz.js <arquivo.kmz> <saida.json>')
 }
 
 module.exports = { extractKMZ }
