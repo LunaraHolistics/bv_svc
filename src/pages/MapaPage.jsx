@@ -64,7 +64,7 @@ const MapaPage = () => {
   const [prestadores, setPrestadores] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [abaAtiva, setAbaAtiva] = useState('interativo')
+  const [abaAtiva, setAbaAtiva] = useState('satelite')
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
 
   useEffect(() => {
@@ -135,9 +135,9 @@ const MapaPage = () => {
         </button>
       </div>
 
-      {/* Área do mapa */}
+      {/* Área do mapa — fullscreen */}
       {loading ? (
-        <div className="aspect-[16/9] bg-gray-100 rounded-xl flex items-center justify-center">
+        <div className="h-[70vh] bg-gray-100 rounded-xl flex items-center justify-center">
           <div className="text-center">
             <svg className="animate-spin h-8 w-8 text-emerald-600 mx-auto mb-2" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
@@ -159,11 +159,11 @@ const MapaPage = () => {
             <MapaInterativo prestadores={prestadores} />
           )}
           {abaAtiva === 'satelite' && (
-            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm h-[70vh]">
               <iframe
                 src={GOOGLE_MAPS_EMBED_URL}
                 width="100%"
-                height="480"
+                height="100%"
                 style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
