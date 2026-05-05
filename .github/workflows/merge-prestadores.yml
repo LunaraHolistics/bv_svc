@@ -1,15 +1,15 @@
 name: Merge Prestadores CSV+KML
 
 on:
-  # Roda manualmente pelo GitHub
+  # Permite rodar manualmente pelo GitHub
   workflow_dispatch:
     inputs:
-      log_level:
-        description: 'Nível de log'
+      dry_run:
+        description: 'Apenas simular (não commitar resultado)'
         required: false
-        default: 'info'
+        default: 'false'
   
-  # Roda automaticamente quando houver push na main (opcional)
+  # Roda automaticamente ao atualizar CSV/KML/script
   push:
     branches: [ main ]
     paths:
@@ -18,35 +18,36 @@ on:
       - 'scripts/merge-prestadores.js'
 
 jobs:
-  merge-data:
+  merge-prestadores:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout do código
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
 
-      - name: Setup Node.js
+      - name: ⚙️ Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Verificar arquivos de entrada
+      - name: 📋 Verificar arquivos de entrada
         run: |
-          echo "📂 Verificando arquivos..."
-          [ -f dados-jot.csv ] && echo "✅ dados-jot.csv encontrado" || echo "❌ dados-jot.csv não encontrado"
-          [ -f meu-mapa.kml ] && echo "✅ meu-mapa.kml encontrado" || echo "❌ meu-mapa.kml não encontrado"
+          echo "🔍 Verificando arquivos necessários..."
+          [ -f dados-jot.csv ] && echo "✅ dados-jot.csv OK" || echo "❌ dados-jot.csv faltando"
+          [ -f meu-mapa.kml ] && echo "✅ meu-mapa.kml OK" || echo "❌ meu-mapa.kml faltando"
+          [ -f scripts/merge-prestadores.js ] && echo "✅ script OK" || echo "❌ script faltando"
 
-      - name: Executar script de merge
+      - name: 🔄 Executar script de merge
         run: node scripts/merge-prestadores.js
 
-      - name: Commitar resultado gerado
-        if: success()
+      - name: 💾 Commitar resultado (se não for dry-run)
+        if: success() && github.event.inputs.dry_run != 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add src/data/prestadores-seed.json
-          git diff --staged --quiet || git commit -m "chore: atualiza prestadores-seed.json via GitHub Actions [skip ci]"
+          git diff --staged --quiet || git commit -m "chore: atualiza prestadores-seed.json [skip ci]"
           git push

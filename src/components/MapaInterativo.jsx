@@ -1,6 +1,7 @@
 // src/components/MapaInterativo.jsx
 import React, { useState } from 'react'
 
+const MAPA_URL = <iframe src="https://www.google.com/maps/d/u/1/embed?mid=1XFELlB7i9JmH3FVd6wR3O8HQ1nAdTSo&ehbc=2E312F" width="640" height="480"></iframe>
 const MapaInterativo = ({ prestadores, mapaImageUrl }) => {
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
   
