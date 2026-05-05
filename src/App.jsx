@@ -11,7 +11,7 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <Header />
 
-        <main className="max-w-5xl mx-auto px-4 py-6">
+        <main className="max-w-6xl mx-auto px-4 py-6">
           <Routes>
             <Route path="/" element={<MapaPage />} />
             <Route path="/anuncios" element={<AnunciosPage />} />
@@ -20,7 +20,7 @@ function App() {
         </main>
 
         <footer className="border-t border-gray-200 bg-white mt-8">
-          <div className="max-w-5xl mx-auto px-4 py-4 text-center text-xs text-gray-400">
+          <div className="max-w-6xl mx-auto px-4 py-4 text-center text-xs text-gray-400">
             BV Service Classificados &bull; Condomínio BV Service
           </div>
         </footer>
