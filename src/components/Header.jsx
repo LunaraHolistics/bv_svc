@@ -1,10 +1,37 @@
 // src/components/Header.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const links = [
   {
     to: '/',
+    label: 'Início',
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+      </svg>
+    ),
+  },
+  {
+    to: '/servicos',
+    label: 'Serviços',
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.1-5.1m0 0L3.5 12.9m2.82-2.83L3.5 7.25m5.1 5.1L13.5 7.25m-2.08 7.92l5.1-5.1m0 0l2.82 2.83m-2.82-2.83l2.82-2.83" />
+      </svg>
+    ),
+  },
+  {
+    to: '/indicacoes',
+    label: 'Indicações',
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+      </svg>
+    ),
+  },
+  {
+    to: '/mapa',
     label: 'Mapa',
     icon: (
       <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
@@ -21,68 +48,46 @@ const links = [
       </svg>
     ),
   },
-  {
-    to: '/novo-anuncio',
-    label: 'Anunciar',
-    icon: (
-      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
-    ),
-    highlight: true,
-  },
 ]
 
 const Header = () => {
   const [menuAberto, setMenuAberto] = useState(false)
   const location = useLocation()
 
-  // Fechar menu ao mudar de rota
-  React.useEffect(() => {
+  useEffect(() => {
     setMenuAberto(false)
   }, [location.pathname])
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Barra de destaque topo */}
       <div className="h-1 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500" />
-
-      {/* Fundo com blur */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-[60px]">
-            {/* Logo */}
-            <NavLink to="/" className="flex items-center gap-3 no-underline group">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-[56px]">
+            <NavLink to="/" className="flex items-center gap-2.5 no-underline group">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <span className="text-white font-extrabold text-sm tracking-tight">BV</span>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                  <span className="text-white font-extrabold text-xs tracking-tight">BV</span>
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-teal-400 rounded-full border-2 border-white" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-teal-400 rounded-full border-2 border-white" />
               </div>
               <div className="leading-none">
-                <span className="font-bold text-gray-900 text-[15px] block tracking-tight">
-                  BV Service
-                </span>
-                <span className="text-[11px] text-gray-400 font-medium tracking-wide uppercase">
-                  Classificados
-                </span>
+                <span className="font-bold text-gray-900 text-sm block tracking-tight">BV Service</span>
+                <span className="text-[10px] text-gray-400 font-medium tracking-wide uppercase">Bella Vittà</span>
               </div>
             </NavLink>
 
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-0.5">
               {links.map(link => (
                 <NavLink
                   key={link.to}
                   to={link.to}
                   end={link.to === '/'}
                   className={({ isActive }) =>
-                    `inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all no-underline ${
-                      link.highlight
-                        ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow-md'
-                        : isActive
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/60'
+                    `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all no-underline ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/60'
                     }`
                   }
                 >
@@ -90,12 +95,20 @@ const Header = () => {
                   {link.label}
                 </NavLink>
               ))}
+              <NavLink
+                to="/novo-anuncio"
+                className="inline-flex items-center gap-1.5 ml-2 px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium shadow-sm hover:bg-emerald-700 hover:shadow-md transition-all no-underline"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Anunciar
+              </NavLink>
             </nav>
 
-            {/* Mobile menu button */}
             <button
               onClick={() => setMenuAberto(!menuAberto)}
-              className="md:hidden p-2.5 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100/60 transition-colors"
+              className="lg:hidden p-2.5 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100/60 transition-colors"
               aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
@@ -110,17 +123,13 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile Nav Drawer */}
       {menuAberto && (
         <>
-          {/* Backdrop */}
           <div
-            className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+            className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
             onClick={() => setMenuAberto(false)}
           />
-
-          {/* Drawer */}
-          <nav className="md:hidden fixed top-[61px] left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-gray-200/60 p-2 flex flex-col gap-0.5">
+          <nav className="lg:hidden fixed top-[57px] left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-gray-200/60 p-2 flex flex-col gap-0.5">
             {links.map(link => (
               <NavLink
                 key={link.to}
@@ -128,11 +137,9 @@ const Header = () => {
                 end={link.to === '/'}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors no-underline ${
-                    link.highlight
-                      ? 'bg-emerald-600 text-white'
-                      : isActive
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'text-gray-600 hover:bg-gray-50'
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'text-gray-600 hover:bg-gray-50'
                   }`
                 }
               >
@@ -140,6 +147,16 @@ const Header = () => {
                 {link.label}
               </NavLink>
             ))}
+            <div className="border-t border-gray-100 my-1" />
+            <NavLink
+              to="/novo-anuncio"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl text-sm font-medium no-underline"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Anunciar
+            </NavLink>
           </nav>
         </>
       )}
