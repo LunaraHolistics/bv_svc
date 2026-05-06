@@ -1,7 +1,8 @@
-// src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth.jsx'
+
 import Header from './components/Header'
+
 import HomePage from './pages/HomePage'
 import MapaPage from './pages/MapaPage'
 import ServicosPage from './pages/ServicosPage'
@@ -17,27 +18,98 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-gray-50 flex flex-col">
+
+          {/* HEADER */}
           <Header />
-          <main className="max-w-6xl mx-auto px-4 py-6">
+
+          {/* MAIN */}
+          <main className="flex-1 w-full">
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/mapa" element={<MapaPage />} />
-              <Route path="/servicos" element={<ServicosPage />} />
-              <Route path="/indicacoes" element={<IndicacoesPage />} />
-              <Route path="/anuncios" element={<AnunciosPage />} />
-              <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
-              <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
+
+              {/* páginas internas continuam centralizadas */}
+              <Route
+                path="/mapa"
+                element={
+                  <div className="max-w-6xl mx-auto px-4 py-8">
+                    <MapaPage />
+                  </div>
+                }
+              />
+
+              <Route
+                path="/servicos"
+                element={
+                  <div className="max-w-6xl mx-auto px-4 py-8">
+                    <ServicosPage />
+                  </div>
+                }
+              />
+
+              <Route
+                path="/indicacoes"
+                element={
+                  <div className="max-w-6xl mx-auto px-4 py-8">
+                    <IndicacoesPage />
+                  </div>
+                }
+              />
+
+              <Route
+                path="/anuncios"
+                element={
+                  <div className="max-w-6xl mx-auto px-4 py-8">
+                    <AnunciosPage />
+                  </div>
+                }
+              />
+
+              <Route
+                path="/novo-anuncio"
+                element={
+                  <div className="max-w-4xl mx-auto px-4 py-8">
+                    <NovoAnuncioPage />
+                  </div>
+                }
+              />
+
+              <Route
+                path="/editar-anuncio/:id"
+                element={
+                  <div className="max-w-4xl mx-auto px-4 py-8">
+                    <EditarAnuncioPage />
+                  </div>
+                }
+              />
+
+              <Route
+                path="/perfil"
+                element={
+                  <div className="max-w-4xl mx-auto px-4 py-8">
+                    <PerfilPage />
+                  </div>
+                }
+              />
+
               <Route path="/login" element={<LoginPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/perfil" element={<PerfilPage />} />
             </Routes>
           </main>
-          <footer className="border-t border-gray-200 bg-white mt-8">
-            <div className="max-w-6xl mx-auto px-4 py-4 text-center text-xs text-gray-400">
-              BV Service Classificados &bull; Condomínio Bella Vittà
+
+          {/* FOOTER */}
+          <footer className="mt-10 border-t border-gray-100 bg-white/80 backdrop-blur-sm">
+            <div className="max-w-6xl mx-auto px-4 py-6 text-center">
+              <p className="text-sm font-medium text-gray-700">
+                BV Service
+              </p>
+
+              <p className="text-xs text-gray-400 mt-1">
+                Marketplace interno • Condomínio Bella Vittà
+              </p>
             </div>
           </footer>
+
         </div>
       </BrowserRouter>
     </AuthProvider>
