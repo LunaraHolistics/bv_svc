@@ -1,15 +1,13 @@
+// src/components/Header.jsx
 import React, { useState, useEffect, useRef } from 'react'
-import {
-  NavLink,
-  useLocation,
-  useNavigate
-} from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const navItems = [
   {
     to: '/',
     label: 'Início',
+    emoji: '🏠',
     icon: (
       <path d="M3 10.5L12 3l9 7.5v9a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 19.5v-9z" />
     )
@@ -17,6 +15,7 @@ const navItems = [
   {
     to: '/servicos',
     label: 'Serviços',
+    emoji: '🛠️',
     icon: (
       <path d="M14.25 6.75l3 3m0-3l-3 3M4.5 19.5l6.75-6.75m0 0l4.5-4.5a2.121 2.121 0 10-3-3l-4.5 4.5m3 3l-3-3" />
     )
@@ -24,6 +23,7 @@ const navItems = [
   {
     to: '/indicacoes',
     label: 'Indicações',
+    emoji: '👥',
     icon: (
       <path d="M18 18.72a9 9 0 003.74-.48 3 3 0 00-4.68-2.72M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm-9 3a2.25 2.25 0 11-4.5 0A2.25 2.25 0 016 9.75z" />
     )
@@ -31,6 +31,7 @@ const navItems = [
   {
     to: '/mapa',
     label: 'Mapa',
+    emoji: '📍',
     icon: (
       <path d="M9 6v12m6-9v9m6-12v12l-6-3-6 3-6-3V6l6 3 6-3 6 3z" />
     )
@@ -38,6 +39,7 @@ const navItems = [
   {
     to: '/anuncios',
     label: 'Anúncios',
+    emoji: '📢',
     icon: (
       <path d="M7.5 6h9m-9 6h9m-9 6h6" />
     )
@@ -72,7 +74,6 @@ const Header = () => {
   } = useAuth()
 
   const [menuOpen, setMenuOpen] = useState(false)
-
   const dropdownRef = useRef(null)
 
   const isActive = (path) => {
@@ -110,22 +111,16 @@ const Header = () => {
       }
     }
 
-    document.addEventListener(
-      'mousedown',
-      handleClickOutside
-    )
+    document.addEventListener('mousedown', handleClickOutside)
 
     return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleClickOutside
-      )
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 
   return (
     <>
-      {/* HEADER DESKTOP */}
+      {/* ===== DESKTOP ===== */}
       <header className="hidden md:block sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto px-6">
           <div className="h-16 flex items-center justify-between">
@@ -151,7 +146,7 @@ const Header = () => {
               </div>
             </NavLink>
 
-            {/* MENU */}
+            {/* NAVEGAÇÃO */}
             <nav className="flex items-center gap-2">
               {navItems.map((item) => {
                 const active = isActive(item.to)
@@ -161,7 +156,7 @@ const Header = () => {
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition no-underline ${
                       active
                         ? 'bg-emerald-50 text-emerald-700'
                         : 'text-gray-600 hover:bg-gray-100'
@@ -193,9 +188,7 @@ const Header = () => {
                   ref={dropdownRef}
                 >
                   <button
-                    onClick={() =>
-                      setMenuOpen(!menuOpen)
-                    }
+                    onClick={() => setMenuOpen(!menuOpen)}
                     className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-2 py-2 rounded-xl transition"
                   >
                     {perfil?.avatar_url ? (
@@ -222,9 +215,7 @@ const Header = () => {
                       </button>
 
                       <button
-                        onClick={() =>
-                          navigate('/novo-anuncio')
-                        }
+                        onClick={() => navigate('/novo-anuncio')}
                         className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50"
                       >
                         Novo anúncio
@@ -252,9 +243,9 @@ const Header = () => {
         </div>
       </header>
 
-      {/* MOBILE NAV */}
-      <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md">
-        <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-3xl px-2 py-2">
+      {/* ===== MOBILE ===== */}
+      <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md pb-[env(safe-area-inset-bottom)]">
+        <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-3xl px-1.5 py-2">
           <div className="flex items-center justify-between">
 
             {navItems.slice(0, 2).map((item) => {
@@ -264,35 +255,28 @@ const Header = () => {
                 <NavLink
                   key={item.to}
                   to={item.to}
+                  end={item.to === '/'}
                   className="flex flex-col items-center flex-1 no-underline"
                 >
-                  <Icon
-                    path={item.icon}
-                    active={active}
-                  />
-
-                  <span
-                    className={`text-[10px] mt-1 ${
-                      active
-                        ? 'text-emerald-600 font-semibold'
-                        : 'text-gray-400'
-                    }`}
-                  >
+                  <span className={`text-lg ${active ? 'scale-110' : 'opacity-70'} transition-transform`}>
+                    {item.emoji}
+                  </span>
+                  <span className={`text-[10px] mt-0.5 ${active ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
                     {item.label}
                   </span>
                 </NavLink>
               )
             })}
 
-            {/* CTA */}
+            {/* BOTÃO FLUTUANTE */}
             <NavLink
               to="/novo-anuncio"
-              className="w-14 h-14 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xl -mt-8 no-underline"
+              className="w-12 h-12 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-xl -mt-7 no-underline"
             >
               +
             </NavLink>
 
-            {navItems.slice(2, 4).map((item) => {
+            {navItems.slice(2, 5).map((item) => {
               const active = isActive(item.to)
 
               return (
@@ -301,38 +285,23 @@ const Header = () => {
                   to={item.to}
                   className="flex flex-col items-center flex-1 no-underline"
                 >
-                  <Icon
-                    path={item.icon}
-                    active={active}
-                  />
-
-                  <span
-                    className={`text-[10px] mt-1 ${
-                      active
-                        ? 'text-emerald-600 font-semibold'
-                        : 'text-gray-400'
-                    }`}
-                  >
+                  <span className={`text-lg ${active ? 'scale-110' : 'opacity-70'} transition-transform`}>
+                    {item.emoji}
+                  </span>
+                  <span className={`text-[10px] mt-0.5 ${active ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
                     {item.label}
                   </span>
                 </NavLink>
               )
             })}
 
-            {/* Perfil */}
+            {/* PERFIL */}
             <button
-              onClick={() =>
-                navigate(
-                  user ? '/perfil' : '/login'
-                )
-              }
+              onClick={() => navigate(user ? '/perfil' : '/login')}
               className="flex flex-col items-center flex-1"
             >
-              <div className="w-5 h-5 flex items-center justify-center text-gray-500">
-                👤
-              </div>
-
-              <span className="text-[10px] mt-1 text-gray-400">
+              <span className="text-lg opacity-70">👤</span>
+              <span className="text-[10px] mt-0.5 text-gray-400">
                 Perfil
               </span>
             </button>
@@ -340,8 +309,8 @@ const Header = () => {
         </div>
       </nav>
 
-      {/* espaço mobile */}
-      <div className="md:hidden h-24" />
+      {/* ESPAÇO MOBILE */}
+      <div className="md:hidden h-28" />
     </>
   )
 }

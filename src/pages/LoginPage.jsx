@@ -1,3 +1,4 @@
+// src/pages/LoginPage.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -157,7 +158,7 @@ const LoginPage = () => {
 
   return (
     <div
-      className={`relative min-h-[calc(100vh-58px)] overflow-hidden flex items-center justify-center px-4 py-8 transition-all duration-700 ${
+      className={`relative min-h-screen overflow-hidden flex items-center justify-center px-4 py-8 transition-all duration-700 ${
         pronto
           ? 'opacity-100 translate-y-0'
           : 'opacity-0 translate-y-6'

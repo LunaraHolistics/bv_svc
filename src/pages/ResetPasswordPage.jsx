@@ -60,20 +60,31 @@ const ResetPasswordPage = () => {
     if (score <= 1) {
       return {
         label: 'Fraca',
-        color: 'bg-red-500'
+        color: 'bg-red-500',
+        width: '25%'
+      }
+    }
+
+    if (score <= 2) {
+      return {
+        label: 'Média',
+        color: 'bg-yellow-500',
+        width: '50%'
       }
     }
 
     if (score <= 3) {
       return {
-        label: 'Média',
-        color: 'bg-yellow-500'
+        label: 'Boa',
+        color: 'bg-emerald-400',
+        width: '75%'
       }
     }
 
     return {
       label: 'Forte',
-      color: 'bg-emerald-500'
+      color: 'bg-emerald-500',
+      width: '100%'
     }
   }
 
@@ -147,8 +158,13 @@ const ResetPasswordPage = () => {
   )
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gray-50">
-      <div className="w-full max-w-[420px]">
+    <div className="relative min-h-screen overflow-hidden flex items-center justify-center px-4 py-10">
+      {/* BACKGROUND */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50" />
+      <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-300/20 blur-3xl rounded-full" />
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-300/20 blur-3xl rounded-full" />
+
+      <div className="relative z-10 w-full max-w-[420px]">
         <div className="text-center mb-8">
           <div className="w-20 h-20 rounded-[24px] bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-400 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200/50">
             <span className="text-white font-extrabold text-2xl">BV</span>
@@ -163,7 +179,7 @@ const ResetPasswordPage = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-2xl p-6 shadow-[0_20px_80px_rgba(0,0,0,0.08)]">
           {loading ? (
             <div className="text-center py-10 text-gray-500">
               Validando link...
@@ -186,10 +202,10 @@ const ResetPasswordPage = () => {
               </p>
 
               <button
-                onClick={() => navigate('/esqueci-senha')}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700"
+                onClick={() => navigate('/login')}
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition"
               >
-                Solicitar novo link
+                Voltar ao login
               </button>
             </div>
           ) : (
@@ -226,8 +242,8 @@ const ResetPasswordPage = () => {
                   <div className="mt-2">
                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full ${forcaSenha.color}`}
-                        style={{ width: '100%' }}
+                        className={`h-full ${forcaSenha.color} transition-all duration-300`}
+                        style={{ width: forcaSenha.width }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
@@ -264,7 +280,7 @@ const ResetPasswordPage = () => {
               <button
                 type="submit"
                 disabled={salvando}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 disabled:bg-gray-300"
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 disabled:bg-gray-300 transition"
               >
                 {salvando
                   ? 'Salvando...'

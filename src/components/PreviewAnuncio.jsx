@@ -1,7 +1,11 @@
+// src/components/PreviewAnuncio.jsx
 import React, { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Link } from 'react-router-dom'
+
+const inputClass =
+  'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white'
 
 const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
   const { user } = useAuth()
@@ -269,7 +273,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
       </h2>
 
       {!user && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg mb-5 text-sm">
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-2xl mb-5 text-sm">
           Faça login para publicar anúncios no marketplace do condomínio.
           {' '}
           <Link
@@ -282,13 +286,13 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl mb-4 text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl mb-4 text-sm">
           {success}
         </div>
       )}
@@ -311,7 +315,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
             disabled={loading}
             required
             placeholder="Ex: Bicicleta Mountain Bike"
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+            className={inputClass}
           />
         </div>
 
@@ -331,7 +335,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
             min="0"
             step="0.01"
             placeholder="1500.00"
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+            className={inputClass}
           />
 
           {formData.preco && (
@@ -355,7 +359,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
             disabled={loading}
             required
             placeholder="Descreva seu produto..."
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+            className={inputClass}
           />
         </div>
 
@@ -365,31 +369,46 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
             Foto do produto
           </label>
 
+          <div
+            onClick={() => !loading && fileInputRef.current?.click()}
+            className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer hover:border-emerald-500 transition"
+          >
+            {imagemPreview ? (
+              <img
+                src={imagemPreview}
+                alt="Preview"
+                className="w-full max-h-64 object-cover rounded-2xl"
+              />
+            ) : (
+              <>
+                <div className="text-4xl mb-2">📷</div>
+                <p className="text-gray-500 text-sm">
+                  Clique para enviar uma imagem
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Máximo 5MB
+                </p>
+              </>
+            )}
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleImageChange}
             disabled={loading}
-            className="w-full text-sm"
+            className="hidden"
           />
 
           {imagemPreview && (
-            <div className="mt-3">
-              <img
-                src={imagemPreview}
-                alt="Preview"
-                className="w-full max-h-64 object-cover rounded-xl border"
-              />
-
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="mt-2 text-red-500 text-sm font-medium"
-              >
-                Remover imagem
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="mt-2 text-red-500 text-sm font-medium"
+            >
+              Remover imagem
+            </button>
           )}
         </div>
 
@@ -405,7 +424,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
               value={formData.status}
               onChange={handleInputChange}
               disabled={loading}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg"
+              className={inputClass}
             >
               <option value="Ativo">Ativo</option>
               <option value="Vendido">Vendido</option>
@@ -424,7 +443,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
               value={formData.data_expiracao}
               onChange={handleInputChange}
               disabled={loading}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg"
+              className={inputClass}
             />
           </div>
         </div>
@@ -432,10 +451,10 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-3 rounded-lg text-white font-semibold ${
+          className={`w-full py-3 rounded-2xl text-white font-semibold transition ${
             loading
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-emerald-600 hover:bg-emerald-700'
+              : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20'
           }`}
         >
           {loading ? 'Publicando...' : 'Publicar anúncio'}
@@ -446,17 +465,17 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
       {(formData.titulo ||
         formData.preco ||
         formData.descricao) && (
-        <div className="mt-8 p-4 bg-gray-50 border rounded-xl">
+        <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
             Preview do anúncio
           </h3>
 
-          <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
             {imagemPreview && (
               <img
                 src={imagemPreview}
                 alt="Preview anúncio"
-                className="w-full h-40 object-cover rounded-lg mb-3"
+                className="w-full h-40 object-cover rounded-2xl mb-3"
               />
             )}
 

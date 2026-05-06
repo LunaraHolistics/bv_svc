@@ -1,3 +1,4 @@
+// src/pages/PerfilPage.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -312,6 +313,14 @@ const PerfilPage = () => {
             />
 
             <input
+              name="fase"
+              value={form.fase}
+              onChange={handleChange}
+              placeholder="Fase"
+              className={inputClass}
+            />
+
+            <input
               name="quadra"
               value={form.quadra}
               onChange={handleChange}
@@ -385,6 +394,14 @@ const PerfilPage = () => {
                 value={form.instagram_url}
                 onChange={handleChange}
                 placeholder="Instagram"
+                className={inputClass}
+              />
+
+              <input
+                name="facebook_url"
+                value={form.facebook_url}
+                onChange={handleChange}
+                placeholder="Facebook"
                 className={inputClass}
               />
 
