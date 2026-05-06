@@ -38,7 +38,7 @@ const PerfilPage = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/login')
+      navigate('/login', { replace: true })
     }
   }, [authLoading, user, navigate])
 
@@ -193,9 +193,7 @@ const PerfilPage = () => {
   if (authLoading || !user) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-gray-500">
-          Carregando perfil...
-        </div>
+        <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
       </div>
     )
   }

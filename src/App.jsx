@@ -1,6 +1,6 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { AuthProvider, useAuth } from './lib/auth.jsx'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { AuthProvider } from './lib/auth.jsx'
 
 import Header from './components/Header'
 
@@ -15,18 +15,6 @@ import LoginPage from './pages/LoginPage'
 import PerfilPage from './pages/PerfilPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import NotFoundPage from './pages/NotFoundPage'
-
-function PrivateRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-      </div>
-    )
-  }
-  return user ? children : <Navigate to="/login" replace />
-}
 
 function AppLayout() {
   const location = useLocation()
@@ -53,9 +41,9 @@ function AppLayout() {
             <Route path="/indicacoes" element={<IndicacoesPage />} />
             <Route path="/anuncios" element={<AnunciosPage />} />
             <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
-            <Route path="/editar-anuncio/:id" element={<PrivateRoute><EditarAnuncioPage /></PrivateRoute>} />
+            <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/perfil" element={<PrivateRoute><PerfilPage /></PrivateRoute>} />
+            <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

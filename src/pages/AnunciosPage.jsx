@@ -64,7 +64,7 @@ const AnunciosPage = () => {
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl" />
 
         <div className="relative z-10 max-w-3xl">
-          <span className="inline-flex px-4 py-2 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium mb-5 text-white">
+          <span className="inline-flex px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-xs font-medium mb-5 text-white">
             Marketplace Bella Vittà
           </span>
 
@@ -87,7 +87,7 @@ const AnunciosPage = () => {
 
             <Link
               to="/servicos"
-              className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl text-white no-underline hover:bg-white/20 transition"
+              className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl text-white no-underline hover:bg-white/25 transition"
             >
               Explorar serviços
             </Link>
