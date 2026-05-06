@@ -1,4 +1,4 @@
-// src/lib/auth.js
+// src/lib/auth.jsx
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
@@ -42,12 +42,30 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const loginMagicLink = async (email) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
+  const cadastrar = async (email, senha, nomeCompleto) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.toLowerCase().trim(),
+      password: senha,
       options: {
-        emailRedirectTo: window.location.origin,
+        data: { nome_completo: nomeCompleto.trim() },
       },
+    })
+    if (error) throw error
+    return data
+  }
+
+  const login = async (email, senha) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase().trim(),
+      password: senha,
+    })
+    if (error) throw error
+    return data
+  }
+
+  const recuperarSenha = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+      redirectTo: window.location.origin,
     })
     if (error) throw error
   }
@@ -62,7 +80,9 @@ export function AuthProvider({ children }) {
       user,
       perfil,
       loading,
-      loginMagicLink,
+      cadastrar,
+      login,
+      recuperarSenha,
       logout,
       recarregarPerfil: () => user && buscarPerfil(user.id),
     }}>
