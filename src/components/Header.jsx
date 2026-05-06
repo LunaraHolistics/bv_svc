@@ -1,6 +1,6 @@
 // src/components/Header.jsx
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate, NavLink } from 'react-router-dom'
+import { useLocation, useNavigate, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const navItems = [
