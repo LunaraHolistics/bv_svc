@@ -37,17 +37,19 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        runtimeCaching: {
-          urlPattern: /^https:\/\/kdigpnzpaabuxdvgjtcz\.supabase\.co\/storage\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'imagens-supabase',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dias
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/kdigpnzpaabuxdvgjtcz\.supabase\.co\/storage\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'imagens-supabase',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
             },
           },
-        },
+        ],
       },
     }),
   ],
