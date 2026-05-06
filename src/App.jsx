@@ -11,6 +11,7 @@ import NovoAnuncioPage from './pages/NovoAnuncioPage'
 import EditarAnuncioPage from './pages/EditarAnuncioPage'
 import LoginPage from './pages/LoginPage'
 import PerfilPage from './pages/PerfilPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
               <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/perfil" element={<PerfilPage />} />
             </Routes>
           </main>
