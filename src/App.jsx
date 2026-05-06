@@ -10,6 +10,7 @@ import AnunciosPage from './pages/AnunciosPage'
 import NovoAnuncioPage from './pages/NovoAnuncioPage'
 import EditarAnuncioPage from './pages/EditarAnuncioPage'
 import LoginPage from './pages/LoginPage'
+import PerfilPage from './pages/PerfilPage'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
               <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
               <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/perfil" element={<PerfilPage />} />
             </Routes>
           </main>
           <footer className="border-t border-gray-200 bg-white mt-8">

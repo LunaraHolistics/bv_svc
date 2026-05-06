@@ -1,8 +1,10 @@
 // src/components/PreviewAnuncio.jsx
 import React, { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 
 const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     titulo: '',
     preco: '',
@@ -65,7 +67,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
     const fileName = `${anuncioId}-${Date.now()}.${fileExt}`
     const filePath = `anuncios/${fileName}`
     
-    const { data: uploadData, error: uploadError } = await supabase
+    const { error: uploadError } = await supabase
       .storage
       .from('anuncios')
       .upload(filePath, file, {
@@ -112,7 +114,8 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
           descricao: formData.descricao.trim(),
           imagem_url: null,
           status: formData.status || 'Ativo',
-          data_expiracao: formData.data_expiracao ? new Date(formData.data_expiracao).toISOString() : null
+          data_expiracao: formData.data_expiracao ? new Date(formData.data_expiracao).toISOString() : null,
+          usuario_id: user?.id || null,
         })
         .select()
         .single()
@@ -193,6 +196,13 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
       {success && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-4 text-sm">
           {success}
+        </div>
+      )}
+
+      {!user && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg mb-4 text-sm">
+          ⚠️ Você não está logado. O anúncio será publicado sem vínculo ao seu perfil.{' '}
+          <a href="/login" className="font-medium underline">Entrar</a>
         </div>
       )}
 
