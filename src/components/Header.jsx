@@ -1,7 +1,7 @@
 // src/components/Header.jsx
 import React, { useState, useEffect } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth.jsx'
 
 const links = [
   {

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth.jsx'
 
 const formatarPreco = (valor) => {
   if (!valor) return 'R$ 0,00'

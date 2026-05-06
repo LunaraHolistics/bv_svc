@@ -1,6 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './lib/auth'
+import { AuthProvider } from './lib/auth.jsx'
 import Header from './components/Header'
 import HomePage from './pages/HomePage'
 import MapaPage from './pages/MapaPage'
