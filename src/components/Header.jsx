@@ -1,6 +1,6 @@
 // src/components/Header.jsx
 import React, { useState, useEffect, useRef } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const navItems = [
@@ -101,6 +101,10 @@ const Header = () => {
     navigate('/perfil')
   }
 
+  const irLogin = () => {
+    navigate('/login')
+  }
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -189,7 +193,7 @@ const Header = () => {
                 >
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
-                    className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-2 py-2 rounded-xl transition"
+                    className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-2 py-2 rounded-xl transition cursor-pointer"
                   >
                     {perfil?.avatar_url ? (
                       <img
@@ -209,21 +213,21 @@ const Header = () => {
 
                       <button
                         onClick={irPerfil}
-                        className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50"
+                        className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer"
                       >
                         Meu perfil
                       </button>
 
                       <button
                         onClick={() => navigate('/novo-anuncio')}
-                        className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50"
+                        className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer"
                       >
                         Novo anúncio
                       </button>
 
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+                        className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
                       >
                         Sair
                       </button>
@@ -231,12 +235,12 @@ const Header = () => {
                   )}
                 </div>
               ) : (
-                <NavLink
-                  to="/login"
-                  className="text-sm text-gray-600 hover:text-gray-900 no-underline"
+                <button
+                  onClick={irLogin}
+                  className="px-5 py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition cursor-pointer"
                 >
                   Entrar
-                </NavLink>
+                </button>
               )}
             </div>
           </div>
@@ -295,15 +299,38 @@ const Header = () => {
               )
             })}
 
-            {/* PERFIL */}
+            {/* PERFIL / ENTRAR */}
             <button
               onClick={() => navigate(user ? '/perfil' : '/login')}
-              className="flex flex-col items-center flex-1"
+              className="flex flex-col items-center flex-1 cursor-pointer"
             >
-              <span className="text-lg opacity-70">👤</span>
-              <span className="text-[10px] mt-0.5 text-gray-400">
-                Perfil
-              </span>
+              {user ? (
+                <>
+                  {perfil?.avatar_url ? (
+                    <img
+                      src={perfil.avatar_url}
+                      alt="Avatar"
+                      className="w-5 h-5 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <span className="text-[8px] font-bold text-emerald-700">
+                        {initials}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-[10px] mt-0.5 text-gray-400">
+                    Perfil
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg opacity-70">🔐</span>
+                  <span className="text-[10px] mt-0.5 text-emerald-600 font-semibold">
+                    Entrar
+                  </span>
+                </>
+              )}
             </button>
           </div>
         </div>
