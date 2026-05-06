@@ -1,3 +1,4 @@
+// src/pages/AnunciosPage.jsx
 import React from 'react'
 import { Link } from 'react-router-dom'
 import ListagemAnuncios from '../components/ListagemAnuncios'
@@ -63,15 +64,15 @@ const AnunciosPage = () => {
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl" />
 
         <div className="relative z-10 max-w-3xl">
-          <span className="inline-flex px-4 py-2 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium mb-5">
+          <span className="inline-flex px-4 py-2 rounded-full bg-white/10 backdrop-blur-md text-xs font-medium mb-5 text-white">
             Marketplace Bella Vittà
           </span>
 
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight text-white">
             Compre e venda entre vizinhos com muito mais confiança
           </h1>
 
-          <p className="mt-5 text-slate-200 text-base md:text-lg max-w-2xl leading-relaxed">
+          <p className="mt-5 text-emerald-100 text-base md:text-lg max-w-2xl leading-relaxed">
             Um marketplace privado para moradores anunciarem produtos,
             encontrarem oportunidades e negociarem com pessoas da própria comunidade.
           </p>
