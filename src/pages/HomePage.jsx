@@ -42,7 +42,9 @@ const CardDestaque = ({ anuncio }) => (
 const CardUltimo = ({ anuncio }) => (
   <Link to="/anuncios" className="bg-white rounded-xl border border-gray-200 p-3 flex gap-3 hover:shadow-md transition-shadow no-underline group">
     {anuncio.imagem_url ? (
-      <img src={anuncio.imagem_url} alt={anuncio.titulo} className="w-16 h-16 rounded-lg object-cover shrink-0" loading="lazy" />
+      <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+        <img src={anuncio.imagem_url} alt={anuncio.titulo} className="w-full h-full object-cover" loading="lazy" />
+      </div>
     ) : (
       <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
         <span className="text-xl text-gray-300">📦</span>
@@ -93,7 +95,7 @@ const Carrossel = ({ titulo, itens, children }) => {
           </button>
         </div>
       </div>
-      <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {children}
       </div>
     </div>
@@ -111,21 +113,24 @@ const HomePage = () => {
 
   const buscarDados = async () => {
     try {
-      // Destaques
+      const agora = new Date().toISOString()
+
+      // Destaques: destaque=true + ativo + NÃO expirado
       const { data: dataDestaque } = await supabase
         .from('anuncios_vendas')
         .select('*')
         .eq('destaque', true)
         .ilike('status', 'ativo')
-        .gt('data_expiracao', new Date().toISOString())
+        .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
         .order('created_at', { ascending: false })
         .limit(10)
 
-      // Últimos anúncios (incluindo destaque, sem filtro de expiração para não ficar vazio)
+      // Últimos: ativo + NÃO expirado
       const { data: dataUltimos } = await supabase
         .from('anuncios_vendas')
         .select('*')
         .ilike('status', 'ativo')
+        .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
         .order('created_at', { ascending: false })
         .limit(8)
 
@@ -147,7 +152,7 @@ const HomePage = () => {
         <div className="relative z-10">
           <h1 className="text-2xl sm:text-3xl font-bold">Bem-vindo ao BV Service</h1>
           <p className="text-emerald-100 mt-2 text-sm sm:text-base max-w-lg">
-            Classificados e serviços do Condomínio Bella Vittà. Encontre profissionais,indicações e oportunidades perto de você.
+            Classificados e serviços do Condomínio Bella Vittà. Encontre profissionais, indicações e oportunidades perto de você.
           </p>
           <div className="flex gap-3 mt-5">
             <Link
@@ -208,7 +213,7 @@ const HomePage = () => {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                 <span className="text-4xl block mb-3">🏷️</span>
-                <p className="text-gray-500 text-sm">Nenhum anúncio publicado ainda.</p>
+                <p className="text-gray-500 text-sm">Nenhum anúncio ativo no momento.</p>
                 <Link to="/novo-anuncio" className="inline-block mt-3 text-sm text-emerald-600 font-medium hover:underline no-underline">
                   Seja o primeiro a anunciar!
                 </Link>

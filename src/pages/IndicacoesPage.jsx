@@ -1,6 +1,7 @@
 // src/pages/IndicacoesPage.jsx
 import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import FormIndicacao from '../components/FormIndicacao'
 
 const formatarWhatsapp = (numero) => {
   if (!numero) return null
@@ -34,7 +35,6 @@ const CardIndicacao = ({ indicacao }) => {
           <p className="text-gray-500 text-xs mt-2 leading-relaxed">{indicacao.descricao}</p>
         )}
 
-        {/* Serviços */}
         {indicacao.servicos && indicacao.servicos.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2.5">
             {indicacao.servicos.map((s, i) => (
@@ -43,20 +43,17 @@ const CardIndicacao = ({ indicacao }) => {
           </div>
         )}
 
-        {/* Condições especiais */}
         {indicacao.condicoes_moradores && (
           <div className="mt-2.5 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg">
             <p className="text-amber-700 text-[11px] font-medium">⭐ {indicacao.condicoes_moradores}</p>
           </div>
         )}
 
-        {/* Endereço */}
         {indicacao.endereco && (
           <p className="text-gray-400 text-[11px] mt-2">📍 {indicacao.endereco}</p>
         )}
       </div>
 
-      {/* Ações */}
       <div className="border-t border-gray-100 px-4 py-3 flex items-center gap-2">
         {whatsapp ? (
           <a
@@ -106,6 +103,7 @@ const IndicacoesPage = () => {
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [mostrarForm, setMostrarForm] = useState(false)
 
   useEffect(() => {
     buscarDados()
@@ -147,12 +145,46 @@ const IndicacoesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Indicações de Moradores</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Profissionais e serviços recomendados pelos moradores do Bella Vittà
-        </p>
+      {/* Header com botão */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Indicações de Moradores</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Profissionais recomendados pelos moradores do Bella Vittà
+          </p>
+        </div>
+        <button
+          onClick={() => setMostrarForm(!mostrarForm)}
+          className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all no-underline shrink-0 ${
+            mostrarForm
+              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            {mostrarForm ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            )}
+          </svg>
+          {mostrarForm ? 'Fechar' : 'Indicar Profissional'}
+        </button>
       </div>
+
+      {/* Formulário (expansível) */}
+      {mostrarForm && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Nova Indicação</h2>
+          <FormIndicacao
+            onSucesso={() => {
+              setMostrarForm(false)
+              buscarDados()
+            }}
+            onFechar={() => setMostrarForm(false)}
+          />
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -199,7 +231,14 @@ const IndicacoesPage = () => {
               ? 'Nenhuma indicação cadastrada ainda.'
               : `Nenhuma indicação em "${filtroCategoria}".`}
           </p>
-          <p className="text-gray-400 text-xs mt-2">Os moradores podem indicar profissionais pela área de perfil (em breve).</p>
+          {!mostrarForm && (
+            <button
+              onClick={() => setMostrarForm(true)}
+              className="mt-4 text-sm text-blue-600 font-medium hover:underline"
+            >
+              Seja o primeiro a indicar!
+            </button>
+          )}
         </div>
       ) : (
         <>
