@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import {
+  Wrench,
+  MapPin,
+  ShoppingBag,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Users,
+  Sparkles
+} from 'lucide-react'
 
 const formatarPreco = (valor) => {
-  if (!valor) return 'R$ 0,00'
+  if (!valor) return 'Sob consulta'
 
   return Number(valor).toLocaleString('pt-BR', {
     style: 'currency',
@@ -11,42 +22,42 @@ const formatarPreco = (valor) => {
   })
 }
 
+/* ---------------- CARD DESTAQUE ---------------- */
+
 const CardDestaque = ({ anuncio }) => (
   <Link
     to="/anuncios"
-    className="shrink-0 w-[280px] bg-white rounded-3xl border border-gray-100 overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 no-underline group"
+    className="group min-w-[320px] max-w-[320px] bg-white rounded-3xl overflow-hidden border border-white/70 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 no-underline"
   >
-    {anuncio.imagem_url ? (
-      <div className="h-44 overflow-hidden">
+    <div className="relative h-52 overflow-hidden">
+      {anuncio.imagem_url ? (
         <img
           src={anuncio.imagem_url}
           alt={anuncio.titulo}
           className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
         />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
+          <ShoppingBag className="w-10 h-10 text-emerald-600" />
+        </div>
+      )}
+
+      <div className="absolute top-4 left-4 px-3 py-1 bg-black/70 text-white rounded-full text-xs font-medium backdrop-blur-md">
+        Destaque
       </div>
-    ) : (
-      <div className="h-44 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
-        <span className="text-5xl">🏷️</span>
-      </div>
-    )}
+    </div>
 
     <div className="p-5">
-      <div className="flex justify-between items-start gap-2">
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug">
-          {anuncio.titulo}
-        </h3>
+      <h3 className="font-bold text-gray-900 text-base line-clamp-2">
+        {anuncio.titulo}
+      </h3>
 
-        <span className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] rounded-full font-bold">
-          DESTAQUE
-        </span>
-      </div>
-
-      <p className="text-emerald-600 font-bold text-xl mt-3">
+      <p className="text-emerald-600 text-xl font-bold mt-2">
         {formatarPreco(anuncio.preco)}
       </p>
 
       {anuncio.descricao && (
-        <p className="text-gray-500 text-xs mt-2 line-clamp-2">
+        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
           {anuncio.descricao}
         </p>
       )}
@@ -54,10 +65,12 @@ const CardDestaque = ({ anuncio }) => (
   </Link>
 )
 
+/* ---------------- CARD LISTAGEM ---------------- */
+
 const CardUltimo = ({ anuncio }) => (
   <Link
     to="/anuncios"
-    className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 no-underline"
+    className="group bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-lg hover:-translate-y-1 transition-all no-underline"
   >
     <div className="flex gap-4">
       {anuncio.imagem_url ? (
@@ -68,7 +81,7 @@ const CardUltimo = ({ anuncio }) => (
         />
       ) : (
         <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center">
-          📦
+          <ShoppingBag className="w-6 h-6 text-gray-500" />
         </div>
       )}
 
@@ -82,66 +95,70 @@ const CardUltimo = ({ anuncio }) => (
         </p>
 
         <p className="text-xs text-gray-400 mt-2">
-          {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
+          Publicado em {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
         </p>
       </div>
     </div>
   </Link>
 )
 
-const QuickLink = ({ to, icon, label, descricao }) => (
+/* ---------------- QUICK CARD ---------------- */
+
+const QuickCard = ({ to, title, subtitle, icon }) => (
   <Link
     to={to}
-    className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-lg hover:border-emerald-200 transition-all duration-300 no-underline group"
+    className="group bg-white/90 backdrop-blur-xl border border-white rounded-3xl p-5 hover:shadow-xl hover:-translate-y-1 transition-all no-underline"
   >
-    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform">
       {icon}
     </div>
 
     <h3 className="font-semibold text-gray-900">
-      {label}
+      {title}
     </h3>
 
-    <p className="text-gray-500 text-sm mt-1">
-      {descricao}
+    <p className="text-sm text-gray-500 mt-1">
+      {subtitle}
     </p>
   </Link>
 )
 
-const Carrossel = ({ titulo, itens, children }) => {
+/* ---------------- CAROUSEL ---------------- */
+
+const Carousel = ({ title, items, children }) => {
   const scrollRef = useRef(null)
 
-  const scroll = (direction) => {
+  const move = (direction) => {
     if (!scrollRef.current) return
 
     scrollRef.current.scrollBy({
-      left: direction * 320,
+      left: direction * 350,
       behavior: 'smooth'
     })
   }
 
-  if (!itens?.length) return null
+  if (!items?.length) return null
 
   return (
-    <section>
-      <div className="flex justify-between items-center mb-5">
-        <h2 className="text-xl font-bold text-gray-900">
-          {titulo}
+    <section className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {title}
         </h2>
 
-        <div className="flex gap-2">
+        <div className="hidden md:flex gap-2">
           <button
-            onClick={() => scroll(-1)}
-            className="w-10 h-10 rounded-xl bg-white border border-gray-200 hover:bg-gray-50"
+            onClick={() => move(-1)}
+            className="w-10 h-10 rounded-xl bg-white shadow-sm border flex items-center justify-center"
           >
-            ←
+            <ChevronLeft size={18} />
           </button>
 
           <button
-            onClick={() => scroll(1)}
-            className="w-10 h-10 rounded-xl bg-white border border-gray-200 hover:bg-gray-50"
+            onClick={() => move(1)}
+            className="w-10 h-10 rounded-xl bg-white shadow-sm border flex items-center justify-center"
           >
-            →
+            <ChevronRight size={18} />
           </button>
         </div>
       </div>
@@ -160,9 +177,16 @@ const Carrossel = ({ titulo, itens, children }) => {
   )
 }
 
+/* ---------------- PAGE ---------------- */
+
 const HomePage = () => {
   const [destaques, setDestaques] = useState([])
   const [ultimos, setUltimos] = useState([])
+  const [stats, setStats] = useState({
+    anuncios: 0,
+    servicos: 0,
+    indicacoes: 0
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -173,142 +197,245 @@ const HomePage = () => {
     try {
       const agora = new Date().toISOString()
 
-      const { data: dataDestaque } = await supabase
-        .from('anuncios_vendas')
-        .select('*')
-        .eq('destaque', true)
-        .ilike('status', 'ativo')
-        .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
-        .order('created_at', { ascending: false })
-        .limit(10)
+      const [
+        destaqueRes,
+        ultimosRes,
+        anunciosCount,
+        servicosCount,
+        indicacoesCount
+      ] = await Promise.all([
+        supabase
+          .from('anuncios_vendas')
+          .select('*')
+          .eq('destaque', true)
+          .ilike('status', 'ativo')
+          .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
+          .order('created_at', { ascending: false })
+          .limit(10),
 
-      const { data: dataUltimos } = await supabase
-        .from('anuncios_vendas')
-        .select('*')
-        .ilike('status', 'ativo')
-        .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
-        .order('created_at', { ascending: false })
-        .limit(8)
+        supabase
+          .from('anuncios_vendas')
+          .select('*')
+          .ilike('status', 'ativo')
+          .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
+          .order('created_at', { ascending: false })
+          .limit(6),
 
-      setDestaques(dataDestaque || [])
-      setUltimos(dataUltimos || [])
+        supabase
+          .from('anuncios_vendas')
+          .select('*', { count: 'exact', head: true }),
+
+        supabase
+          .from('prestadores_servico')
+          .select('*', { count: 'exact', head: true }),
+
+        supabase
+          .from('indicacoes')
+          .select('*', { count: 'exact', head: true })
+      ])
+
+      setDestaques(destaqueRes.data || [])
+      setUltimos(ultimosRes.data || [])
+
+      setStats({
+        anuncios: anunciosCount.count || 0,
+        servicos: servicosCount.count || 0,
+        indicacoes: indicacoesCount.count || 0
+      })
     } catch (error) {
-      console.error(error)
+      console.error('Erro HomePage:', error)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+    <div className="space-y-10">
 
-        {/* HERO */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700 p-8 sm:p-12 text-white shadow-2xl">
-          <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-          <div className="relative z-10 max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-white/15 rounded-full text-sm mb-4">
-              Marketplace interno do condomínio
+      {/* HERO */}
+      <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white p-8 md:p-12">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
+
+        <div className="relative z-10 max-w-3xl">
+          <span className="inline-flex px-4 py-2 bg-white/10 rounded-full text-sm backdrop-blur-md mb-5">
+            Bella Vittà Community Hub
+          </span>
+
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
+            Tudo que seu condomínio precisa,
+            <span className="block text-emerald-100">
+              em um só lugar.
             </span>
+          </h1>
 
-            <h1 className="text-4xl sm:text-5xl font-bold leading-tight">
-              Bem-vindo ao BV Service
-            </h1>
+          <p className="mt-5 text-emerald-50 text-lg max-w-2xl leading-relaxed">
+            Encontre prestadores recomendados, anuncie produtos,
+            visualize o mapa do residencial e conecte-se com moradores.
+          </p>
 
-            <p className="text-emerald-100 mt-4 text-lg">
-              Encontre serviços, produtos, recomendações e oportunidades
-              dentro do Bella Vittà com muito mais praticidade.
-            </p>
-
-            <div className="flex flex-wrap gap-3 mt-6">
-              <Link
-                to="/novo-anuncio"
-                className="px-6 py-3 bg-white text-emerald-700 rounded-2xl font-semibold no-underline hover:scale-105 transition"
-              >
-                Anunciar grátis
-              </Link>
-
-              <Link
-                to="/servicos"
-                className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline hover:bg-white/20 transition"
-              >
-                Explorar serviços
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* QUICK LINKS */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <QuickLink
-            to="/servicos"
-            icon="🔧"
-            label="Serviços"
-            descricao="Prestadores do condomínio"
-          />
-
-          <QuickLink
-            to="/indicacoes"
-            icon="👥"
-            label="Indicações"
-            descricao="Recomendações reais"
-          />
-
-          <QuickLink
-            to="/anuncios"
-            icon="🏷️"
-            label="Anúncios"
-            descricao="Produtos à venda"
-          />
-
-          <QuickLink
-            to="/mapa"
-            icon="📍"
-            label="Mapa"
-            descricao="Localizações"
-          />
-        </section>
-
-        {!loading && destaques.length > 0 && (
-          <Carrossel
-            titulo="🔥 Ofertas em destaque"
-            itens={destaques}
-          >
-            {destaques.map((item) => (
-              <CardDestaque
-                key={item.id}
-                anuncio={item}
-              />
-            ))}
-          </Carrossel>
-        )}
-
-        {/* ÚLTIMOS */}
-        <section>
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-xl font-bold text-gray-900">
-              Últimos anúncios
-            </h2>
+          <div className="flex flex-wrap gap-4 mt-8">
+            <Link
+              to="/novo-anuncio"
+              className="px-6 py-3 bg-white text-emerald-700 rounded-2xl font-semibold no-underline hover:scale-105 transition"
+            >
+              Criar anúncio
+            </Link>
 
             <Link
-              to="/anuncios"
-              className="text-emerald-600 font-semibold no-underline"
+              to="/servicos"
+              className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline"
             >
-              Ver todos →
+              Explorar serviços
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {ultimos.map((item) => (
-              <CardUltimo
-                key={item.id}
-                anuncio={item}
-              />
-            ))}
-          </div>
-        </section>
+          <div className="grid grid-cols-3 gap-4 mt-10 max-w-lg">
+            <div>
+              <h3 className="text-2xl font-bold">{stats.anuncios}+</h3>
+              <p className="text-sm text-emerald-100">Anúncios</p>
+            </div>
 
-      </div>
+            <div>
+              <h3 className="text-2xl font-bold">{stats.servicos}+</h3>
+              <p className="text-sm text-emerald-100">Prestadores</p>
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-bold">{stats.indicacoes}+</h3>
+              <p className="text-sm text-emerald-100">Indicações</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* QUICK ACTIONS */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <QuickCard
+          to="/servicos"
+          title="Prestadores"
+          subtitle="Profissionais próximos"
+          icon={<Wrench size={22} />}
+        />
+
+        <QuickCard
+          to="/indicacoes"
+          title="Indicações"
+          subtitle="Recomendações reais"
+          icon={<Star size={22} />}
+        />
+
+        <QuickCard
+          to="/mapa"
+          title="Mapa"
+          subtitle="Encontre rapidamente"
+          icon={<MapPin size={22} />}
+        />
+
+        <QuickCard
+          to="/anuncios"
+          title="Marketplace"
+          subtitle="Produtos disponíveis"
+          icon={<ShoppingBag size={22} />}
+        />
+      </section>
+
+      {loading ? (
+        <div className="grid md:grid-cols-3 gap-5">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="h-48 bg-white rounded-3xl animate-pulse border"
+            />
+          ))}
+        </div>
+      ) : (
+        <>
+          {destaques.length > 0 && (
+            <Carousel title="Destaques da semana" items={destaques}>
+              {destaques.map((item) => (
+                <CardDestaque key={item.id} anuncio={item} />
+              ))}
+            </Carousel>
+          )}
+
+          <section>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-2xl font-bold">
+                Últimos anúncios
+              </h2>
+
+              <Link
+                to="/anuncios"
+                className="text-emerald-600 font-medium no-underline"
+              >
+                Ver todos
+              </Link>
+            </div>
+
+            {ultimos.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {ultimos.map((item) => (
+                  <CardUltimo key={item.id} anuncio={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-12 text-center border">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Nenhum anúncio disponível
+                </h3>
+
+                <p className="text-gray-500 mt-2">
+                  Seja o primeiro morador a publicar algo.
+                </p>
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* BLOCO DE CONFIANÇA */}
+      <section className="bg-white rounded-3xl p-8 border border-gray-100">
+        <div className="grid md:grid-cols-3 gap-6 text-center">
+          <div>
+            <Shield className="mx-auto text-emerald-600 mb-3" />
+            <h3 className="text-xl font-bold">Segurança</h3>
+            <p className="text-gray-500 mt-2">Exclusivo para moradores</p>
+          </div>
+
+          <div>
+            <Users className="mx-auto text-emerald-600 mb-3" />
+            <h3 className="text-xl font-bold">Comunidade</h3>
+            <p className="text-gray-500 mt-2">Fortaleça conexões locais</p>
+          </div>
+
+          <div>
+            <Sparkles className="mx-auto text-emerald-600 mb-3" />
+            <h3 className="text-xl font-bold">Praticidade</h3>
+            <p className="text-gray-500 mt-2">Tudo centralizado</p>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FINAL */}
+      <section className="rounded-3xl bg-gray-900 text-white p-10 text-center">
+        <h2 className="text-3xl font-bold">
+          Tem algo parado em casa?
+        </h2>
+
+        <p className="text-gray-300 mt-3 max-w-xl mx-auto">
+          Venda para quem mora perto com mais praticidade,
+          confiança e sem aquela novela de marketplace externo.
+        </p>
+
+        <Link
+          to="/novo-anuncio"
+          className="inline-flex mt-6 px-6 py-3 bg-emerald-500 rounded-2xl font-semibold text-white no-underline hover:bg-emerald-600"
+        >
+          Criar anúncio agora
+        </Link>
+      </section>
+
     </div>
   )
 }

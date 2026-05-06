@@ -1,8 +1,31 @@
-// src/pages/EditarAnuncioPage.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/auth.jsx'
+import { useAuth } from '../lib/auth'
+
+const formatarPreco = (valor) => {
+  if (!valor) return ''
+
+  const numero = parseFloat(valor)
+
+  if (isNaN(numero)) return ''
+
+  return numero.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  })
+}
+
+const extrairPathStorage = (url) => {
+  if (!url) return null
+
+  try {
+    const partes = url.split('/storage/v1/object/public/anuncios/')
+    return partes[1] || null
+  } catch {
+    return null
+  }
+}
 
 const EditarAnuncioPage = () => {
   const { id } = useParams()
@@ -15,35 +38,47 @@ const EditarAnuncioPage = () => {
     preco: '',
     descricao: '',
     status: 'Ativo',
-    data_expiracao: '',
+    data_expiracao: ''
   })
+
   const [imagemPreview, setImagemPreview] = useState(null)
   const [imagemFile, setImagemFile] = useState(null)
   const [imagemExistente, setImagemExistente] = useState(null)
+
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [error, setError] = useState(null)
   const [sucesso, setSucesso] = useState(false)
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return }
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
     buscarAnuncio()
   }, [id, user])
 
   const buscarAnuncio = async () => {
     try {
-      const { data, error: err } = await supabase
+      setLoading(true)
+      setError(null)
+
+      const { data, error } = await supabase
         .from('anuncios_vendas')
         .select('*')
         .eq('id', id)
         .single()
 
-      if (err) throw err
-      if (!data) { setError('Anúncio não encontrado.'); return }
+      if (error) throw error
 
-      // Verificar se é dono (por usuario_id ou se campo for null — compatibilidade)
+      if (!data) {
+        setError('Anúncio não encontrado.')
+        return
+      }
+
       if (data.usuario_id && data.usuario_id !== user.id) {
-        setError('Você não pode editar este anúncio.')
+        setError('Você não tem permissão para editar este anúncio.')
         return
       }
 
@@ -52,10 +87,14 @@ const EditarAnuncioPage = () => {
         preco: data.preco || '',
         descricao: data.descricao || '',
         status: data.status || 'Ativo',
-        data_expiracao: data.data_expiracao ? data.data_expiracao.slice(0, 10) : '',
+        data_expiracao: data.data_expiracao
+          ? data.data_expiracao.slice(0, 10)
+          : ''
       })
-      setImagemExistente(data.imagem_url)
-    } catch {
+
+      setImagemExistente(data.imagem_url || null)
+    } catch (err) {
+      console.error(err)
       setError('Erro ao carregar anúncio.')
     } finally {
       setLoading(false)
@@ -63,171 +102,358 @@ const EditarAnuncioPage = () => {
   }
 
   const handleChange = (e) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-    setError(null)
+    setForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }))
+
+    if (error) setError(null)
   }
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
+
     if (!file) return
-    if (!file.type.startsWith('image/')) { setError('Apenas imagens.'); return }
-    if (file.size > 5 * 1024 * 1024) { setError('Máximo 5MB.'); return }
+
+    if (!file.type.startsWith('image/')) {
+      setError('Envie apenas arquivos de imagem.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('A imagem deve ter no máximo 5MB.')
+      return
+    }
+
     setImagemFile(file)
-    const reader = new FileReader()
-    reader.onloadend = () => setImagemPreview(reader.result)
-    reader.readAsDataURL(file)
     setError(null)
+
+    const reader = new FileReader()
+
+    reader.onloadend = () => {
+      setImagemPreview(reader.result)
+    }
+
+    reader.readAsDataURL(file)
+  }
+
+  const removerImagemNova = () => {
+    setImagemPreview(null)
+    setImagemFile(null)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const uploadNovaImagem = async () => {
+    if (!imagemFile) return imagemExistente
+
+    const ext = imagemFile.name.split('.').pop()
+    const filePath = `anuncios/${id}-${Date.now()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('anuncios')
+      .upload(filePath, imagemFile, {
+        contentType: imagemFile.type
+      })
+
+    if (uploadError) throw uploadError
+
+    if (imagemExistente) {
+      const oldPath = extrairPathStorage(imagemExistente)
+
+      if (oldPath) {
+        await supabase.storage
+          .from('anuncios')
+          .remove([oldPath])
+      }
+    }
+
+    const {
+      data: { publicUrl }
+    } = supabase.storage
+      .from('anuncios')
+      .getPublicUrl(filePath)
+
+    return publicUrl
   }
 
   const handleSalvar = async (e) => {
     e.preventDefault()
-    setSalvando(true)
-    setError(null)
+
+    if (salvando) return
 
     try {
-      if (!form.titulo.trim()) throw new Error('Título obrigatório.')
-      if (!form.preco || parseFloat(form.preco) <= 0) throw new Error('Preço obrigatório.')
+      setSalvando(true)
+      setError(null)
 
-      // Atualizar dados
-      const { error: updateErr } = await supabase
+      if (!form.titulo.trim()) {
+        throw new Error('Informe um título.')
+      }
+
+      if (!form.descricao.trim()) {
+        throw new Error('Informe uma descrição.')
+      }
+
+      if (!form.preco || parseFloat(form.preco) <= 0) {
+        throw new Error('Informe um preço válido.')
+      }
+
+      const imagemUrlFinal = await uploadNovaImagem()
+
+      const { error } = await supabase
         .from('anuncios_vendas')
         .update({
           titulo: form.titulo.trim(),
           preco: parseFloat(form.preco),
           descricao: form.descricao.trim(),
           status: form.status,
-          data_expiracao: form.data_expiracao ? new Date(form.data_expiracao).toISOString() : null,
-          usuario_id: user.id,
+          imagem_url: imagemUrlFinal,
+          data_expiracao: form.data_expiracao
+            ? new Date(form.data_expiracao).toISOString()
+            : null
         })
         .eq('id', id)
 
-      if (updateErr) throw updateErr
-
-      // Se nova imagem, upload
-      if (imagemFile) {
-        const ext = imagemFile.name.split('.').pop()
-        const path = `anuncios/${id}-${Date.now()}.${ext}`
-        const { error: uploadErr } = await supabase.storage.from('anuncios').upload(path, imagemFile, { contentType: imagemFile.type })
-        if (uploadErr) throw uploadErr
-
-        const { data: { publicUrl } } = supabase.storage.from('anuncios').getPublicUrl(path)
-        await supabase.from('anuncios_vendas').update({ imagem_url: publicUrl }).eq('id', id)
-      }
+      if (error) throw error
 
       setSucesso(true)
-      setTimeout(() => navigate('/anuncios'), 1500)
+
+      setTimeout(() => {
+        navigate('/anuncios')
+      }, 1800)
     } catch (err) {
-      setError(err.message || 'Erro ao salvar.')
+      console.error(err)
+      setError(err.message || 'Erro ao salvar anúncio.')
     } finally {
       setSalvando(false)
     }
   }
 
   const handleExcluir = async () => {
-    if (!confirm('Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.')) return
-    setSalvando(true)
+    const confirmar = window.confirm(
+      'Deseja realmente excluir este anúncio?'
+    )
+
+    if (!confirmar) return
+
     try {
-      await supabase.from('anuncios_vendas').delete().eq('id', id)
+      setSalvando(true)
+      setError(null)
+
+      if (imagemExistente) {
+        const imagePath = extrairPathStorage(imagemExistente)
+
+        if (imagePath) {
+          await supabase.storage
+            .from('anuncios')
+            .remove([imagePath])
+        }
+      }
+
+      const { error } = await supabase
+        .from('anuncios_vendas')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
       navigate('/anuncios')
-    } catch {
-      setError('Erro ao excluir.')
+    } catch (err) {
+      console.error(err)
+      setError('Erro ao excluir anúncio.')
       setSalvando(false)
     }
   }
 
-  const formatarPreco = (v) => {
-    if (!v) return ''
-    const n = parseFloat(v)
-    return isNaN(n) ? '' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <div className="w-12 h-12 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin" />
+      </div>
+    )
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <svg className="animate-spin h-8 w-8 text-emerald-600" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-      </svg>
-    </div>
-  )
+  if (sucesso) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-6xl mb-4">🎉</div>
 
-  if (error && !form.titulo) return (
-    <div className="text-center py-20">
-      <p className="text-red-500 mb-4">{error}</p>
-      <Link to="/anuncios" className="text-sm text-emerald-600 hover:underline no-underline">Voltar aos anúncios</Link>
-    </div>
-  )
+        <h2 className="text-2xl font-bold text-gray-900">
+          Anúncio atualizado com sucesso
+        </h2>
 
-  if (sucesso) return (
-    <div className="text-center py-20">
-      <div className="text-5xl mb-3">✅</div>
-      <h2 className="text-lg font-semibold text-gray-900">Anúncio atualizado!</h2>
-      <p className="text-gray-500 text-sm mt-1">Redirecionando...</p>
-    </div>
-  )
+        <p className="text-gray-500 mt-2">
+          Redirecionando...
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center gap-3">
-        <Link to="/anuncios" className="text-gray-400 hover:text-gray-600 transition-colors no-underline">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+    <div className="space-y-8">
+      <section className="rounded-[32px] bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-800 text-white p-8">
+        <Link
+          to="/anuncios"
+          className="text-sm text-emerald-200 no-underline"
+        >
+          ← Voltar para anúncios
         </Link>
-        <h1 className="text-xl font-bold text-gray-900">Editar Anúncio</h1>
-      </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+        <h1 className="text-3xl md:text-4xl font-bold mt-4">
+          Editar anúncio
+        </h1>
 
-      <form onSubmit={handleSalvar} className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
-          <input type="text" name="titulo" value={form.titulo} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" disabled={salvando} required />
+        <p className="text-slate-200 mt-2 max-w-xl">
+          Atualize seu anúncio e mantenha ele competitivo.
+        </p>
+      </section>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl">
+          {error}
         </div>
+      )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$) *</label>
-          <input type="number" name="preco" value={form.preco} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" step="0.01" min="0" disabled={salvando} required />
-          {form.preco && <p className="text-sm text-emerald-600 font-medium mt-1">{formatarPreco(form.preco)}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descrição *</label>
-          <textarea name="descricao" value={form.descricao} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" rows={4} disabled={salvando} required />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Foto</label>
-          <div className="flex items-center gap-3">
-            <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-gray-100 file:text-gray-700" disabled={salvando} />
-            {imagemPreview && <button type="button" onClick={() => { setImagemPreview(null); setImagemFile(null); fileInputRef.current.value = '' }} className="text-red-500 text-xs font-medium">Remover</button>}
-          </div>
-          {(imagemPreview || imagemExistente) && (
-            <img src={imagemPreview || imagemExistente} alt="Preview" className="mt-3 max-h-48 rounded-lg object-cover border border-gray-200" />
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+        <form
+          onSubmit={handleSalvar}
+          className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-6"
+        >
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" disabled={salvando}>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Foto do produto
+            </label>
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer hover:border-emerald-500 transition"
+            >
+              {imagemPreview || imagemExistente ? (
+                <img
+                  src={imagemPreview || imagemExistente}
+                  alt="Preview"
+                  className="w-full max-h-80 object-cover rounded-2xl"
+                />
+              ) : (
+                <>
+                  <div className="text-5xl mb-3">📷</div>
+                  <p className="text-gray-500 text-sm">
+                    Clique para enviar nova imagem
+                  </p>
+                </>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+
+            {imagemPreview && (
+              <button
+                type="button"
+                onClick={removerImagemNova}
+                className="mt-3 text-red-500 text-sm font-medium"
+              >
+                Remover nova imagem
+              </button>
+            )}
+          </div>
+
+          <input
+            type="text"
+            name="titulo"
+            value={form.titulo}
+            onChange={handleChange}
+            placeholder="Título"
+            className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+          />
+
+          <div>
+            <input
+              type="number"
+              name="preco"
+              value={form.preco}
+              onChange={handleChange}
+              placeholder="Preço"
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+            />
+
+            {form.preco && (
+              <p className="text-emerald-600 text-sm font-medium mt-2">
+                {formatarPreco(form.preco)}
+              </p>
+            )}
+          </div>
+
+          <textarea
+            name="descricao"
+            rows="5"
+            value={form.descricao}
+            onChange={handleChange}
+            placeholder="Descrição"
+            className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+          />
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <select
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+            >
               <option value="Ativo">Ativo</option>
               <option value="Vendido">Vendido</option>
               <option value="Expirado">Expirado</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Expirar em</label>
-            <input type="date" name="data_expiracao" value={form.data_expiracao} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" disabled={salvando} />
-          </div>
-        </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={salvando} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:bg-gray-300">
-            {salvando ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
-          <button type="button" onClick={handleExcluir} disabled={salvando} className="px-4 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
-            Excluir
-          </button>
+            <input
+              type="date"
+              name="data_expiracao"
+              value={form.data_expiracao}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="submit"
+              disabled={salvando}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-semibold"
+            >
+              {salvando ? 'Salvando...' : 'Salvar alterações'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExcluir}
+              disabled={salvando}
+              className="px-5 py-3 border border-red-200 text-red-600 rounded-2xl hover:bg-red-50"
+            >
+              Excluir anúncio
+            </button>
+          </div>
+        </form>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 h-fit">
+          <h3 className="font-bold text-gray-900 text-lg">
+            Dicas rápidas
+          </h3>
+
+          <ul className="mt-4 space-y-3 text-sm text-gray-500">
+            <li>✓ Use boas fotos</li>
+            <li>✓ Seja honesto na descrição</li>
+            <li>✓ Preço justo vende mais rápido</li>
+            <li>✓ Responda rápido interessados</li>
+          </ul>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

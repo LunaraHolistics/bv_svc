@@ -1,3 +1,4 @@
+// src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth.jsx'
 
@@ -18,98 +19,44 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-gray-50 flex flex-col">
+        <div className="min-h-screen bg-[#f6f8f7] flex flex-col relative overflow-hidden">
 
-          {/* HEADER */}
+          {/* background decorativo */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-[-150px] right-[-120px] w-[420px] h-[420px] bg-emerald-200/30 rounded-full blur-3xl" />
+            <div className="absolute bottom-[10%] left-[-150px] w-[350px] h-[350px] bg-teal-200/20 rounded-full blur-3xl" />
+          </div>
+
           <Header />
 
-          {/* MAIN */}
-          <main className="flex-1 w-full">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-
-              {/* páginas internas continuam centralizadas */}
-              <Route
-                path="/mapa"
-                element={
-                  <div className="max-w-6xl mx-auto px-4 py-8">
-                    <MapaPage />
-                  </div>
-                }
-              />
-
-              <Route
-                path="/servicos"
-                element={
-                  <div className="max-w-6xl mx-auto px-4 py-8">
-                    <ServicosPage />
-                  </div>
-                }
-              />
-
-              <Route
-                path="/indicacoes"
-                element={
-                  <div className="max-w-6xl mx-auto px-4 py-8">
-                    <IndicacoesPage />
-                  </div>
-                }
-              />
-
-              <Route
-                path="/anuncios"
-                element={
-                  <div className="max-w-6xl mx-auto px-4 py-8">
-                    <AnunciosPage />
-                  </div>
-                }
-              />
-
-              <Route
-                path="/novo-anuncio"
-                element={
-                  <div className="max-w-4xl mx-auto px-4 py-8">
-                    <NovoAnuncioPage />
-                  </div>
-                }
-              />
-
-              <Route
-                path="/editar-anuncio/:id"
-                element={
-                  <div className="max-w-4xl mx-auto px-4 py-8">
-                    <EditarAnuncioPage />
-                  </div>
-                }
-              />
-
-              <Route
-                path="/perfil"
-                element={
-                  <div className="max-w-4xl mx-auto px-4 py-8">
-                    <PerfilPage />
-                  </div>
-                }
-              />
-
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-            </Routes>
+          <main className="flex-1 relative z-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/mapa" element={<MapaPage />} />
+                <Route path="/servicos" element={<ServicosPage />} />
+                <Route path="/indicacoes" element={<IndicacoesPage />} />
+                <Route path="/anuncios" element={<AnunciosPage />} />
+                <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
+                <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/perfil" element={<PerfilPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+              </Routes>
+            </div>
           </main>
 
-          {/* FOOTER */}
-          <footer className="mt-10 border-t border-gray-100 bg-white/80 backdrop-blur-sm">
-            <div className="max-w-6xl mx-auto px-4 py-6 text-center">
-              <p className="text-sm font-medium text-gray-700">
-                BV Service
+          <footer className="relative z-10 mt-10 border-t border-white/50 bg-white/70 backdrop-blur-xl">
+            <div className="max-w-7xl mx-auto px-6 py-6 text-center">
+              <p className="text-sm text-gray-500">
+                BV Service • Condomínio Bella Vittà
               </p>
 
               <p className="text-xs text-gray-400 mt-1">
-                Marketplace interno • Condomínio Bella Vittà
+                Classificados, serviços e conexões entre moradores
               </p>
             </div>
           </footer>
-
         </div>
       </BrowserRouter>
     </AuthProvider>

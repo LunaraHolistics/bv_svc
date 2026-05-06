@@ -17,12 +17,6 @@ export function AuthProvider({ children }) {
   const [perfil, setPerfil] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  /**
-   * Busca perfil do usuário
-   * Corrigido:
-   * - troca single() por maybeSingle()
-   * - trata erro sem quebrar fluxo
-   */
   const buscarPerfil = useCallback(async (userId) => {
     if (!userId) {
       setPerfil(null)
@@ -51,9 +45,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  /**
-   * Sessão inicial
-   */
   useEffect(() => {
     let mounted = true
 
@@ -66,9 +57,10 @@ export function AuthProvider({ children }) {
         if (!mounted) return
 
         const currentUser = session?.user ?? null
+
         setUser(currentUser)
 
-        if (currentUser) {
+        if (currentUser?.id) {
           await buscarPerfil(currentUser.id)
         } else {
           setPerfil(null)
@@ -90,11 +82,13 @@ export function AuthProvider({ children }) {
       data: { subscription }
     } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return
+
         const currentUser = session?.user ?? null
 
         setUser(currentUser)
 
-        if (currentUser) {
+        if (currentUser?.id) {
           await buscarPerfil(currentUser.id)
         } else {
           setPerfil(null)
@@ -106,13 +100,10 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false
-      subscription.unsubscribe()
+      subscription?.unsubscribe()
     }
   }, [buscarPerfil])
 
-  /**
-   * Cadastro
-   */
   const cadastrar = async (
     email,
     senha,
@@ -135,9 +126,6 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  /**
-   * Login
-   */
   const login = async (email, senha) => {
     const { data, error } =
       await supabase.auth.signInWithPassword({
@@ -150,24 +138,18 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  /**
-   * Recuperação de senha
-   */
   const recuperarSenha = async (email) => {
     const { error } =
       await supabase.auth.resetPasswordForEmail(
         email.toLowerCase().trim(),
         {
-          redirectTo: window.location.origin
+          redirectTo: `${window.location.origin}/reset-password`
         }
       )
 
     if (error) throw error
   }
 
-  /**
-   * Logout
-   */
   const logout = async () => {
     try {
       await supabase.auth.signOut()
@@ -178,9 +160,6 @@ export function AuthProvider({ children }) {
     }
   }
 
-  /**
-   * Recarregar perfil manualmente
-   */
   const recarregarPerfil = async () => {
     if (!user?.id) return null
     return await buscarPerfil(user.id)

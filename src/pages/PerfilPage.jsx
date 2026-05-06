@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 
@@ -11,9 +11,6 @@ const PerfilPage = () => {
   const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
   const [error, setError] = useState(null)
-  const [salvo, setSalvo] = useState(false)
-  const [editando, setEditando] = useState(false)
-
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
 
@@ -28,16 +25,12 @@ const PerfilPage = () => {
     whatsapp: '',
     nome_fantasia: '',
     descricao_comercial: '',
-    endereco_comercial: '',
     instagram_url: '',
     facebook_url: '',
     site_url: '',
-    servicos_oferecidos: '',
-    condicoes_moradores: '',
-    horario_funcionamento: ''
+    servicos_oferecidos: ''
   })
 
-  const primeiroAcesso = !perfil?.nome_completo
   const ehPrestador =
     form.tipo_pessoa === 'prestador' ||
     form.tipo_pessoa === 'ambos'
@@ -46,7 +39,7 @@ const PerfilPage = () => {
     if (!authLoading && !user) {
       navigate('/login')
     }
-  }, [user, authLoading, navigate])
+  }, [authLoading, user, navigate])
 
   useEffect(() => {
     if (perfil) {
@@ -61,31 +54,16 @@ const PerfilPage = () => {
         whatsapp: perfil.whatsapp || '',
         nome_fantasia: perfil.nome_fantasia || '',
         descricao_comercial: perfil.descricao_comercial || '',
-        endereco_comercial: perfil.endereco_comercial || '',
         instagram_url: perfil.instagram_url || '',
         facebook_url: perfil.facebook_url || '',
         site_url: perfil.site_url || '',
-        servicos_oferecidos: (
-          perfil.servicos_oferecidos || []
-        ).join(', '),
-        condicoes_moradores:
-          perfil.condicoes_moradores || '',
-        horario_funcionamento:
-          perfil.horario_funcionamento || ''
+        servicos_oferecidos:
+          (perfil.servicos_oferecidos || []).join(', ')
       })
 
-      setAvatarPreview(perfil.avatar_url)
-      setSalvo(true)
+      setAvatarPreview(perfil.avatar_url || null)
     }
   }, [perfil])
-
-  useEffect(() => {
-    if (!authLoading && primeiroAcesso) {
-      setEditando(true)
-    } else if (!authLoading && perfil?.nome_completo) {
-      setEditando(false)
-    }
-  }, [authLoading, primeiroAcesso, perfil])
 
   const handleChange = (e) => {
     setForm((prev) => ({
@@ -96,12 +74,11 @@ const PerfilPage = () => {
   }
 
   const handleAvatarChange = (e) => {
-    const file = e.target.files[0]
-
+    const file = e.target.files?.[0]
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      setError('Apenas imagens são permitidas.')
+      setError('Envie apenas imagens.')
       return
     }
 
@@ -134,16 +111,13 @@ const PerfilPage = () => {
       let avatarUrl = perfil?.avatar_url || null
 
       if (avatarFile && user) {
-        const ext =
-          avatarFile.name?.split('.').pop() || 'jpg'
-
+        const ext = avatarFile.name.split('.').pop()
         const filePath = `avatars/${user.id}.${ext}`
 
         const { error: uploadError } =
           await supabase.storage
-            .from('anuncios')
+            .from('avatars')
             .upload(filePath, avatarFile, {
-              contentType: avatarFile.type,
               upsert: true
             })
 
@@ -152,187 +126,131 @@ const PerfilPage = () => {
         const {
           data: { publicUrl }
         } = supabase.storage
-          .from('anuncios')
+          .from('avatars')
           .getPublicUrl(filePath)
 
         avatarUrl = publicUrl
       }
 
       const dados = {
-        nome_completo: form.nome_completo.trim(),
-        nome_exibicao:
-          form.nome_exibicao.trim() || null,
+        nome_completo: form.nome_completo,
+        nome_exibicao: form.nome_exibicao || null,
         fase: form.fase || null,
-        quadra: form.quadra.trim() || null,
-        lote: form.lote.trim() || null,
+        quadra: form.quadra || null,
+        lote: form.lote || null,
         tipo_pessoa: form.tipo_pessoa,
-        telefone: form.telefone.trim() || null,
-        whatsapp: form.whatsapp.trim() || null,
-        nome_fantasia:
-          form.nome_fantasia.trim() || null,
+        telefone: form.telefone || null,
+        whatsapp: form.whatsapp || null,
+        nome_fantasia: form.nome_fantasia || null,
         descricao_comercial:
-          form.descricao_comercial.trim() || null,
-        endereco_comercial:
-          form.endereco_comercial.trim() || null,
-        instagram_url:
-          form.instagram_url.trim() || null,
-        facebook_url:
-          form.facebook_url.trim() || null,
-        site_url:
-          form.site_url.trim() || null,
-        servicos_oferecidos:
-          form.servicos_oferecidos
-            ? form.servicos_oferecidos
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : null,
-        condicoes_moradores:
-          form.condicoes_moradores.trim() || null,
-        horario_funcionamento:
-          form.horario_funcionamento.trim() || null,
+          form.descricao_comercial || null,
+        instagram_url: form.instagram_url || null,
+        facebook_url: form.facebook_url || null,
+        site_url: form.site_url || null,
+        servicos_oferecidos: form.servicos_oferecidos
+          ? form.servicos_oferecidos
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+          : null,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
       }
 
-      if (perfil) {
-        const { error } = await supabase
+      const { error } = perfil
+        ? await supabase
           .from('perfis')
           .update(dados)
           .eq('id', user.id)
-
-        if (error) throw error
-      } else {
-        const { error } = await supabase
+        : await supabase
           .from('perfis')
           .insert({
             ...dados,
             id: user.id
           })
 
-        if (error) throw error
-      }
+      if (error) throw error
 
       await recarregarPerfil()
 
       setSucesso(true)
-      setSalvo(true)
-      setEditando(false)
       setAvatarFile(null)
 
       setTimeout(() => {
         setSucesso(false)
       }, 3000)
     } catch (err) {
-      setError(err.message || 'Erro ao salvar perfil.')
+      setError(err.message || 'Erro ao salvar.')
     } finally {
       setSalvando(false)
     }
   }
 
-  const Field = ({
-    label,
-    name,
-    placeholder,
-    type = 'text',
-    required = false,
-    children
-  }) => (
-    <div>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-          {required && (
-            <span className="text-red-500 ml-1">*</span>
-          )}
-        </label>
-      )}
-
-      {children || (
-        <input
-          type={type}
-          name={name}
-          value={form[name]}
-          onChange={handleChange}
-          placeholder={placeholder}
-          disabled={salvando}
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-        />
-      )}
-    </div>
-  )
-
-  const SelectField = ({
-    label,
-    name,
-    options,
-    placeholder
-  }) => (
-    <div>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-        </label>
-      )}
-
-      <div className="relative">
-        <select
-          name={name}
-          value={form[name]}
-          onChange={handleChange}
-          disabled={salvando}
-          className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl appearance-none focus:ring-2 focus:ring-emerald-500 outline-none"
-        >
-          {placeholder && (
-            <option value="">{placeholder}</option>
-          )}
-
-          {options.map((option) => (
-            <option
-              key={option.value}
-              value={option.value}
-            >
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-          ▼
-        </div>
-      </div>
-    </div>
-  )
+  const inputClass =
+    'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all'
 
   if (authLoading || !user) {
     return (
-      <div className="flex justify-center py-20">
-        Carregando...
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-gray-500">
+          Carregando perfil...
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-8">
+
+      {/* HERO */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 p-8 md:p-10 text-white shadow-xl">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-52 h-52 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <span className="text-xs bg-white/10 px-3 py-1 rounded-full">
+              Área do morador
+            </span>
+
+            <h1 className="text-3xl font-bold mt-4">
+              Seu perfil no Bella Vittà
+            </h1>
+
+            <p className="text-white/80 mt-2 max-w-xl">
+              Atualize seus dados pessoais, informações
+              comerciais e personalize como você aparece
+              para os moradores.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/')}
+            className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition"
+          >
+            Voltar ao início
+          </button>
+        </div>
+      </div>
 
       {sucesso && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-xl">
-          Perfil salvo com sucesso!
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-2xl">
+          Perfil salvo com sucesso ✨
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl">
           {error}
         </div>
       )}
 
       <form
         onSubmit={handleSalvar}
-        className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6"
+        className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-8"
       >
         {/* Avatar */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100">
           <div
             onClick={() =>
               fileInputRef.current?.click()
@@ -342,11 +260,11 @@ const PerfilPage = () => {
             {avatarPreview ? (
               <img
                 src={avatarPreview}
-                alt="Avatar"
-                className="w-20 h-20 rounded-2xl object-cover"
+                alt="avatar"
+                className="w-24 h-24 rounded-3xl object-cover shadow-md"
               />
             ) : (
-              <div className="w-20 h-20 rounded-2xl bg-gray-200 flex items-center justify-center text-2xl">
+              <div className="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center text-4xl">
                 👤
               </div>
             )}
@@ -355,153 +273,153 @@ const PerfilPage = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
             className="hidden"
+            accept="image/*"
             onChange={handleAvatarChange}
           />
 
           <div>
-            <p className="font-medium">
+            <h3 className="font-semibold text-gray-900">
               Foto de perfil
-            </p>
-            <p className="text-sm text-gray-500">
-              Clique para alterar
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Clique na foto para alterar sua imagem
             </p>
           </div>
         </div>
 
         {/* Dados pessoais */}
-        <Field
-          label="Nome completo"
-          name="nome_completo"
-          required
-          placeholder="Digite seu nome"
-        />
+        <div>
+          <h2 className="text-xl font-bold mb-5">
+            Dados pessoais
+          </h2>
 
-        <Field
-          label="Nome de exibição"
-          name="nome_exibicao"
-          placeholder="Como deseja aparecer"
-        />
+          <div className="grid md:grid-cols-2 gap-4">
+            <input
+              name="nome_completo"
+              value={form.nome_completo}
+              onChange={handleChange}
+              placeholder="Nome completo"
+              className={inputClass}
+            />
 
-        <div className="grid grid-cols-3 gap-4">
-          <Field
-            label="Quadra"
-            name="quadra"
-          />
+            <input
+              name="nome_exibicao"
+              value={form.nome_exibicao}
+              onChange={handleChange}
+              placeholder="Nome de exibição"
+              className={inputClass}
+            />
 
-          <Field
-            label="Lote"
-            name="lote"
-          />
+            <input
+              name="quadra"
+              value={form.quadra}
+              onChange={handleChange}
+              placeholder="Quadra"
+              className={inputClass}
+            />
 
-          <SelectField
-            label="Fase"
-            name="fase"
-            options={[
-              {
-                value: 'Fase 1',
-                label: 'Fase 1'
-              },
-              {
-                value: 'Fase 2',
-                label: 'Fase 2'
-              }
-            ]}
-          />
+            <input
+              name="lote"
+              value={form.lote}
+              onChange={handleChange}
+              placeholder="Lote"
+              className={inputClass}
+            />
+
+            <input
+              name="telefone"
+              value={form.telefone}
+              onChange={handleChange}
+              placeholder="Telefone"
+              className={inputClass}
+            />
+
+            <input
+              name="whatsapp"
+              value={form.whatsapp}
+              onChange={handleChange}
+              placeholder="WhatsApp"
+              className={inputClass}
+            />
+          </div>
         </div>
 
-        <SelectField
-          label="Tipo de perfil"
-          name="tipo_pessoa"
-          options={[
-            {
-              value: 'morador',
-              label: 'Morador'
-            },
-            {
-              value: 'prestador',
-              label: 'Prestador'
-            },
-            {
-              value: 'ambos',
-              label: 'Ambos'
-            }
-          ]}
-        />
+        {/* Perfil comercial */}
+        <div>
+          <h2 className="text-xl font-bold mb-5">
+            Perfil comercial
+          </h2>
 
-        <Field
-          label="Telefone"
-          name="telefone"
-        />
+          <select
+            name="tipo_pessoa"
+            value={form.tipo_pessoa}
+            onChange={handleChange}
+            className={inputClass}
+          >
+            <option value="morador">Morador</option>
+            <option value="prestador">Prestador</option>
+            <option value="ambos">Ambos</option>
+          </select>
 
-        <Field
-          label="WhatsApp"
-          name="whatsapp"
-        />
-
-        {ehPrestador && (
-          <>
-            <Field
-              label="Nome fantasia"
-              name="nome_fantasia"
-            />
-
-            <Field
-              label="Descrição comercial"
-              name="descricao_comercial"
-            >
-              <textarea
-                name="descricao_comercial"
-                value={form.descricao_comercial}
+          {ehPrestador && (
+            <div className="grid md:grid-cols-2 gap-4 mt-4">
+              <input
+                name="nome_fantasia"
+                value={form.nome_fantasia}
                 onChange={handleChange}
-                rows="4"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                placeholder="Nome fantasia"
+                className={inputClass}
               />
-            </Field>
 
-            <Field
-              label="Serviços oferecidos"
-              name="servicos_oferecidos"
-              placeholder="Ex: Pintura, Jardinagem"
-            />
+              <input
+                name="servicos_oferecidos"
+                value={form.servicos_oferecidos}
+                onChange={handleChange}
+                placeholder="Serviços oferecidos"
+                className={inputClass}
+              />
 
-            <Field
-              label="Instagram"
-              name="instagram_url"
-            />
+              <input
+                name="instagram_url"
+                value={form.instagram_url}
+                onChange={handleChange}
+                placeholder="Instagram"
+                className={inputClass}
+              />
 
-            <Field
-              label="Facebook"
-              name="facebook_url"
-            />
-
-            <Field
-              label="Site"
-              name="site_url"
-            />
-          </>
-        )}
-
-        <div className="flex gap-3">
-          {!primeiroAcesso && (
-            <button
-              type="button"
-              onClick={() => setEditando(false)}
-              className="px-5 py-3 border border-gray-200 rounded-xl"
-            >
-              Cancelar
-            </button>
+              <input
+                name="site_url"
+                value={form.site_url}
+                onChange={handleChange}
+                placeholder="Website"
+                className={inputClass}
+              />
+            </div>
           )}
 
+          {ehPrestador && (
+            <textarea
+              name="descricao_comercial"
+              value={form.descricao_comercial}
+              onChange={handleChange}
+              placeholder="Descreva seu serviço"
+              rows="4"
+              className={`${inputClass} mt-4`}
+            />
+          )}
+        </div>
+
+        {/* Botão */}
+        <div className="pt-4 border-t border-gray-100">
           <button
             type="submit"
             disabled={salvando}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-medium"
+            className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20"
           >
             {salvando
               ? 'Salvando...'
-              : 'Salvar Perfil'}
+              : 'Salvar alterações'}
           </button>
         </div>
       </form>
