@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import MapaInterativo from '../components/MapaInterativo'
 
 const GOOGLE_MAPS_EMBED_URL =
   'https://www.google.com/maps/d/u/1/embed?mid=1XFELlB7i9JmH3FVd6wR3O8HQ1nAdTSo&ehbc=2E312F'
@@ -92,7 +91,6 @@ const MapaPage = () => {
   const [prestadores, setPrestadores] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [abaAtiva, setAbaAtiva] = useState('interativo')
   const [filtroCategoria, setFiltroCategoria] = useState('Todas')
   const [busca, setBusca] = useState('')
 
@@ -221,15 +219,40 @@ const MapaPage = () => {
         </div>
       </div>
 
-      {/* CONTROLES */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-5 space-y-5">
-        <input
-          type="text"
-          placeholder="Buscar por nome, categoria ou casa..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none"
-        />
+      {/* SEÇÃO DE DESTAQUE: VISÃO POR SATÉLITE */}
+      <div className="bg-white rounded-3xl border-2 border-emerald-400 overflow-hidden shadow-xl relative">
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 z-10 flex items-center gap-3 shadow-md">
+          <span className="text-2xl">🛰️</span>
+          <div>
+            <h2 className="font-bold text-base leading-tight">Visão por Satélite do Condomínio</h2>
+            <p className="text-emerald-100 text-xs">Explore as ruas e a região de cima</p>
+          </div>
+        </div>
+        <div className="pt-14">
+          <iframe
+            src={GOOGLE_MAPS_EMBED_URL}
+            width="100%"
+            height="450"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            title="Mapa Satélite"
+          />
+        </div>
+      </div>
+
+      {/* FILTROS DE BUSCA */}
+      <div className="bg-white rounded-3xl border border-gray-200 p-5 space-y-4">
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar por nome, serviço ou número da casa..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900"
+          />
+        </div>
 
         <div className="flex flex-wrap gap-2">
           {categorias.map((cat) => (
@@ -237,7 +260,7 @@ const MapaPage = () => {
               key={cat}
               onClick={() => setFiltroCategoria(cat)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition ${filtroCategoria === cat
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
             >
@@ -245,56 +268,9 @@ const MapaPage = () => {
             </button>
           ))}
         </div>
-
-        <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
-          <button
-            onClick={() => setAbaAtiva('interativo')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${abaAtiva === 'interativo'
-                ? 'bg-white shadow-sm'
-                : ''
-              }`}
-          >
-            🏠 Prestadores
-          </button>
-
-          <button
-            onClick={() => setAbaAtiva('satelite')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${abaAtiva === 'satelite'
-                ? 'bg-white shadow-sm'
-                : ''
-              }`}
-          >
-            🛰 Satélite
-          </button>
-        </div>
       </div>
 
-      {/* MAPA */}
-      <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
-        {loading ? (
-          <div className="h-[65vh] flex items-center justify-center">
-            <p className="text-gray-500">Carregando mapa...</p>
-          </div>
-        ) : error ? (
-          <div className="h-[65vh] flex items-center justify-center">
-            <p className="text-red-500">{error}</p>
-          </div>
-        ) : abaAtiva === 'interativo' ? (
-          <MapaInterativo prestadores={prestadoresFiltrados} />
-        ) : (
-          <iframe
-            src={GOOGLE_MAPS_EMBED_URL}
-            width="100%"
-            height="650"
-            style={{ border: 0 }}
-            allowFullScreen
-            loading="lazy"
-            title="Mapa Satélite"
-          />
-        )}
-      </div>
-
-      {/* LISTA */}
+      {/* LISTA DE PRESTADORES */}
       <div>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -306,7 +282,15 @@ const MapaPage = () => {
           </span>
         </div>
 
-        {prestadoresFiltrados.length === 0 ? (
+        {loading ? (
+          <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center">
+            <p className="text-gray-500">Carregando prestadores...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center">
+            <p className="text-red-500">{error}</p>
+          </div>
+        ) : prestadoresFiltrados.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center">
             <div className="text-5xl mb-4">🔍</div>
 
