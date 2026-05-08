@@ -161,7 +161,7 @@ const PerfilPage = () => {
         telefone2: form.telefone2.replace(/\D/g, '') || null,
         telefone: ehPrestador ? (form.telefone.replace(/\D/g, '') || null) : null,
         nome_exibicao: form.nome_exibicao.trim() || null,
-        fase: form.fase.trim() || null,
+        fase: form.fase.trim() || '',
         quadra: form.quadra.trim() || null,
         lote: form.lote.trim() || null,
         tipo_pessoa: form.tipo_pessoa || 'morador',
