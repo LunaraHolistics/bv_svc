@@ -9,6 +9,7 @@ import MapaPage from './pages/MapaPage'
 import ServicosPage from './pages/ServicosPage'
 import IndicacoesPage from './pages/IndicacoesPage'
 import AnunciosPage from './pages/AnunciosPage'
+import AnuncioDetailPage from './pages/AnuncioDetailPage'
 import NovoAnuncioPage from './pages/NovoAnuncioPage'
 import EditarAnuncioPage from './pages/EditarAnuncioPage'
 import LoginPage from './pages/LoginPage'
@@ -37,6 +38,7 @@ function AppContent() {
             <Route path="/servicos" element={<ServicosPage />} />
             <Route path="/indicacoes" element={<IndicacoesPage />} />
             <Route path="/anuncios" element={<AnunciosPage />} />
+            <Route path="/anuncio/:id" element={<AnuncioDetailPage />} />
             <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
             <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
             <Route path="/login" element={<LoginPage />} />
