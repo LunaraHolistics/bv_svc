@@ -9,7 +9,20 @@ const formatarPreco = (valor) => {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+const getPrimeiraImagem = (imagemUrl) => {
+  if (!imagemUrl) return null
+  try {
+    const parsed = JSON.parse(imagemUrl)
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed[0]
+    return imagemUrl
+  } catch {
+    return imagemUrl
+  }
+}
+
 const CardAnuncio = ({ anuncio, ehDono }) => {
+  const imagem = getPrimeiraImagem(anuncio.imagem_url)
+
   const statusNormalizado = anuncio.status
     ? anuncio.status.charAt(0).toUpperCase() + anuncio.status.slice(1).toLowerCase()
     : 'Ativo'
@@ -17,8 +30,8 @@ const CardAnuncio = ({ anuncio, ehDono }) => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow group relative">
       <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
-        {anuncio.imagem_url ? (
-          <img src={anuncio.imagem_url} alt={anuncio.titulo} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+        {imagem ? (
+          <img src={imagem} alt={anuncio.titulo} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-gray-300">
             <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
@@ -27,7 +40,6 @@ const CardAnuncio = ({ anuncio, ehDono }) => {
         {anuncio.destaque && (
           <div className="absolute top-2 left-2 px-2 py-0.5 bg-amber-400 text-amber-900 text-[10px] font-bold rounded-full shadow-sm">★ DESTAQUE</div>
         )}
-        {/* Botão editar (só dono) */}
         {ehDono && (
           <Link
             to={`/editar-anuncio/${anuncio.id}`}
