@@ -23,7 +23,6 @@ const PerfilPage = () => {
     lote: '',
     tipo_pessoa: 'morador',
     telefone: '',
-    whatsapp: '',
     nome_fantasia: '',
     descricao_comercial: '',
     instagram_url: '',
@@ -52,7 +51,6 @@ const PerfilPage = () => {
         lote: perfil.lote || '',
         tipo_pessoa: perfil.tipo_pessoa || 'morador',
         telefone: perfil.telefone || '',
-        whatsapp: perfil.whatsapp || '',
         nome_fantasia: perfil.nome_fantasia || '',
         descricao_comercial: perfil.descricao_comercial || '',
         instagram_url: perfil.instagram_url || '',
@@ -105,24 +103,27 @@ const PerfilPage = () => {
       return
     }
 
+    if (!user?.id) {
+      setError('Sessão expirada. Faça login novamente.')
+      return
+    }
+
     setSalvando(true)
     setError(null)
 
     try {
       let avatarUrl = perfil?.avatar_url || null
 
-      if (avatarFile && user) {
+      if (avatarFile) {
         const ext = avatarFile.name.split('.').pop()
         const filePath = `avatars/${user.id}.${ext}`
 
         const { error: uploadError } =
           await supabase.storage
             .from('avatars')
-            .upload(filePath, avatarFile, {
-              upsert: true
-            })
+            .upload(filePath, avatarFile, { upsert: true })
 
-        if (uploadError) throw uploadError
+        if (uploadError) throw new Error(`Upload falhou: ${uploadError.message}`)
 
         const {
           data: { publicUrl }
@@ -134,20 +135,18 @@ const PerfilPage = () => {
       }
 
       const dados = {
-        nome_completo: form.nome_completo,
-        nome_exibicao: form.nome_exibicao || null,
-        fase: form.fase || null,
-        quadra: form.quadra || null,
-        lote: form.lote || null,
-        tipo_pessoa: form.tipo_pessoa,
-        telefone: form.telefone || null,
-        whatsapp: form.whatsapp || null,
-        nome_fantasia: form.nome_fantasia || null,
-        descricao_comercial:
-          form.descricao_comercial || null,
-        instagram_url: form.instagram_url || null,
-        facebook_url: form.facebook_url || null,
-        site_url: form.site_url || null,
+        nome_completo: form.nome_completo.trim(),
+        telefone: form.telefone.trim() || '',
+        nome_exibicao: form.nome_exibicao.trim() || null,
+        fase: form.fase.trim() || null,
+        quadra: form.quadra.trim() || null,
+        lote: form.lote.trim() || null,
+        tipo_pessoa: form.tipo_pessoa || 'morador',
+        nome_fantasia: form.nome_fantasia.trim() || null,
+        descricao_comercial: form.descricao_comercial.trim() || null,
+        instagram_url: form.instagram_url.trim() || null,
+        facebook_url: form.facebook_url.trim() || null,
+        site_url: form.site_url.trim() || null,
         servicos_oferecidos: form.servicos_oferecidos
           ? form.servicos_oferecidos
             .split(',')
@@ -158,19 +157,25 @@ const PerfilPage = () => {
         updated_at: new Date().toISOString()
       }
 
-      const { error } = perfil
-        ? await supabase
+      let dbError
+
+      if (perfil) {
+        const result = await supabase
           .from('perfis')
           .update(dados)
           .eq('id', user.id)
-        : await supabase
+        dbError = result.error
+      } else {
+        const result = await supabase
           .from('perfis')
-          .insert({
-            ...dados,
-            id: user.id
-          })
+          .insert({ ...dados, id: user.id })
+        dbError = result.error
+      }
 
-      if (error) throw error
+      if (dbError) {
+        console.error('[Perfil] Erro Supabase:', dbError)
+        throw new Error(dbError.message)
+      }
 
       await recarregarPerfil()
 
@@ -181,7 +186,8 @@ const PerfilPage = () => {
         setSucesso(false)
       }, 3000)
     } catch (err) {
-      setError(err.message || 'Erro ao salvar.')
+      console.error('[Perfil] Erro ao salvar:', err)
+      setError(err.message || 'Erro ao salvar perfil.')
     } finally {
       setSalvando(false)
     }
@@ -190,12 +196,16 @@ const PerfilPage = () => {
   const inputClass =
     'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all'
 
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
       </div>
     )
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -251,9 +261,7 @@ const PerfilPage = () => {
         {/* Avatar */}
         <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100">
           <div
-            onClick={() =>
-              fileInputRef.current?.click()
-            }
+            onClick={() => fileInputRef.current?.click()}
             className="cursor-pointer"
           >
             {avatarPreview ? (
@@ -341,14 +349,6 @@ const PerfilPage = () => {
               placeholder="Telefone"
               className={inputClass}
             />
-
-            <input
-              name="whatsapp"
-              value={form.whatsapp}
-              onChange={handleChange}
-              placeholder="WhatsApp"
-              className={inputClass}
-            />
           </div>
         </div>
 
@@ -430,11 +430,9 @@ const PerfilPage = () => {
           <button
             type="submit"
             disabled={salvando}
-            className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20"
+            className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 disabled:opacity-70"
           >
-            {salvando
-              ? 'Salvando...'
-              : 'Salvar alterações'}
+            {salvando ? 'Salvando...' : 'Salvar alterações'}
           </button>
         </div>
       </form>

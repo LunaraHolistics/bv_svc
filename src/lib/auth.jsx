@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
         .maybeSingle()
 
       if (error) {
-        console.error('Erro ao buscar perfil:', error)
+        console.error('[Auth] Erro ao buscar perfil:', error.message)
         setPerfil(null)
         return null
       }
@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
       setPerfil(data || null)
       return data
     } catch (err) {
-      console.error('Erro inesperado ao buscar perfil:', err)
+      console.error('[Auth] Erro inesperado ao buscar perfil:', err)
       setPerfil(null)
       return null
     }
@@ -48,23 +48,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('[Auth] Timeout de segurança — liberando loading')
-        setLoading(false)
-      }
-    }, 5000)
-
-    const carregarSessao = async () => {
+    const init = async () => {
       try {
         const {
-          data: { session }
+          data: { session },
+          error: sessionError
         } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.error('[Auth] Erro getSession:', sessionError.message)
+        }
 
         if (!mounted) return
 
         const currentUser = session?.user ?? null
-
         setUser(currentUser)
 
         if (currentUser?.id) {
@@ -73,27 +70,25 @@ export function AuthProvider({ children }) {
           setPerfil(null)
         }
       } catch (err) {
-        console.error('Erro ao carregar sessão:', err)
+        console.error('[Auth] Falha ao carregar sessão:', err)
         setUser(null)
         setPerfil(null)
       } finally {
         if (mounted) {
-          clearTimeout(safetyTimeout)
           setLoading(false)
         }
       }
     }
 
-    carregarSessao()
+    init()
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!mounted) return
 
         const currentUser = session?.user ?? null
-
         setUser(currentUser)
 
         if (currentUser?.id) {
@@ -108,53 +103,38 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false
-      clearTimeout(safetyTimeout)
       subscription?.unsubscribe()
     }
-  }, [buscarPerfil, loading])
+  }, [buscarPerfil])
 
-  const cadastrar = async (
-    email,
-    senha,
-    nomeCompleto
-  ) => {
-    const { data, error } =
-      await supabase.auth.signUp({
-        email: email.toLowerCase().trim(),
-        password: senha,
-        options: {
-          data: {
-            nome_completo:
-              nomeCompleto.trim()
-          }
-        }
-      })
+  const cadastrar = async (email, senha, nomeCompleto) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.toLowerCase().trim(),
+      password: senha,
+      options: {
+        data: { nome_completo: nomeCompleto.trim() }
+      }
+    })
 
     if (error) throw error
-
     return data
   }
 
   const login = async (email, senha) => {
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
-        email: email.toLowerCase().trim(),
-        password: senha
-      })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase().trim(),
+      password: senha
+    })
 
     if (error) throw error
-
     return data
   }
 
   const recuperarSenha = async (email) => {
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email.toLowerCase().trim(),
-        {
-          redirectTo: `${window.location.origin}/reset-password`
-        }
-      )
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.toLowerCase().trim(),
+      { redirectTo: `${window.location.origin}/reset-password` }
+    )
 
     if (error) throw error
   }
@@ -165,7 +145,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       setPerfil(null)
     } catch (err) {
-      console.error('Erro ao sair:', err)
+      console.error('[Auth] Erro ao sair:', err)
     }
   }
 
