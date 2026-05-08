@@ -124,6 +124,11 @@ const PerfilPage = () => {
       return
     }
 
+    if (!form.fase) {
+      setError('Informe sua fase.')
+      return
+    }
+
     if (!user?.id) {
       setError('Sessão expirada. Faça login novamente.')
       return
@@ -161,7 +166,7 @@ const PerfilPage = () => {
         telefone2: form.telefone2.replace(/\D/g, '') || null,
         telefone: ehPrestador ? (form.telefone.replace(/\D/g, '') || null) : null,
         nome_exibicao: form.nome_exibicao.trim() || null,
-        fase: form.fase.trim() || '',
+        fase: form.fase,
         quadra: form.quadra.trim() || null,
         lote: form.lote.trim() || null,
         tipo_pessoa: form.tipo_pessoa || 'morador',
@@ -340,6 +345,18 @@ const PerfilPage = () => {
               className={inputClass}
             />
 
+            <select
+              name="fase"
+              value={form.fase}
+              onChange={handleChange}
+              required
+              className={inputClass}
+            >
+              <option value="">Selecione sua fase *</option>
+              <option value="Fase 1">Fase 1</option>
+              <option value="Fase 2">Fase 2</option>
+            </select>
+
             <input
               name="whatsapp"
               value={form.whatsapp}
@@ -355,14 +372,6 @@ const PerfilPage = () => {
               onChange={handleChange}
               placeholder="Telefone adicional (opcional)"
               autoComplete="tel"
-              className={inputClass}
-            />
-
-            <input
-              name="fase"
-              value={form.fase}
-              onChange={handleChange}
-              placeholder="Fase"
               className={inputClass}
             />
 
