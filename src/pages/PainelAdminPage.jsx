@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 
-const MASTER_USER_ID = 'COLE_SEU_USER_ID_AQUI'
+const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
 const PainelAdminPage = () => {
   const { user, logout } = useAuth()
