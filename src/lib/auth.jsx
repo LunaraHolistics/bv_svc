@@ -32,8 +32,6 @@ export function AuthProvider({ children }) {
 
       if (error) {
         console.error('[Auth] Erro buscar perfil:', error.message)
-        setPerfil(null)
-        return null
       }
 
       setPerfil(data || null)
@@ -50,14 +48,7 @@ export function AuthProvider({ children }) {
 
     const init = async () => {
       try {
-        const {
-          data: { session },
-          error
-        } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error('[Auth] getSession erro:', error.message)
-        }
+        const { data: { session } } = await supabase.auth.getSession()
 
         if (!mounted) return
 
@@ -65,12 +56,12 @@ export function AuthProvider({ children }) {
         setUser(currentUser)
 
         if (currentUser?.id) {
-          await buscarPerfil(currentUser.id)
+          buscarPerfil(currentUser.id)
         } else {
           setPerfil(null)
         }
       } catch (err) {
-        console.error('[Auth] Falha sessão:', err)
+        console.warn('[Auth] getSession falhou:', err.message)
         setUser(null)
         setPerfil(null)
       } finally {
@@ -92,7 +83,7 @@ export function AuthProvider({ children }) {
         setUser(currentUser)
 
         if (currentUser?.id) {
-          await buscarPerfil(currentUser.id)
+          buscarPerfil(currentUser.id)
         } else {
           setPerfil(null)
         }
@@ -121,6 +112,8 @@ export function AuthProvider({ children }) {
   }
 
   const login = async (email, senha) => {
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.toLowerCase().trim(),
       password: senha
@@ -140,14 +133,13 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    setUser(null)
-    setPerfil(null)
-    setLoading(false)
-
     try {
       await supabase.auth.signOut()
     } catch (err) {
       console.error('[Auth] Erro sair:', err)
+    } finally {
+      setUser(null)
+      setPerfil(null)
     }
   }
 
