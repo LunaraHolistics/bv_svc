@@ -1,5 +1,5 @@
 // src/components/PreviewAnuncio.jsx
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
