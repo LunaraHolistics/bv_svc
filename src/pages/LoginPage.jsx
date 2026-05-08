@@ -90,6 +90,7 @@ const LoginPage = () => {
     try {
       if (aba === 'login') {
         await login(email, senha)
+        navigate('/', { replace: true })
       }
 
       if (aba === 'cadastro') {
@@ -122,7 +123,7 @@ const LoginPage = () => {
       } else if (msg.includes('already registered')) {
         setError('Este e-mail já possui cadastro.')
       } else if (msg.includes('Email not confirmed')) {
-        setError('Confirme seu e-mail antes de acessar.')
+        setError('Confirme seu e-mail antes de acessar. Verifique sua caixa de entrada e spam.')
       } else {
         setError(msg || 'Erro ao processar sua solicitação.')
       }
@@ -130,34 +131,6 @@ const LoginPage = () => {
       setLoading(false)
     }
   }
-
-  const PasswordInput = ({
-    value,
-    onChange,
-    placeholder,
-    visible,
-    setVisible,
-    autocomplete
-  }) => (
-    <div className="relative">
-      <input
-        type={visible ? 'text' : 'password'}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        autoComplete={autocomplete}
-        className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
-      />
-
-      <button
-        type="button"
-        onClick={() => setVisible(!visible)}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
-      >
-        {visible ? '🙈' : '👁️'}
-      </button>
-    </div>
-  )
 
   return (
     <div
@@ -291,30 +264,48 @@ const LoginPage = () => {
               placeholder="Seu e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              autoComplete="username"
               className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
             />
 
             {aba !== 'recuperar' && (
-              <PasswordInput
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="Sua senha"
-                visible={mostrarSenha}
-                setVisible={setMostrarSenha}
-                autocomplete={aba === 'login' ? 'current-password' : 'new-password'}
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="Sua senha"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  autoComplete={aba === 'login' ? 'current-password' : 'new-password'}
+                  className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                >
+                  {mostrarSenha ? '🙈' : '👁️'}
+                </button>
+              </div>
             )}
 
             {aba === 'cadastro' && (
-              <PasswordInput
-                value={confirmarSenha}
-                onChange={(e) => setConfirmarSenha(e.target.value)}
-                placeholder="Confirmar senha"
-                visible={mostrarConfirmar}
-                setVisible={setMostrarConfirmar}
-                autocomplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="Confirmar senha"
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarConfirmar(!mostrarConfirmar)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                >
+                  {mostrarConfirmar ? '🙈' : '👁️'}
+                </button>
+              </div>
             )}
 
             {aba === 'login' && (
