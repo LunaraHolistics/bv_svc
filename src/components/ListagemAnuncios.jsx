@@ -9,24 +9,32 @@ const formatarPreco = (valor) => {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-const getPrimeiraImagem = (imagemUrl) => {
-  if (!imagemUrl) return null
+const getImagens = (imagemUrl) => {
+  if (!imagemUrl) return []
   try {
     const parsed = JSON.parse(imagemUrl)
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed[0]
-    return imagemUrl
+    if (Array.isArray(parsed)) return parsed
+    return [imagemUrl]
   } catch {
-    return imagemUrl
+    return [imagemUrl]
   }
 }
 
 const CardAnuncio = ({ anuncio, ehDono }) => {
   const navigate = useNavigate()
-  const imagem = getPrimeiraImagem(anuncio.imagem_url)
+  const imagens = getImagens(anuncio.imagem_url)
+  const imagem = imagens.length > 0 ? imagens[0] : null
 
   const statusNormalizado = anuncio.status
     ? anuncio.status.charAt(0).toUpperCase() + anuncio.status.slice(1).toLowerCase()
     : 'Ativo'
+
+  const statusCor =
+    statusNormalizado === 'Ativo'
+      ? 'bg-emerald-100 text-emerald-700'
+      : statusNormalizado === 'Vendido'
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-gray-100 text-gray-600'
 
   return (
     <div
@@ -43,9 +51,7 @@ const CardAnuncio = ({ anuncio, ehDono }) => {
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-            </svg>
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
           </div>
         )}
         {anuncio.destaque && (
@@ -54,29 +60,35 @@ const CardAnuncio = ({ anuncio, ehDono }) => {
           </div>
         )}
       </div>
+
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">
+          <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-1">
             {anuncio.titulo}
           </h3>
-          <span className={`shrink-0 px-2 py-0.5 text-[10px] font-medium rounded-full ${
-            statusNormalizado === 'Ativo' ? 'bg-emerald-100 text-emerald-700' :
-            statusNormalizado === 'Vendido' ? 'bg-amber-100 text-amber-700' :
-            'bg-gray-100 text-gray-600'
-          }`}>
+          <span className={`shrink-0 px-2 py-0.5 text-[10px] font-medium rounded-full ${statusCor}`}>
             {statusNormalizado}
           </span>
         </div>
+
         <p className="text-emerald-600 font-bold mt-1">
           {formatarPreco(anuncio.preco)}
         </p>
-        <p className="text-gray-500 text-xs mt-2 line-clamp-2">
+
+        <p className="text-gray-500 text-xs mt-1 line-clamp-1">
           {anuncio.descricao}
         </p>
-        <p className="text-[10px] text-gray-400 mt-2">
-          {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
-          {anuncio.data_expiracao && ` · Expira: ${new Date(anuncio.data_expiracao).toLocaleDateString('pt-BR')}`}
-        </p>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(`/anuncio/${anuncio.id}`)
+          }}
+          className="text-[11px] text-emerald-600 font-medium hover:text-emerald-700 mt-2 block text-left"
+        >
+          Clique para mais informações →
+        </button>
       </div>
     </div>
   )
@@ -150,7 +162,7 @@ const ListagemAnuncios = () => {
           Nenhum anúncio ativo
         </h3>
         <p className="text-gray-500 text-sm mb-6">
-          Seja o primeiro a anunciar algo no condomínio!
+          Seja o primeiro a anúnciar algo no condomínio!
         </p>
       </div>
     )
