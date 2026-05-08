@@ -13,7 +13,7 @@ const navItems = [
     )
   },
   {
-    to: '/servicos',
+    to: '/mapa',
     label: 'Serviços',
     emoji: '🛠️',
     icon: (
@@ -26,14 +26,6 @@ const navItems = [
     emoji: '👥',
     icon: (
       <path d="M18 18.72a9 9 0 003.74-.48 3 3 0 00-4.68-2.72M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm-9 3a2.25 2.25 0 11-4.5 0A2.25 2.25 0 016 9.75z" />
-    )
-  },
-  {
-    to: '/mapa',
-    label: 'Mapa',
-    emoji: '📍',
-    icon: (
-      <path d="M9 6v12m6-9v9m6-12v12l-6-3-6 3-6-3V6l6 3 6-3 6 3z" />
     )
   },
   {
@@ -276,7 +268,7 @@ const Header = () => {
               +
             </NavLink>
 
-            {navItems.slice(2, 5).map((item) => {
+            {navItems.slice(2, 4).map((item) => {
               const active = isActive(item.to)
 
               return (

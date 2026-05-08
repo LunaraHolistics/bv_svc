@@ -1,12 +1,11 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AuthProvider } from './lib/auth.jsx'
 
 import Header from './components/Header'
 
 import HomePage from './pages/HomePage'
 import MapaPage from './pages/MapaPage'
-import ServicosPage from './pages/ServicosPage'
 import IndicacoesPage from './pages/IndicacoesPage'
 import AnunciosPage from './pages/AnunciosPage'
 import AnuncioDetailPage from './pages/AnuncioDetailPage'
@@ -35,7 +34,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/mapa" element={<MapaPage />} />
-            <Route path="/servicos" element={<ServicosPage />} />
+            <Route path="/servicos" element={<Navigate to="/mapa" replace />} />
             <Route path="/indicacoes" element={<IndicacoesPage />} />
             <Route path="/anuncios" element={<AnunciosPage />} />
             <Route path="/anuncio/:id" element={<AnuncioDetailPage />} />
