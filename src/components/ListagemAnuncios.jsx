@@ -1,7 +1,7 @@
 // src/components/ListagemAnuncios.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supababase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 
 const formatarPreco = (valor) => {
@@ -20,71 +20,10 @@ const getImagens = (imagemUrl) => {
   }
 }
 
-const CarouselFotos = ({ imagens, titulo }) => {
-  if (imagens.length <= 1) return null
-
-  const [atual, setAtual] = useState(0)
-
-  const voltar = () => {
-    setAtual((prev) => (prev <= 0 ? imagens.length - 1 : prev - 1))
-  }
-
-  const avancar = () => {
-    setAtual((prev) => (prev >= imagens.length - 1 ? 0 : prev + 1))
-  }
-
-  if (!titulo) {
-    return (
-      <div className="flex items-center gap-2 mt-2">
-        <button
-          type="button"
-          onClick={voltar}
-          className="w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition cursor-pointer"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5 7.5" /></svg>
-        </button>
-        <span className="text-[11px] text-gray-500">
-          1/{imagens.length}
-        </span>
-        <button
-          type="button"
-          onClick={avancar}
-          className="w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition cursor-pointer"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5" /></svg>
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-2">
-      <button
-        type="button"
-        onClick={voltar}
-        className="w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition cursor-pointer"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5 7.5" /></svg>
-      </button>
-      <span className="text-[11px] text-gray-500">
-        {atual + 1}/{imagens.length}
-      </span>
-      <button
-        type="button"
-        onClick={avancar}
-        className="w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition cursor-pointer"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5" /></svg>
-      </button>
-    </div>
-  )
-}
-
 const CardAnuncio = ({ anuncio, ehDono }) => {
   const navigate = useNavigate()
   const imagens = getImagens(anuncio.imagem_url)
-  const totalImagens = imagens.length
-  const temMaisDeUma = totalImagens > 1
+  const imagem = imagens.length > 0 ? imagens[0] : null
 
   const statusNormalizado = anuncio.status
     ? anuncio.status.charAt(0).toUpperCase() + anuncio.status.slice(1).toLowerCase()
@@ -97,30 +36,31 @@ const CardAnuncio = ({ anuncio, ehDono }) => {
         ? 'bg-amber-100 text-amber-700'
         : 'bg-gray-100 text-gray-600'
 
-  const capaImagem = totalImagens > 0 ? imagens[0] : null
-
   return (
     <div
-      onClick={(e) => {
-        if (e.target.closest('button')) return
-        navigate(`/anuncio/${anuncio.id}`)
-      }}
+      onClick={() => navigate(`/anuncio/${anuncio.id}`)}
       className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative"
     >
-      {/* Capa */}
-      {capaImagem && (
-        <div className="relative w-full aspect-video bg-gray-100 overflow-hidden">
+      <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
+        {imagem ? (
           <img
-            src={capaImagem}
+            src={imagem}
             alt={anuncio.titulo}
-            className="w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
-        </div>
-      )}
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
+          </div>
+        )}
+        {anuncio.destaque && (
+          <div className="absolute top-2 left-2 px-2 py-0.5 bg-amber-400 text-amber-900 text-[10px] font-bold rounded-full shadow-sm">
+            ★ DESTAQUE
+          </div>
+        )}
+      </div>
 
-      {/* Conteúdo */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-1">
@@ -139,39 +79,16 @@ const CardAnuncio = ({ anuncio, ehDono }) => {
           {anuncio.descricao}
         </p>
 
-        {/* Carousel + ver mais */}
-        <div className="flex items-center justify-between mt-3">
-          {temMaisDeUma && <CarouselFotos imagens={imagens} titulo={anuncio.titulo} />}
-
-          {temMaisDeUma && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                navigate(`/anuncio/${anuncio.id}`)
-              }}
-              className="text-[11px] text-emerald-600 font-medium hover:text-emerald-700 mt-1 block text-right cursor-pointer"
-            >
-              Ver mais fotos →
-            </button>
-          )}
-
-          {ehDono && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                navigate(`/editar-anuncio/${anuncio.id}`)
-              }}
-              className="text-[11px] text-gray-400 hover:text-gray-600 mt-1 block text-right cursor-pointer"
-            >
-              ✏️ Editar
-            </button>
-          )}
-        </div>
-
-        <p className="text-[10px] text-gray-400 mt-2">
-          {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
-          {anuncio.data_expiracao && ` · Expira: ${new Date(anuncio.data_expiracao).toLocaleDateString('pt-BR')}`}
-        </p>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(`/anuncio/${anuncio.id}`)
+          }}
+          className="text-[11px] text-emerald-600 font-medium hover:text-emerald-700 mt-2 block text-left"
+        >
+          Clique para mais informações →
+        </button>
       </div>
     </div>
   )
