@@ -27,6 +27,7 @@ const PainelAdminPage = () => {
         const { data } = await supabase.from('prestadores_servico').select('*').order('nome')
         setServicos(data || [])
       } else if (abaAtiva === 'anuncios') {
+        // IMPORTANTE: Nome exato da tabela de anúncios
         const { data } = await supabase.from('anuncios_vendas').select('*').order('created_at', { ascending: false })
         setAnuncios(data || [])
       } else if (abaAtiva === 'indicacoes') {
@@ -34,7 +35,7 @@ const PainelAdminPage = () => {
         setIndicacoes(data || [])
       }
     } catch (error) {
-      console.error(error)
+      console.error("Erro ao buscar dados admin:", error)
     } finally {
       setLoading(false)
     }
@@ -91,20 +92,32 @@ const PainelAdminPage = () => {
       </div>
 
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
+        
+        {/* BARRA LATERAL COM 3 ABAS */}
         <div className="md:w-64 shrink-0">
           <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-2 sticky top-8">
-            <button onClick={() => setAbaAtiva('servicos')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${abaAtiva === 'servicos' ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-600'}`}>
+            <button 
+              onClick={() => setAbaAtiva('servicos')} 
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${abaAtiva === 'servicos' ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-600'}`}
+            >
               🛠️ Serviços ({servicos.length})
             </button>
-            <button onClick={() => setAbaAtiva('anuncios')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${abaAtiva === 'anuncios' ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-600'}`}>
+            <button 
+              onClick={() => setAbaAtiva('anuncios')} 
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${abaAtiva === 'anuncios' ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-600'}`}
+            >
               📢 Anúncios ({anuncios.length})
             </button>
-            <button onClick={() => setAbaAtiva('indicacoes')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${abaAtiva === 'indicacoes' ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-600'}`}>
+            <button 
+              onClick={() => setAbaAtiva('indicacoes')} 
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${abaAtiva === 'indicacoes' ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-gray-50 text-gray-600'}`}
+            >
               👥 Indicações ({indicacoes.length})
             </button>
           </div>
         </div>
 
+        {/* ÁREA DE CONTEÚDO */}
         <div className="flex-1 bg-white rounded-2xl border border-gray-200 p-6 min-h-[500px]">
           {loading ? (
             <p className="text-gray-400 text-center py-20">Carregando dados...</p>
@@ -117,7 +130,7 @@ const PainelAdminPage = () => {
                     <div key={ser.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{ser.nome}</p>
-                        <p className="text-xs text-gray-500 truncate">{ser.categoria || 'Sem categoria'} • ID: {ser.usuario_id?.substring(0,8)}...</p>
+                        <p className="text-xs text-gray-500 truncate">{ser.categoria || 'Sem categoria'} • ID: {ser.usuario_id?.substring(0,8) || 'Sem dono'}...</p>
                       </div>
                       <button onClick={() => deletarServico(ser.id)} className="ml-4 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer">EXCLUIR</button>
                     </div>
@@ -134,7 +147,7 @@ const PainelAdminPage = () => {
                     <div key={anun.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{anun.titulo}</p>
-                        <p className="text-xs text-gray-500 truncate">{anun.status || 'Ativo'} • ID: {anun.usuario_id?.substring(0,8)}...</p>
+                        <p className="text-xs text-gray-500 truncate">{anun.status || 'Ativo'} • ID: {anun.usuario_id?.substring(0,8) || 'Sem dono'}...</p>
                       </div>
                       <button onClick={() => deletarAnuncio(anun.id)} className="ml-4 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer">EXCLUIR</button>
                     </div>
@@ -151,7 +164,7 @@ const PainelAdminPage = () => {
                     <div key={ind.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{ind.nome_profissional}</p>
-                        <p className="text-xs text-gray-500 truncate">{ind.categoria || 'Sem categoria'} • ID: {ind.usuario_id?.substring(0,8)}...</p>
+                        <p className="text-xs text-gray-500 truncate">{ind.categoria || 'Sem categoria'} • ID: {ind.usuario_id?.substring(0,8) || 'Sem dono'}...</p>
                       </div>
                       <button onClick={() => deletarIndicacao(ind.id)} className="ml-4 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition cursor-pointer">EXCLUIR</button>
                     </div>

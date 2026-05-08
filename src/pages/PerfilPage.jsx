@@ -21,7 +21,6 @@ const PerfilPage = () => {
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
   
-  // NOVO: Estado para estatísticas do usuário
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
 
   const [form, setForm] = useState({
@@ -42,9 +41,7 @@ const PerfilPage = () => {
     servicos_oferecidos: ''
   })
 
-  const ehPrestador =
-    form.tipo_pessoa === 'prestador' ||
-    form.tipo_pessoa === 'ambos'
+  const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -53,16 +50,18 @@ const PerfilPage = () => {
   }, [authLoading, user, navigate])
 
   useEffect(() => {
-    if (user) buscarEstatisticas()
+    if (user) {
+      buscarEstatisticas()
+    }
   }, [user])
 
-  // NOVO: Função para buscar contagem no banco
   const buscarEstatisticas = async () => {
     try {
+      // Tenta buscar usando 'usuario_id' OU 'user_id' (depende de como sua tabela foi criada)
       const [resAnuncios, resServicos, resIndicacoes] = await Promise.all([
-        supabase.from('anuncios_vendas').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id),
-        supabase.from('prestadores_servico').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id),
-        supabase.from('indicacoes').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id)
+        supabase.from('anuncios_vendas').select('*', { count: 'exact', head: true }).or(`usuario_id.eq.${user.id},user_id.eq.${user.id}`),
+        supabase.from('prestadores_servico').select('*', { count: 'exact', head: true }).or(`usuario_id.eq.${user.id},user_id.eq.${user.id}`),
+        supabase.from('indicacoes').select('*', { count: 'exact', head: true }).or(`usuario_id.eq.${user.id},user_id.eq.${user.id}`)
       ])
       
       setStats({
@@ -92,8 +91,7 @@ const PerfilPage = () => {
         instagram_url: perfil.instagram_url || '',
         facebook_url: perfil.facebook_url || '',
         site_url: perfil.site_url || '',
-        servicos_oferecidos:
-          (perfil.servicos_oferecidos || []).join(', ')
+        servicos_oferecidos: (perfil.servicos_oferecidos || []).join(', ')
       })
 
       setAvatarPreview(perfil.avatar_url || null)
@@ -104,15 +102,9 @@ const PerfilPage = () => {
     const { name, value } = e.target
 
     if (name === 'whatsapp' || name === 'telefone2' || name === 'telefone') {
-      setForm((prev) => ({
-        ...prev,
-        [name]: formatarFone(value)
-      }))
+      setForm((prev) => ({ ...prev, [name]: formatarFone(value) }))
     } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]: value
-      }))
+      setForm((prev) => ({ ...prev, [name]: value }))
     }
 
     setError(null)
@@ -169,19 +161,11 @@ const PerfilPage = () => {
         const ext = avatarFile.name.split('.').pop()
         const filePath = `avatars/${user.id}.${ext}`
 
-        const { error: uploadError } =
-          await supabase.storage
-            .from('avatars')
-            .upload(filePath, avatarFile, { upsert: true })
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile, { upsert: true })
 
         if (uploadError) throw new Error(`Upload falhou: ${uploadError.message}`)
 
-        const {
-          data: { publicUrl }
-        } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath)
-
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath)
         avatarUrl = publicUrl
       }
 
@@ -200,12 +184,7 @@ const PerfilPage = () => {
         instagram_url: form.instagram_url.trim() || null,
         facebook_url: form.facebook_url.trim() || null,
         site_url: form.site_url.trim() || null,
-        servicos_oferecidos: form.servicos_oferecidos
-          ? form.servicos_oferecidos
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-          : null,
+        servicos_oferecidos: form.servicos_oferecidos ? form.servicos_oferecidos.split(',').map((s) => s.trim()).filter(Boolean) : null,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
       }
@@ -213,15 +192,10 @@ const PerfilPage = () => {
       let dbError
 
       if (perfil) {
-        const result = await supabase
-          .from('perfis')
-          .update(dados)
-          .eq('id', user.id)
+        const result = await supabase.from('perfis').update(dados).eq('id', user.id)
         dbError = result.error
       } else {
-        const result = await supabase
-          .from('perfis')
-          .insert({ ...dados, id: user.id })
+        const result = await supabase.from('perfis').insert({ ...dados, id: user.id })
         dbError = result.error
       }
 
@@ -246,8 +220,7 @@ const PerfilPage = () => {
     }
   }
 
-  const inputClass =
-    'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all'
+  const inputClass = 'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all'
 
   if (authLoading) {
     return (
@@ -270,19 +243,9 @@ const PerfilPage = () => {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <span className="text-xs bg-white/10 px-3 py-1 rounded-full">
-              Área do morador
-            </span>
-
-            <h1 className="text-3xl font-bold mt-4">
-              Seu perfil no Bella Vittà
-            </h1>
-
-            <p className="text-white/80 mt-2 max-w-xl">
-              Atualize seus dados pessoais, informações
-              comerciais e personalize como você aparece
-              para os moradores.
-            </p>
+            <span className="text-xs bg-white/10 px-3 py-1 rounded-full">Área do morador</span>
+            <h1 className="text-3xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
+            <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais, informações comerciais e personalize como você aparece para os moradores.</p>
           </div>
 
           <button
@@ -294,7 +257,7 @@ const PerfilPage = () => {
         </div>
       </div>
 
-      {/* NOVO: CARD DE ESTATÍSTICAS DO USUÁRIO */}
+      {/* CARD DE ESTATÍSTICAS */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
           <span className="text-3xl mb-2">📢</span>
@@ -325,130 +288,48 @@ const PerfilPage = () => {
         </div>
       )}
 
-      <form
-        onSubmit={handleSalvar}
-        className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-8"
-      >
-        {/* Avatar */}
+      <form onSubmit={handleSalvar} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-8">
+        
         <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="cursor-pointer"
-          >
+          <div onClick={() => fileInputRef.current?.click()} className="cursor-pointer">
             {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt="avatar"
-                className="w-24 h-24 rounded-3xl object-cover shadow-md"
-              />
+              <img src={avatarPreview} alt="avatar" className="w-24 h-24 rounded-3xl object-cover shadow-md" />
             ) : (
-              <div className="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center text-4xl">
-                👤
-              </div>
+              <div className="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center text-4xl">👤</div>
             )}
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleAvatarChange}
-          />
+          <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
 
           <div>
-            <h3 className="font-semibold text-gray-900">
-              Foto de perfil
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Clique na foto para alterar sua imagem
-            </p>
+            <h3 className="font-semibold text-gray-900">Foto de perfil</h3>
+            <p className="text-sm text-gray-500 mt-1">Clique na foto para alterar sua imagem</p>
           </div>
         </div>
 
-        {/* Dados pessoais */}
         <div>
-          <h2 className="text-xl font-bold mb-5">
-            Dados pessoais
-          </h2>
-
+          <h2 className="text-xl font-bold mb-5">Dados pessoais</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            <input
-              name="nome_completo"
-              value={form.nome_completo}
-              onChange={handleChange}
-              placeholder="Nome completo"
-              className={inputClass}
-            />
+            <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo" className={inputClass} />
+            <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição" className={inputClass} />
 
-            <input
-              name="nome_exibicao"
-              value={form.nome_exibicao}
-              onChange={handleChange}
-              placeholder="Nome de exibição"
-              className={inputClass}
-            />
-
-            <select
-              name="fase"
-              value={form.fase}
-              onChange={handleChange}
-              required
-              className={inputClass}
-            >
+            <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
               <option value="">Selecione sua fase *</option>
               <option value="Fase 1">Fase 1</option>
               <option value="Fase 2">Fase 2</option>
             </select>
 
-            <input
-              name="whatsapp"
-              value={form.whatsapp}
-              onChange={handleChange}
-              placeholder="WhatsApp (00) 00000-0000"
-              autoComplete="tel"
-              className={inputClass}
-            />
-
-            <input
-              name="telefone2"
-              value={form.telefone2}
-              onChange={handleChange}
-              placeholder="Telefone adicional (opcional)"
-              autoComplete="tel"
-              className={inputClass}
-            />
-
-            <input
-              name="quadra"
-              value={form.quadra}
-              onChange={handleChange}
-              placeholder="Quadra"
-              className={inputClass}
-            />
-
-            <input
-              name="lote"
-              value={form.lote}
-              onChange={handleChange}
-              placeholder="Lote"
-              className={inputClass}
-            />
+            <input name="whatsapp" value={form.whatsapp} onChange={handleChange} placeholder="WhatsApp (00) 00000-0000" autoComplete="tel" className={inputClass} />
+            <input name="telefone2" value={form.telefone2} onChange={handleChange} placeholder="Telefone adicional (opcional)" autoComplete="tel" className={inputClass} />
+            <input name="quadra" value={form.quadra} onChange={handleChange} placeholder="Quadra" className={inputClass} />
+            <input name="lote" value={form.lote} onChange={handleChange} placeholder="Lote" className={inputClass} />
           </div>
         </div>
 
-        {/* Perfil comercial */}
         <div>
-          <h2 className="text-xl font-bold mb-5">
-            Perfil comercial
-          </h2>
+          <h2 className="text-xl font-bold mb-5">Perfil comercial</h2>
 
-          <select
-            name="tipo_pessoa"
-            value={form.tipo_pessoa}
-            onChange={handleChange}
-            className={inputClass}
-          >
+          <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
             <option value="morador">Morador</option>
             <option value="prestador">Prestador</option>
             <option value="ambos">Ambos</option>
@@ -456,66 +337,17 @@ const PerfilPage = () => {
 
           {ehPrestador && (
             <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <input
-                name="nome_fantasia"
-                value={form.nome_fantasia}
-                onChange={handleChange}
-                placeholder="Nome fantasia"
-                className={inputClass}
-              />
-
-              <input
-                name="telefone"
-                value={form.telefone}
-                onChange={handleChange}
-                placeholder="Telefone comercial (opcional)"
-                autoComplete="tel"
-                className={inputClass}
-              />
-
-              <input
-                name="servicos_oferecidos"
-                value={form.servicos_oferecidos}
-                onChange={handleChange}
-                placeholder="Serviços oferecidos"
-                className={inputClass}
-              />
-
-              <input
-                name="instagram_url"
-                value={form.instagram_url}
-                onChange={handleChange}
-                placeholder="Instagram"
-                className={inputClass}
-              />
-
-              <input
-                name="facebook_url"
-                value={form.facebook_url}
-                onChange={handleChange}
-                placeholder="Facebook"
-                className={inputClass}
-              />
-
-              <input
-                name="site_url"
-                value={form.site_url}
-                onChange={handleChange}
-                placeholder="Website"
-                className={inputClass}
-              />
+              <input name="nome_fantasia" value={form.nome_fantasia} onChange={handleChange} placeholder="Nome fantasia" className={inputClass} />
+              <input name="telefone" value={form.telefone} onChange={handleChange} placeholder="Telefone comercial (opcional)" autoComplete="tel" className={inputClass} />
+              <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleChange} placeholder="Serviços oferecidos" className={inputClass} />
+              <input name="instagram_url" value={form.instagram_url} onChange={handleChange} placeholder="Instagram" className={inputClass} />
+              <input name="facebook_url" value={form.facebook_url} onChange={handleChange} placeholder="Facebook" className={inputClass} />
+              <input name="site_url" value={form.site_url} onChange={handleChange} placeholder="Website" className={inputClass} />
             </div>
           )}
 
           {ehPrestador && (
-            <textarea
-              name="descricao_comercial"
-              value={form.descricao_comercial}
-              onChange={handleChange}
-              placeholder="Descreva seu serviço"
-              rows="4"
-              className={`${inputClass} mt-4`}
-            />
+            <textarea name="descricao_comercial" value={form.descricao_comercial} onChange={handleChange} placeholder="Descreva seu serviço" rows="4" className={`${inputClass} mt-4`} />
           )}
         </div>
 
