@@ -18,13 +18,12 @@ import PainelAdminPage from './pages/PainelAdminPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 // ⚠️ COLE AQUI O SEU ID DE USUÁRIO MASTER DO SUPABASE
-const MASTER_USER_ID = 'COLE_SEU_USER_ID_AQUI'
+const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
-// Componente para proteger a rota de Administrador
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth()
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando permissões...</div>
   if (!user || user.id !== MASTER_USER_ID) return <Navigate to="/" replace />
 
   return children
@@ -58,7 +57,7 @@ function AppContent() {
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             
-            {/* ROTA SECRETA DO MASTER ADMIN */}
+            {/* ATENÇÃO: ESTÁ ROTA PRECISA FICAR ANTES DO path="*" */}
             <Route path="/admin" element={<AdminRoute><PainelAdminPage /></AdminRoute>} />
             
             <Route path="*" element={<NotFoundPage />} />
