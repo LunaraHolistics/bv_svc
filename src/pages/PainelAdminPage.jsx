@@ -27,7 +27,6 @@ const PainelAdminPage = () => {
         const { data } = await supabase.from('prestadores_servico').select('*').order('nome')
         setServicos(data || [])
       } else if (abaAtiva === 'anuncios') {
-        // CORRIGIDO: O nome real da tabela é anuncios_vendas
         const { data } = await supabase.from('anuncios_vendas').select('*').order('created_at', { ascending: false })
         setAnuncios(data || [])
       } else if (abaAtiva === 'indicacoes') {
@@ -44,19 +43,31 @@ const PainelAdminPage = () => {
   const deletarServico = async (id) => {
     if (!window.confirm('Tem certeza que deseja EXCLUIR este serviço?')) return
     const { error } = await supabase.from('prestadores_servico').delete().eq('id', id)
-    if (error) alert('Erro: ' + error.message) else buscarDados()
+    if (error) {
+      alert('Erro: ' + error.message)
+    } else {
+      buscarDados()
+    }
   }
 
   const deletarAnuncio = async (id) => {
     if (!window.confirm('Tem certeza que deseja EXCLUIR este anúncio?')) return
     const { error } = await supabase.from('anuncios_vendas').delete().eq('id', id)
-    if (error) alert('Erro: ' + error.message) else buscarDados()
+    if (error) {
+      alert('Erro: ' + error.message)
+    } else {
+      buscarDados()
+    }
   }
 
   const deletarIndicacao = async (id) => {
     if (!window.confirm('Tem certeza que deseja EXCLUIR esta indicação?')) return
     const { error } = await supabase.from('indicacoes').delete().eq('id', id)
-    if (error) alert('Erro: ' + error.message) else buscarDados()
+    if (error) {
+      alert('Erro: ' + error.message)
+    } else {
+      buscarDados()
+    }
   }
 
   const handleLogout = async () => {
