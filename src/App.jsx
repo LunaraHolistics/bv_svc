@@ -1,6 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { AuthProvider } from './lib/auth.jsx'
+import { AuthProvider, useAuth } from './lib/auth.jsx'
 
 import Header from './components/Header'
 
@@ -14,11 +14,25 @@ import EditarAnuncioPage from './pages/EditarAnuncioPage'
 import LoginPage from './pages/LoginPage'
 import PerfilPage from './pages/PerfilPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import PainelAdminPage from './pages/PainelAdminPage'
 import NotFoundPage from './pages/NotFoundPage'
+
+// ⚠️ COLE AQUI O SEU ID DE USUÁRIO MASTER DO SUPABASE
+const MASTER_USER_ID = 'COLE_SEU_USER_ID_AQUI'
+
+// Componente para proteger a rota de Administrador
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth()
+
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
+  if (!user || user.id !== MASTER_USER_ID) return <Navigate to="/" replace />
+
+  return children
+}
 
 function AppContent() {
   const location = useLocation()
-  const hideChrome = ['/login', '/reset-password'].includes(location.pathname)
+  const hideChrome = ['/login', '/reset-password', '/admin'].includes(location.pathname)
 
   return (
     <div className="min-h-screen bg-[#f6f8f7] flex flex-col relative overflow-hidden">
@@ -43,6 +57,10 @@ function AppContent() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            
+            {/* ROTA SECRETA DO MASTER ADMIN */}
+            <Route path="/admin" element={<AdminRoute><PainelAdminPage /></AdminRoute>} />
+            
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
@@ -51,12 +69,8 @@ function AppContent() {
       {!hideChrome && (
         <footer className="relative z-10 mt-10 border-t border-white/50 bg-white/70 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-6 py-6 text-center">
-            <p className="text-sm text-gray-500">
-              BV Service • Condomínio Bella Vittà
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Classificados, serviços e conexões entre moradores
-            </p>
+            <p className="text-sm text-gray-500">BV Service • Condomínio Bella Vittà</p>
+            <p className="text-xs text-gray-400 mt-1">Classificados, serviços e conexões entre moradores</p>
           </div>
         </footer>
       )}
