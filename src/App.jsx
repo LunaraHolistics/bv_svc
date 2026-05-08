@@ -16,24 +16,21 @@ import PerfilPage from './pages/PerfilPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import NotFoundPage from './pages/NotFoundPage'
 
-function AppLayout() {
+function AppContent() {
   const location = useLocation()
-  const authPages = ['/login', '/reset-password']
-  const isAuthPage = authPages.includes(location.pathname)
+  const hideChrome = ['/login', '/reset-password'].includes(location.pathname)
 
   return (
     <div className="min-h-screen bg-[#f6f8f7] flex flex-col relative overflow-hidden">
-
-      {/* background decorativo */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-150px] right-[-120px] w-[420px] h-[420px] bg-emerald-200/30 rounded-full blur-3xl" />
         <div className="absolute bottom-[10%] left-[-150px] w-[350px] h-[350px] bg-teal-200/20 rounded-full blur-3xl" />
       </div>
 
-      {!isAuthPage && <Header />}
+      {!hideChrome && <Header />}
 
       <main className="flex-1 relative z-10">
-        <div className={`${isAuthPage ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10'}`}>
+        <div className={hideChrome ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10'}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/mapa" element={<MapaPage />} />
@@ -50,7 +47,7 @@ function AppLayout() {
         </div>
       </main>
 
-      {!isAuthPage && (
+      {!hideChrome && (
         <footer className="relative z-10 mt-10 border-t border-white/50 bg-white/70 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-6 py-6 text-center">
             <p className="text-sm text-gray-500">
@@ -70,7 +67,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppLayout />
+        <AppContent />
       </BrowserRouter>
     </AuthProvider>
   )

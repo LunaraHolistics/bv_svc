@@ -48,6 +48,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] Timeout de segurança — liberando loading')
+        setLoading(false)
+      }
+    }, 5000)
+
     const carregarSessao = async () => {
       try {
         const {
@@ -71,6 +78,7 @@ export function AuthProvider({ children }) {
         setPerfil(null)
       } finally {
         if (mounted) {
+          clearTimeout(safetyTimeout)
           setLoading(false)
         }
       }
@@ -100,9 +108,10 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false
+      clearTimeout(safetyTimeout)
       subscription?.unsubscribe()
     }
-  }, [buscarPerfil])
+  }, [buscarPerfil, loading])
 
   const cadastrar = async (
     email,

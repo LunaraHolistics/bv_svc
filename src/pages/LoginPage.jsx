@@ -8,7 +8,7 @@ const IMAGEM_FAIXADA =
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const { cadastrar, login, recuperarSenha, user } = useAuth()
+  const { cadastrar, login, recuperarSenha, user, loading: authLoading } = useAuth()
 
   const [aba, setAba] = useState('login')
   const [loading, setLoading] = useState(false)
@@ -25,13 +25,14 @@ const LoginPage = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => setPronto(true), 120)
-
-    if (user) {
-      navigate('/')
-    }
-
     return () => clearTimeout(timer)
-  }, [user, navigate])
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/', { replace: true })
+    }
+  }, [authLoading, user, navigate])
 
   useEffect(() => {
     setError(null)
@@ -88,7 +89,7 @@ const LoginPage = () => {
     try {
       if (aba === 'login') {
         await login(email, senha)
-        navigate('/')
+        navigate('/', { replace: true })
       }
 
       if (aba === 'cadastro') {
