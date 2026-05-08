@@ -11,6 +11,7 @@ import AnunciosPage from './pages/AnunciosPage'
 import AnuncioDetailPage from './pages/AnuncioDetailPage'
 import NovoAnuncioPage from './pages/NovoAnuncioPage'
 import EditarAnuncioPage from './pages/EditarAnuncioPage'
+import EditarServicoPage from './pages/EditarServicoPage'
 import LoginPage from './pages/LoginPage'
 import PerfilPage from './pages/PerfilPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -20,7 +21,6 @@ import NotFoundPage from './pages/NotFoundPage'
 
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
-// Rota exclusiva para o DESENVOLVEDOR (Você)
 const MasterRoute = ({ children }) => {
   const { user, loading } = useAuth()
   if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
@@ -28,18 +28,12 @@ const MasterRoute = ({ children }) => {
   return children
 }
 
-// Rota para o ADMIN DO CONDOMÍNIO (Síndicos) E para o DESENVOLVEDOR
 const AdmBVRoute = ({ children }) => {
   const { user, perfil, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando permissões...</div>
-  
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
   const isMaster = user?.id === MASTER_USER_ID
   const isAdmCondominio = perfil?.is_admin_condominio === true
-
-  if (!user || (!isMaster && !isAdmCondominio)) {
-    return <Navigate to="/" replace />
-  }
-
+  if (!user || (!isMaster && !isAdmCondominio)) return <Navigate to="/" replace />
   return children
 }
 
@@ -67,14 +61,12 @@ function AppContent() {
             <Route path="/anuncio/:id" element={<AnuncioDetailPage />} />
             <Route path="/novo-anuncio" element={<NovoAnuncioPage />} />
             <Route path="/editar-anuncio/:id" element={<EditarAnuncioPage />} />
+            <Route path="/editar-servico/:id" element={<EditarServicoPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            
-            {/* Rotas Protegidas */}
             <Route path="/admin" element={<MasterRoute><PainelAdminPage /></MasterRoute>} />
             <Route path="/adm_bv" element={<AdmBVRoute><AdmBVPage /></AdmBVRoute>} />
-            
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>

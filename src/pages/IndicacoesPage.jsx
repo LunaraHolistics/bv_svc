@@ -1,9 +1,10 @@
-// src/pages/IndicacoesPage.jsx
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import FormIndicacao from '../components/FormIndicacao'
+
+const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
 const formatarWhatsapp = (numero) => {
   if (!numero) return null
@@ -11,8 +12,16 @@ const formatarWhatsapp = (numero) => {
   return limpo.length >= 10 ? limpo : null
 }
 
-const CardIndicacao = ({ indicacao }) => {
+const CardIndicacao = ({ indicacao, podeGerenciar, onDelete }) => {
   const whatsapp = formatarWhatsapp(indicacao.contato_whatsapp)
+
+  const handleDelete = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (window.confirm('Tem certeza que deseja EXCLUIR esta indicação?')) {
+      onDelete(indicacao.id)
+    }
+  }
 
   return (
     <div className="group bg-white rounded-3xl border border-gray-200 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -37,11 +46,13 @@ const CardIndicacao = ({ indicacao }) => {
             </div>
           )}
         </div>
+        
         {indicacao.descricao && (
           <p className="text-gray-500 text-sm leading-relaxed mt-4 line-clamp-3">
             {indicacao.descricao}
           </p>
         )}
+        
         {Array.isArray(indicacao.servicos) && indicacao.servicos.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {indicacao.servicos.map((servico, index) => (
@@ -51,6 +62,7 @@ const CardIndicacao = ({ indicacao }) => {
             ))}
           </div>
         )}
+        
         {indicacao.condicoes_moradores && (
           <div className="mt-5 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl">
             <p className="text-sm text-emerald-700 font-medium">
@@ -58,12 +70,14 @@ const CardIndicacao = ({ indicacao }) => {
             </p>
           </div>
         )}
+        
         {indicacao.endereco && (
           <p className="text-xs text-gray-400 mt-4">
             📍 {indicacao.endereco}
           </p>
         )}
       </div>
+
       <div className="border-t border-gray-100 p-4 flex flex-wrap gap-2">
         {whatsapp && (
           <a
@@ -99,6 +113,16 @@ const CardIndicacao = ({ indicacao }) => {
             Site
           </a>
         )}
+
+        {/* BOTÃO EXCLUIR - SÓ APARECE PRO DONO OU MASTER */}
+        {podeGerenciar && (
+          <button 
+            onClick={handleDelete} 
+            className="ml-auto px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition cursor-pointer border border-red-100"
+          >
+            🗑️ Excluir
+          </button>
+        )}
       </div>
     </div>
   )
@@ -107,6 +131,7 @@ const CardIndicacao = ({ indicacao }) => {
 const IndicacoesPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isMaster = user?.id === MASTER_USER_ID
 
   const [indicacoes, setIndicacoes] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -119,6 +144,15 @@ const IndicacoesPage = () => {
   useEffect(() => {
     buscarDados()
   }, [])
+
+  const handleDeleteIndicacao = async (id) => {
+    const { error } = await supabase.from('indicacoes').delete().eq('id', id)
+    if (!error) {
+      setIndicacoes((prev) => prev.filter((ind) => ind.id !== id))
+    } else {
+      alert('Erro ao excluir: ' + error.message)
+    }
+  }
 
   const buscarDados = async () => {
     setLoading(true)
@@ -187,7 +221,6 @@ const IndicacoesPage = () => {
 
   return (
     <div className="space-y-8">
-
       <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-8 md:p-10">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl" />
@@ -266,7 +299,12 @@ const IndicacoesPage = () => {
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filtradas.map((item) => (
-            <CardIndicacao key={item.id} indicacao={item} />
+            <CardIndicacao 
+              key={item.id} 
+              indicacao={item} 
+              podeGerenciar={user ? (item.usuario_id === user.id || isMaster) : false}
+              onDelete={handleDeleteIndicacao}
+            />
           ))}
         </div>
       )}

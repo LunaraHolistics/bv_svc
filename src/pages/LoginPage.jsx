@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const IMAGEM_FAIXADA =
-  'https://z-cdn-media.chatglm.cn/files/87ba6203-a570-45ba-acba-2cf86cfb2e0c.png?auth_key=1878080770-c1bb91e3034146819b9b3eb0916e73a3-0-605f00e2b1c8fe66e1d5cf4f69bacfbd'
+  'https://kdigpnzpaabuxdvgjtcz.supabase.co/storage/v1/object/public/anuncios/Fachada2.jpeg'
 
 const LoginPage = () => {
   const navigate = useNavigate()
@@ -45,14 +45,13 @@ const LoginPage = () => {
     setConfirmarSenha('')
   }
 
-  // Função para copiar o PIX
   const copiarPix = () => {
     navigator.clipboard.writeText('lunara_terapias@jim.com')
       .then(() => {
         setPixCopiado(true)
         setTimeout(() => setPixCopiado(false), 2500)
       })
-      .catch(err => alert('Falha ao copiar. Copie manualmente: lunara_terapias@jim.com'))
+      .catch(() => alert('Falha ao copiar. Copie manualmente: lunara_terapias@jim.com'))
   }
 
   const validar = () => {
@@ -64,11 +63,9 @@ const LoginPage = () => {
       if (!nome.trim()) {
         return 'Informe seu nome completo.'
       }
-
       if (senha.length < 6) {
         return 'A senha precisa ter no mínimo 6 caracteres.'
       }
-
       if (senha !== confirmarSenha) {
         return 'As senhas não coincidem.'
       }
@@ -105,11 +102,7 @@ const LoginPage = () => {
 
       if (aba === 'cadastro') {
         await cadastrar(email, senha, nome)
-
-        setSucesso(
-          'Conta criada com sucesso. Verifique seu e-mail para confirmar o acesso.'
-        )
-
+        setSucesso('Conta criada com sucesso. Verifique seu e-mail para confirmar o acesso.')
         setAba('login')
         resetCampos()
         setNome('')
@@ -117,11 +110,7 @@ const LoginPage = () => {
 
       if (aba === 'recuperar') {
         await recuperarSenha(email)
-
-        setSucesso(
-          'Enviamos um link de recuperação para seu e-mail.'
-        )
-
+        setSucesso('Enviamos um link de recuperação para seu e-mail.')
         setAba('login')
         resetCampos()
       }
@@ -145,9 +134,7 @@ const LoginPage = () => {
   return (
     <div
       className={`relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-4 py-8 transition-all duration-700 ${
-        pronto
-          ? 'opacity-100 translate-y-0'
-          : 'opacity-0 translate-y-6'
+        pronto ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
       }`}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50" />
@@ -155,14 +142,14 @@ const LoginPage = () => {
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-300/20 blur-3xl rounded-full" />
 
       <div className="relative z-10 w-full max-w-6xl bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.08)] flex flex-col lg:flex-row mb-8">
-
+        
+        {/* LADO ESQUERDO - IMAGEM */}
         <div className="hidden lg:block lg:w-[45%] relative min-h-[620px]">
           <img
             src={IMAGEM_FAIXADA}
             alt="Bella Vittà"
             className="absolute inset-0 w-full h-full object-cover"
           />
-
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
@@ -171,33 +158,22 @@ const LoginPage = () => {
               <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white font-bold text-lg mb-8">
                 BV
               </div>
-
               <h2 className="text-white text-4xl font-bold leading-tight">
                 Sua comunidade em um só lugar
               </h2>
-
               <p className="text-white/70 text-sm mt-4 leading-relaxed max-w-sm">
-                Marketplace, prestadores, indicações e oportunidades
-                reais entre moradores.
+                Marketplace, prestadores, indicações e oportunidades reais entre moradores.
               </p>
             </div>
-
             <div className="flex flex-wrap gap-2">
-              <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs">
-                anúncios locais
-              </span>
-
-              <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs">
-                serviços confiáveis
-              </span>
-
-              <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs">
-                vizinhos conectados
-              </span>
+              <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs">anúncios locais</span>
+              <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs">serviços confiáveis</span>
+              <span className="px-3 py-1 rounded-full bg-white/10 text-white text-xs">vizinhos conectados</span>
             </div>
           </div>
         </div>
 
+        {/* LADO DIREITO - FORMULÁRIO */}
         <div className="flex-1 p-6 sm:p-10 lg:p-12">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">
@@ -205,14 +181,10 @@ const LoginPage = () => {
               {aba === 'cadastro' && 'Criar conta'}
               {aba === 'recuperar' && 'Recuperar acesso'}
             </h1>
-
             <p className="text-sm text-gray-500 mt-2">
-              {aba === 'login' &&
-                'Entre para acessar sua comunidade'}
-              {aba === 'cadastro' &&
-                'Crie sua conta gratuitamente'}
-              {aba === 'recuperar' &&
-                'Enviaremos um link para redefinir sua senha'}
+              {aba === 'login' && 'Entre para acessar sua comunidade'}
+              {aba === 'cadastro' && 'Crie sua conta gratuitamente'}
+              {aba === 'recuperar' && 'Enviaremos um link para redefinir sua senha'}
             </p>
           </div>
 
@@ -221,23 +193,14 @@ const LoginPage = () => {
               <button
                 type="button"
                 onClick={() => setAba('login')}
-                className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
-                  aba === 'login'
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-500'
-                }`}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${aba === 'login' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
               >
                 Entrar
               </button>
-
               <button
                 type="button"
                 onClick={() => setAba('cadastro')}
-                className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
-                  aba === 'cadastro'
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-500'
-                }`}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${aba === 'cadastro' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
               >
                 Criar conta
               </button>
@@ -257,7 +220,6 @@ const LoginPage = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-
             {aba === 'cadastro' && (
               <input
                 type="text"
@@ -281,7 +243,7 @@ const LoginPage = () => {
             {aba !== 'recuperar' && (
               <div className="relative">
                 <input
-                  type="password"
+                  type={mostrarSenha ? 'text' : 'password'}
                   placeholder="Sua senha"
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
@@ -291,7 +253,7 @@ const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setMostrarSenha(!mostrarSenha)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer"
                 >
                   {mostrarSenha ? '🙈' : '👁️'}
                 </button>
@@ -301,7 +263,7 @@ const LoginPage = () => {
             {aba === 'cadastro' && (
               <div className="relative">
                 <input
-                  type="password"
+                  type={mostrarConfirmar ? 'text' : 'password'}
                   placeholder="Confirmar senha"
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
@@ -311,7 +273,7 @@ const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setMostrarConfirmar(!mostrarConfirmar)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer"
                 >
                   {mostrarConfirmar ? '🙈' : '👁️'}
                 </button>
@@ -323,7 +285,7 @@ const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setAba('recuperar')}
-                  className="text-sm text-emerald-600 hover:text-emerald-700"
+                  className="text-sm text-emerald-600 hover:text-emerald-700 cursor-pointer"
                 >
                   Esqueceu sua senha?
                 </button>
@@ -334,7 +296,7 @@ const LoginPage = () => {
               <button
                 type="button"
                 onClick={() => setAba('login')}
-                className="text-sm text-gray-500 hover:text-gray-800"
+                className="text-sm text-gray-500 hover:text-gray-800 cursor-pointer"
               >
                 ← Voltar ao login
               </button>
@@ -363,7 +325,7 @@ const LoginPage = () => {
           <div className="mt-6 text-center">
             <button
               onClick={() => navigate('/')}
-              className="text-sm text-gray-500 hover:text-gray-800"
+              className="text-sm text-gray-500 hover:text-gray-800 cursor-pointer"
             >
               Explorar sem login →
             </button>
@@ -375,8 +337,8 @@ const LoginPage = () => {
       <div className="relative z-10 w-full max-w-lg bg-white/60 backdrop-blur-sm border border-gray-200 rounded-2xl p-5 text-center">
         <p className="text-sm font-bold text-gray-700 mb-1">☕ Combustível para o Código</p>
         <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-          Sabia que o BV Service é movido a café e persistência?<br/>
-          Se o app facilitou sua vida, que tal retribuir com um cafezinho?<br/>
+          Sabia que o BV Service é movido a café e persistência?<br />
+          Se o app facilitou sua vida, que tal retribuir com um cafezinho?<br />
           <span className="font-medium text-gray-700">Você ajuda a manter o servidor ligado e o dev acordado! 🚀</span>
         </p>
         <button

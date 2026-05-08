@@ -1,4 +1,3 @@
-// src/pages/PerfilPage.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -21,6 +20,9 @@ const PerfilPage = () => {
   const [error, setError] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
+  
+  // NOVO: Estado para estatísticas do usuário
+  const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
 
   const [form, setForm] = useState({
     nome_completo: '',
@@ -49,6 +51,29 @@ const PerfilPage = () => {
       navigate('/login', { replace: true })
     }
   }, [authLoading, user, navigate])
+
+  useEffect(() => {
+    if (user) buscarEstatisticas()
+  }, [user])
+
+  // NOVO: Função para buscar contagem no banco
+  const buscarEstatisticas = async () => {
+    try {
+      const [resAnuncios, resServicos, resIndicacoes] = await Promise.all([
+        supabase.from('anuncios_vendas').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id),
+        supabase.from('prestadores_servico').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id),
+        supabase.from('indicacoes').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id)
+      ])
+      
+      setStats({
+        anuncios: resAnuncios.count || 0,
+        servicos: resServicos.count || 0,
+        indicacoes: resIndicacoes.count || 0
+      })
+    } catch (error) {
+      console.error('Erro ao buscar stats:', error)
+    }
+  }
 
   useEffect(() => {
     if (perfil) {
@@ -266,6 +291,25 @@ const PerfilPage = () => {
           >
             Voltar ao início
           </button>
+        </div>
+      </div>
+
+      {/* NOVO: CARD DE ESTATÍSTICAS DO USUÁRIO */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+          <span className="text-3xl mb-2">📢</span>
+          <p className="text-2xl font-bold text-gray-900">{stats.anuncios}</p>
+          <p className="text-xs text-gray-500 mt-1">Meus Anúncios</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+          <span className="text-3xl mb-2">🛠️</span>
+          <p className="text-2xl font-bold text-gray-900">{stats.servicos}</p>
+          <p className="text-xs text-gray-500 mt-1">Meus Serviços</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+          <span className="text-3xl mb-2">🤝</span>
+          <p className="text-2xl font-bold text-gray-900">{stats.indicacoes}</p>
+          <p className="text-xs text-gray-500 mt-1">Minhas Indicações</p>
         </div>
       </div>
 
