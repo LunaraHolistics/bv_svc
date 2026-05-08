@@ -4,6 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 
+const formatarFone = (val) => {
+  const d = val.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
 const PerfilPage = () => {
   const navigate = useNavigate()
   const { user, perfil, loading: authLoading, recarregarPerfil } = useAuth()
@@ -22,6 +29,8 @@ const PerfilPage = () => {
     quadra: '',
     lote: '',
     tipo_pessoa: 'morador',
+    whatsapp: '',
+    telefone2: '',
     telefone: '',
     nome_fantasia: '',
     descricao_comercial: '',
@@ -50,6 +59,8 @@ const PerfilPage = () => {
         quadra: perfil.quadra || '',
         lote: perfil.lote || '',
         tipo_pessoa: perfil.tipo_pessoa || 'morador',
+        whatsapp: perfil.whatsapp || '',
+        telefone2: perfil.telefone2 || '',
         telefone: perfil.telefone || '',
         nome_fantasia: perfil.nome_fantasia || '',
         descricao_comercial: perfil.descricao_comercial || '',
@@ -65,10 +76,20 @@ const PerfilPage = () => {
   }, [perfil])
 
   const handleChange = (e) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
+    const { name, value } = e.target
+
+    if (name === 'whatsapp' || name === 'telefone2' || name === 'telefone') {
+      setForm((prev) => ({
+        ...prev,
+        [name]: formatarFone(value)
+      }))
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        [name]: value
+      }))
+    }
+
     setError(null)
   }
 
@@ -136,7 +157,9 @@ const PerfilPage = () => {
 
       const dados = {
         nome_completo: form.nome_completo.trim(),
-        telefone: form.telefone.trim() || '',
+        whatsapp: form.whatsapp.replace(/\D/g, '') || '',
+        telefone2: form.telefone2.replace(/\D/g, '') || null,
+        telefone: ehPrestador ? (form.telefone.replace(/\D/g, '') || null) : null,
         nome_exibicao: form.nome_exibicao.trim() || null,
         fase: form.fase.trim() || null,
         quadra: form.quadra.trim() || null,
@@ -211,7 +234,6 @@ const PerfilPage = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
 
-      {/* HERO */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 p-8 md:p-10 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-52 h-52 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
@@ -319,6 +341,24 @@ const PerfilPage = () => {
             />
 
             <input
+              name="whatsapp"
+              value={form.whatsapp}
+              onChange={handleChange}
+              placeholder="WhatsApp (00) 00000-0000"
+              autoComplete="tel"
+              className={inputClass}
+            />
+
+            <input
+              name="telefone2"
+              value={form.telefone2}
+              onChange={handleChange}
+              placeholder="Telefone adicional (opcional)"
+              autoComplete="tel"
+              className={inputClass}
+            />
+
+            <input
               name="fase"
               value={form.fase}
               onChange={handleChange}
@@ -339,14 +379,6 @@ const PerfilPage = () => {
               value={form.lote}
               onChange={handleChange}
               placeholder="Lote"
-              className={inputClass}
-            />
-
-            <input
-              name="telefone"
-              value={form.telefone}
-              onChange={handleChange}
-              placeholder="Telefone"
               className={inputClass}
             />
           </div>
@@ -376,6 +408,15 @@ const PerfilPage = () => {
                 value={form.nome_fantasia}
                 onChange={handleChange}
                 placeholder="Nome fantasia"
+                className={inputClass}
+              />
+
+              <input
+                name="telefone"
+                value={form.telefone}
+                onChange={handleChange}
+                placeholder="Telefone comercial (opcional)"
+                autoComplete="tel"
                 className={inputClass}
               />
 
@@ -425,7 +466,6 @@ const PerfilPage = () => {
           )}
         </div>
 
-        {/* Botão */}
         <div className="pt-4 border-t border-gray-100">
           <button
             type="submit"

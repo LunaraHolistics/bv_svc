@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
         .maybeSingle()
 
       if (error) {
-        console.error('[Auth] Erro ao buscar perfil:', error.message)
+        console.error('[Auth] Erro buscar perfil:', error.message)
         setPerfil(null)
         return null
       }
@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
       setPerfil(data || null)
       return data
     } catch (err) {
-      console.error('[Auth] Erro inesperado ao buscar perfil:', err)
+      console.error('[Auth] Falha buscar perfil:', err)
       setPerfil(null)
       return null
     }
@@ -48,15 +48,22 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] getSession lento — liberando sem sessão')
+        setLoading(false)
+      }
+    }, 3000)
+
     const init = async () => {
       try {
         const {
           data: { session },
-          error: sessionError
+          error
         } = await supabase.auth.getSession()
 
-        if (sessionError) {
-          console.error('[Auth] Erro getSession:', sessionError.message)
+        if (error) {
+          console.error('[Auth] getSession erro:', error.message)
         }
 
         if (!mounted) return
@@ -70,11 +77,12 @@ export function AuthProvider({ children }) {
           setPerfil(null)
         }
       } catch (err) {
-        console.error('[Auth] Falha ao carregar sessão:', err)
+        console.error('[Auth] Falha sessão:', err)
         setUser(null)
         setPerfil(null)
       } finally {
         if (mounted) {
+          clearTimeout(timeout)
           setLoading(false)
         }
       }
@@ -103,6 +111,7 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false
+      clearTimeout(timeout)
       subscription?.unsubscribe()
     }
   }, [buscarPerfil])
@@ -145,7 +154,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       setPerfil(null)
     } catch (err) {
-      console.error('[Auth] Erro ao sair:', err)
+      console.error('[Auth] Erro sair:', err)
     }
   }
 

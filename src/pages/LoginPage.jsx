@@ -1,6 +1,6 @@
 // src/pages/LoginPage.jsx
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const IMAGEM_FAIXADA =
@@ -8,6 +8,7 @@ const IMAGEM_FAIXADA =
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { cadastrar, login, recuperarSenha, user, loading: authLoading } = useAuth()
 
   const [aba, setAba] = useState('login')
@@ -29,10 +30,10 @@ const LoginPage = () => {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && location.pathname === '/login') {
       navigate('/', { replace: true })
     }
-  }, [authLoading, user, navigate])
+  }, [authLoading, user, navigate, location.pathname])
 
   useEffect(() => {
     setError(null)
@@ -89,7 +90,6 @@ const LoginPage = () => {
     try {
       if (aba === 'login') {
         await login(email, senha)
-        navigate('/', { replace: true })
       }
 
       if (aba === 'cadastro') {
@@ -136,7 +136,8 @@ const LoginPage = () => {
     onChange,
     placeholder,
     visible,
-    setVisible
+    setVisible,
+    autocomplete
   }) => (
     <div className="relative">
       <input
@@ -144,6 +145,7 @@ const LoginPage = () => {
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        autoComplete={autocomplete}
         className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
       />
 
@@ -165,15 +167,12 @@ const LoginPage = () => {
           : 'opacity-0 translate-y-6'
       }`}
     >
-      {/* BACKGROUND */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-300/20 blur-3xl rounded-full" />
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-300/20 blur-3xl rounded-full" />
 
-      {/* CARD */}
       <div className="relative z-10 w-full max-w-6xl bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.08)] flex flex-col lg:flex-row">
 
-        {/* PAINEL ESQUERDO */}
         <div className="hidden lg:block lg:w-[45%] relative min-h-[620px]">
           <img
             src={IMAGEM_FAIXADA}
@@ -216,7 +215,6 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* FORM */}
         <div className="flex-1 p-6 sm:p-10 lg:p-12">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">
@@ -283,6 +281,7 @@ const LoginPage = () => {
                 placeholder="Nome completo"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
+                autoComplete="name"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             )}
@@ -292,6 +291,7 @@ const LoginPage = () => {
               placeholder="Seu e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
             />
 
@@ -302,18 +302,18 @@ const LoginPage = () => {
                 placeholder="Sua senha"
                 visible={mostrarSenha}
                 setVisible={setMostrarSenha}
+                autocomplete={aba === 'login' ? 'current-password' : 'new-password'}
               />
             )}
 
             {aba === 'cadastro' && (
               <PasswordInput
                 value={confirmarSenha}
-                onChange={(e) =>
-                  setConfirmarSenha(e.target.value)
-                }
+                onChange={(e) => setConfirmarSenha(e.target.value)}
                 placeholder="Confirmar senha"
                 visible={mostrarConfirmar}
                 setVisible={setMostrarConfirmar}
+                autocomplete="new-password"
               />
             )}
 
