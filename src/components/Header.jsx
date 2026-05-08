@@ -91,18 +91,14 @@ const Header = () => {
     'U'
 
   const handleLogout = async () => {
-    await logout()
     setMenuOpen(false)
-    navigate('/login')
+    await logout()
+    navigate('/login', { replace: true })
   }
 
   const irPerfil = () => {
     setMenuOpen(false)
     navigate('/perfil')
-  }
-
-  const irLogin = () => {
-    navigate('/login')
   }
 
   useEffect(() => {
@@ -236,7 +232,7 @@ const Header = () => {
                 </div>
               ) : (
                 <button
-                  onClick={irLogin}
+                  onClick={() => navigate('/login')}
                   className="px-5 py-2.5 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-50 transition cursor-pointer"
                 >
                   Entrar

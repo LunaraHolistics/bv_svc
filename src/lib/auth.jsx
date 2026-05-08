@@ -48,13 +48,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
-    const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('[Auth] getSession lento — liberando sem sessão')
-        setLoading(false)
-      }
-    }, 3000)
-
     const init = async () => {
       try {
         const {
@@ -82,7 +75,6 @@ export function AuthProvider({ children }) {
         setPerfil(null)
       } finally {
         if (mounted) {
-          clearTimeout(timeout)
           setLoading(false)
         }
       }
@@ -111,7 +103,6 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false
-      clearTimeout(timeout)
       subscription?.unsubscribe()
     }
   }, [buscarPerfil])
@@ -149,10 +140,12 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
+    setUser(null)
+    setPerfil(null)
+    setLoading(false)
+
     try {
       await supabase.auth.signOut()
-      setUser(null)
-      setPerfil(null)
     } catch (err) {
       console.error('[Auth] Erro sair:', err)
     }
