@@ -37,8 +37,16 @@ const CardPrestador = ({ prestador, onDelete }) => {
 
   // Permissões
   const isMaster = user?.id === MASTER_USER_ID
-  const isOwner = user?.id === prestador.user_id
+  const isOwner = user?.id === prestador.usuario_id
   const canManage = isMaster || isOwner
+
+  // Monta o link do WhatsApp com a mensagem automática
+  const whatsappLink = useMemo(() => {
+    if (!whatsapp) return null
+    const servico = prestador.categoria || 'serviço disponível'
+    const mensagem = `Olá, também sou morador do Bella Vittà e quero conversar com você sobre seu serviço de ${servico}`
+    return `https://wa.me/55${whatsapp}?text=${encodeURIComponent(mensagem)}`
+  }, [whatsapp, prestador.categoria])
 
   const handleDelete = async (e) => {
     e.stopPropagation()
@@ -160,8 +168,13 @@ const CardPrestador = ({ prestador, onDelete }) => {
 
       {/* RODAPÉ DE CONTATO */}
       <div className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">
-        {whatsapp ? (
-          <a href={`https://wa.me/55${whatsapp}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition">
+        {whatsappLink ? (
+          <a 
+            href={whatsappLink} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition"
+          >
             WhatsApp
           </a>
         ) : (

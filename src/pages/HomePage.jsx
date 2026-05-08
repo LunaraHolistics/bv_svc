@@ -24,83 +24,115 @@ const formatarPreco = (valor) => {
 
 /* ---------------- CARD DESTAQUE ---------------- */
 
-const CardDestaque = ({ anuncio }) => (
-  <Link
-    to="/anuncios"
-    className="group min-w-[320px] max-w-[320px] bg-white rounded-3xl overflow-hidden border border-white/70 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 no-underline"
-  >
-    <div className="relative h-52 overflow-hidden">
-      {anuncio.imagem_url ? (
-        <img
-          src={anuncio.imagem_url}
-          alt={anuncio.titulo}
-          className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-        />
-      ) : (
-        <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
-          <ShoppingBag className="w-10 h-10 text-emerald-600" />
-        </div>
-      )}
+const CardDestaque = ({ anuncio }) => {
+  const getImagens = (imagemUrl) => {
+    if (!imagemUrl) return []
+    try {
+      const parsed = JSON.parse(imagemUrl)
+      if (Array.isArray(parsed)) return parsed
+      return [imagemUrl]
+    } catch {
+      return [imagemUrl]
+    }
+  }
+  
+  const imagens = getImagens(anuncio.imagem_url)
+  const imagem = imagens.length > 0 ? imagens[0] : null
 
-      <div className="absolute top-4 left-4 px-3 py-1 bg-black/70 text-white rounded-full text-xs font-medium backdrop-blur-md">
-        Destaque
+  return (
+    <Link
+      to={`/anuncio/${anuncio.id}`}
+      className="group min-w-[320px] max-w-[320px] bg-white rounded-3xl overflow-hidden border border-white/70 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 no-underline"
+    >
+      <div className="relative h-52 overflow-hidden">
+        {imagem ? (
+          <img
+            src={imagem}
+            alt={anuncio.titulo}
+            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
+            <ShoppingBag className="w-10 h-10 text-emerald-600" />
+          </div>
+        )}
+
+        <div className="absolute top-4 left-4 px-3 py-1 bg-black/70 text-white rounded-full text-xs font-medium backdrop-blur-md">
+          Destaque
+        </div>
       </div>
-    </div>
 
-    <div className="p-5">
-      <h3 className="font-bold text-gray-900 text-base line-clamp-2">
-        {anuncio.titulo}
-      </h3>
-
-      <p className="text-emerald-600 text-xl font-bold mt-2">
-        {formatarPreco(anuncio.preco)}
-      </p>
-
-      {anuncio.descricao && (
-        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-          {anuncio.descricao}
-        </p>
-      )}
-    </div>
-  </Link>
-)
-
-/* ---------------- CARD LISTAGEM ---------------- */
-
-const CardUltimo = ({ anuncio }) => (
-  <Link
-    to="/anuncios"
-    className="group bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-lg hover:-translate-y-1 transition-all no-underline"
-  >
-    <div className="flex gap-4">
-      {anuncio.imagem_url ? (
-        <img
-          src={anuncio.imagem_url}
-          alt={anuncio.titulo}
-          className="w-20 h-20 rounded-xl object-cover"
-        />
-      ) : (
-        <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center">
-          <ShoppingBag className="w-6 h-6 text-gray-500" />
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-gray-900 truncate">
+      <div className="p-5">
+        <h3 className="font-bold text-gray-900 text-base line-clamp-2">
           {anuncio.titulo}
-        </h4>
+        </h3>
 
-        <p className="text-emerald-600 font-bold mt-1">
+        <p className="text-emerald-600 text-xl font-bold mt-2">
           {formatarPreco(anuncio.preco)}
         </p>
 
-        <p className="text-xs text-gray-400 mt-2">
-          Publicado em {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
-        </p>
+        {anuncio.descricao && (
+          <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+            {anuncio.descricao}
+          </p>
+        )}
       </div>
-    </div>
-  </Link>
-)
+    </Link>
+  )
+}
+
+/* ---------------- CARD LISTAGEM ---------------- */
+
+const CardUltimo = ({ anuncio }) => {
+  const getImagens = (imagemUrl) => {
+    if (!imagemUrl) return []
+    try {
+      const parsed = JSON.parse(imagemUrl)
+      if (Array.isArray(parsed)) return parsed
+      return [imagemUrl]
+    } catch {
+      return [imagemUrl]
+    }
+  }
+  
+  const imagens = getImagens(anuncio.imagem_url)
+  const imagem = imagens.length > 0 ? imagens[0] : null
+
+  return (
+    <Link
+      to={`/anuncio/${anuncio.id}`}
+      className="group bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-lg hover:-translate-y-1 transition-all no-underline"
+    >
+      <div className="flex gap-4">
+        {imagem ? (
+          <img
+            src={imagem}
+            alt={anuncio.titulo}
+            className="w-20 h-20 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center">
+            <ShoppingBag className="w-6 h-6 text-gray-500" />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-gray-900 truncate">
+            {anuncio.titulo}
+          </h4>
+
+          <p className="text-emerald-600 font-bold mt-1">
+            {formatarPreco(anuncio.preco)}
+          </p>
+
+          <p className="text-xs text-gray-400 mt-2">
+            Publicado em {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
+          </p>
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 /* ---------------- QUICK CARD ---------------- */
 
@@ -182,6 +214,7 @@ const Carousel = ({ title, items, children }) => {
 const HomePage = () => {
   const [destaques, setDestaques] = useState([])
   const [ultimos, setUltimos] = useState([])
+  const [avisoAdmin, setAvisoAdmin] = useState(null)
   const [stats, setStats] = useState({
     anuncios: 0,
     servicos: 0,
@@ -202,7 +235,8 @@ const HomePage = () => {
         ultimosRes,
         anunciosCount,
         servicosCount,
-        indicacoesCount
+        indicacoesCount,
+        avisoRes
       ] = await Promise.all([
         supabase
           .from('anuncios_vendas')
@@ -231,11 +265,21 @@ const HomePage = () => {
 
         supabase
           .from('indicacoes')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact', head: true }),
+
+        // Tenta buscar o aviso mais recente da administração
+        supabase
+          .from('avisos_admin')
+          .select('*')
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle() // maybeSingle não quebra se a tabela ou linha não existir
       ])
 
       setDestaques(destaqueRes.data || [])
       setUltimos(ultimosRes.data || [])
+      setAvisoAdmin(avisoRes.data) // Pode ser null
 
       setStats({
         anuncios: anunciosCount.count || 0,
@@ -251,6 +295,25 @@ const HomePage = () => {
 
   return (
     <div className="space-y-10">
+
+      {/* AVISO DA ADMINISTRAÇÃO (APARECE SE TIVER AVISO ATIVO) */}
+      {avisoAdmin && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 flex gap-4 items-start shadow-sm">
+          <div className="text-4xl animate-bounce">📢</div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-amber-800 text-lg">Aviso da Administração</h3>
+              <span className="px-2 py-0.5 bg-amber-200 text-amber-800 text-[10px] font-bold rounded-full">NOVO</span>
+            </div>
+            <p className="text-amber-700 text-sm leading-relaxed">{avisoAdmin.mensagem}</p>
+            {avisoAdmin.data && (
+              <p className="text-amber-500 text-xs mt-3 font-medium">
+                Publicado em {new Date(avisoAdmin.created_at || avisoAdmin.data).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* HERO */}
       <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white p-8 md:p-12">
@@ -283,7 +346,7 @@ const HomePage = () => {
             </Link>
 
             <Link
-              to="/servicos"
+              to="/mapa"
               className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline"
             >
               Explorar serviços
@@ -312,7 +375,7 @@ const HomePage = () => {
       {/* QUICK ACTIONS */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <QuickCard
-          to="/servicos"
+          to="/mapa"
           title="Prestadores"
           subtitle="Profissionais próximos"
           icon={<Wrench size={22} />}
@@ -327,7 +390,7 @@ const HomePage = () => {
 
         <QuickCard
           to="/mapa"
-          title="Mapa"
+          title="Mapa Satélite"
           subtitle="Encontre rapidamente"
           icon={<MapPin size={22} />}
         />

@@ -1,4 +1,3 @@
-// src/pages/LoginPage.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -18,6 +17,7 @@ const LoginPage = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
   const [pronto, setPronto] = useState(false)
+  const [pixCopiado, setPixCopiado] = useState(false)
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -43,6 +43,16 @@ const LoginPage = () => {
   const resetCampos = () => {
     setSenha('')
     setConfirmarSenha('')
+  }
+
+  // Função para copiar o PIX
+  const copiarPix = () => {
+    navigator.clipboard.writeText('lunara_terapias@jim.com')
+      .then(() => {
+        setPixCopiado(true)
+        setTimeout(() => setPixCopiado(false), 2500)
+      })
+      .catch(err => alert('Falha ao copiar. Copie manualmente: lunara_terapias@jim.com'))
   }
 
   const validar = () => {
@@ -134,7 +144,7 @@ const LoginPage = () => {
 
   return (
     <div
-      className={`relative min-h-screen overflow-hidden flex items-center justify-center px-4 py-8 transition-all duration-700 ${
+      className={`relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-4 py-8 transition-all duration-700 ${
         pronto
           ? 'opacity-100 translate-y-0'
           : 'opacity-0 translate-y-6'
@@ -144,7 +154,7 @@ const LoginPage = () => {
       <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-300/20 blur-3xl rounded-full" />
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-300/20 blur-3xl rounded-full" />
 
-      <div className="relative z-10 w-full max-w-6xl bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.08)] flex flex-col lg:flex-row">
+      <div className="relative z-10 w-full max-w-6xl bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.08)] flex flex-col lg:flex-row mb-8">
 
         <div className="hidden lg:block lg:w-[45%] relative min-h-[620px]">
           <img
@@ -359,6 +369,26 @@ const LoginPage = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* RODAPÉ DIVERTIDO */}
+      <div className="relative z-10 w-full max-w-lg bg-white/60 backdrop-blur-sm border border-gray-200 rounded-2xl p-5 text-center">
+        <p className="text-sm font-bold text-gray-700 mb-1">☕ Combustível para o Código</p>
+        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+          Sabia que o BV Service é movido a café e persistência?<br/>
+          Se o app facilitou sua vida, que tal retribuir com um cafezinho?<br/>
+          <span className="font-medium text-gray-700">Você ajuda a manter o servidor ligado e o dev acordado! 🚀</span>
+        </p>
+        <button
+          onClick={copiarPix}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-mono font-bold text-gray-700 transition cursor-pointer"
+        >
+          {pixCopiado ? (
+            <>✅ Copiado!</>
+          ) : (
+            <>📋 PIX: lunara_terapias@jim.com</>
+          )}
+        </button>
       </div>
     </div>
   )

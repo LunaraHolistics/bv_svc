@@ -15,23 +15,37 @@ import LoginPage from './pages/LoginPage'
 import PerfilPage from './pages/PerfilPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import PainelAdminPage from './pages/PainelAdminPage'
+import AdmBVPage from './pages/AdmBVPage'
 import NotFoundPage from './pages/NotFoundPage'
 
-// ⚠️ COLE AQUI O SEU ID DE USUÁRIO MASTER DO SUPABASE
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
-const AdminRoute = ({ children }) => {
+// Rota exclusiva para o DESENVOLVEDOR (Você)
+const MasterRoute = ({ children }) => {
   const { user, loading } = useAuth()
-
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando permissões...</div>
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
   if (!user || user.id !== MASTER_USER_ID) return <Navigate to="/" replace />
+  return children
+}
+
+// Rota para o ADMIN DO CONDOMÍNIO (Síndicos) E para o DESENVOLVEDOR
+const AdmBVRoute = ({ children }) => {
+  const { user, perfil, loading } = useAuth()
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando permissões...</div>
+  
+  const isMaster = user?.id === MASTER_USER_ID
+  const isAdmCondominio = perfil?.is_admin_condominio === true
+
+  if (!user || (!isMaster && !isAdmCondominio)) {
+    return <Navigate to="/" replace />
+  }
 
   return children
 }
 
 function AppContent() {
   const location = useLocation()
-  const hideChrome = ['/login', '/reset-password', '/admin'].includes(location.pathname)
+  const hideChrome = ['/login', '/reset-password', '/admin', '/adm_bv'].includes(location.pathname)
 
   return (
     <div className="min-h-screen bg-[#f6f8f7] flex flex-col relative overflow-hidden">
@@ -57,8 +71,9 @@ function AppContent() {
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             
-            {/* ATENÇÃO: ESTÁ ROTA PRECISA FICAR ANTES DO path="*" */}
-            <Route path="/admin" element={<AdminRoute><PainelAdminPage /></AdminRoute>} />
+            {/* Rotas Protegidas */}
+            <Route path="/admin" element={<MasterRoute><PainelAdminPage /></MasterRoute>} />
+            <Route path="/adm_bv" element={<AdmBVRoute><AdmBVPage /></AdmBVRoute>} />
             
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
