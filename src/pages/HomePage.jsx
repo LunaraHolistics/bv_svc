@@ -214,7 +214,6 @@ const Carousel = ({ title, items, children }) => {
 const HomePage = () => {
   const [destaques, setDestaques] = useState([])
   const [ultimos, setUltimos] = useState([])
-  const [avisoAdmin, setAvisoAdmin] = useState(null)
   const [stats, setStats] = useState({
     anuncios: 0,
     servicos: 0,
@@ -235,8 +234,7 @@ const HomePage = () => {
         ultimosRes,
         anunciosCount,
         servicosCount,
-        indicacoesCount,
-        avisoRes
+        indicacoesCount
       ] = await Promise.all([
         supabase
           .from('anuncios_vendas')
@@ -257,29 +255,23 @@ const HomePage = () => {
 
         supabase
           .from('anuncios_vendas')
-          .select('*', { count: 'exact', head: true }),
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Ativo'),
 
         supabase
           .from('prestadores_servico')
-          .select('*', { count: 'exact', head: true }),
+          .select('*', { count: 'exact', head: true })
+          .eq('opt_in', true),
 
+        // Tenta buscar indicações silenciosamente (pode não existir)
         supabase
           .from('indicacoes')
-          .select('*', { count: 'exact', head: true }),
-
-        // Tenta buscar o aviso mais recente da administração
-        supabase
-          .from('avisos_admin')
-          .select('*')
-          .eq('ativo', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle() // maybeSingle não quebra se a tabela ou linha não existir
+          .select('*', { count: 'exact', head: true })
+          .then(res => res.error ? { count: 0 } : res)
       ])
 
       setDestaques(destaqueRes.data || [])
       setUltimos(ultimosRes.data || [])
-      setAvisoAdmin(avisoRes.data) // Pode ser null
 
       setStats({
         anuncios: anunciosCount.count || 0,
@@ -295,25 +287,6 @@ const HomePage = () => {
 
   return (
     <div className="space-y-10">
-
-      {/* AVISO DA ADMINISTRAÇÃO (APARECE SE TIVER AVISO ATIVO) */}
-      {avisoAdmin && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 flex gap-4 items-start shadow-sm">
-          <div className="text-4xl animate-bounce">📢</div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-amber-800 text-lg">Aviso da Administração</h3>
-              <span className="px-2 py-0.5 bg-amber-200 text-amber-800 text-[10px] font-bold rounded-full">NOVO</span>
-            </div>
-            <p className="text-amber-700 text-sm leading-relaxed">{avisoAdmin.mensagem}</p>
-            {avisoAdmin.data && (
-              <p className="text-amber-500 text-xs mt-3 font-medium">
-                Publicado em {new Date(avisoAdmin.created_at || avisoAdmin.data).toLocaleDateString('pt-BR')}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* HERO */}
       <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white p-8 md:p-12">

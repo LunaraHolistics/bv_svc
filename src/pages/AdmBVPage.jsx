@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase'
 
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
-// Função auxiliar para checar se está no período válido
 const estaNoPeriodo = (inicio, fim) => {
   const agora = new Date()
   const depoisDoInicio = inicio ? new Date(inicio) <= agora : true
@@ -28,7 +27,7 @@ const AdmBVPage = () => {
   
   const [avisos, setAvisos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [abaAtiva, setAbaAtiva] = useState('ativos') // 'ativos' ou 'historico'
+  const [abaAtiva, setAbaAtiva] = useState('ativos')
   
   // Formulário
   const [titulo, setTitulo] = useState('')
@@ -40,6 +39,11 @@ const AdmBVPage = () => {
   // Modal de reativação
   const [reativandoId, setReativandoId] = useState(null)
   const [novaDataFim, setNovaDataFim] = useState('')
+  
+  // ✅ NOVO: Estado para visualizações
+  const [vendoVisu, setVendoVisu] = useState(null)
+  const [listaVisu, setListaVisu] = useState([])
+  const [carregandoVisu, setCarregandoVisu] = useState(false)
 
   useEffect(() => { buscarAvisos() }, [])
 
@@ -54,6 +58,46 @@ const AdmBVPage = () => {
     setLoading(false)
   }
 
+  // ✅ NOVO: Busca quem leu um aviso específico
+  const buscarVisualizacoes = async (avisoId) => {
+    setVendoVisu(avisoId)
+    setCarregandoVisu(true)
+    
+    const { data: leituras } = await supabase
+      .from('avisos_lidos')
+      .select('user_id')
+      .eq('aviso_id', avisoId)
+
+    if (!leituras || leituras.length === 0) {
+      setListaVisu([])
+      setCarregandoVisu(false)
+      return
+    }
+
+    // Pega os IDs dos usuários que leram
+    const idsUsuarios = leituras.map(l => l.user_id)
+
+    // Busca os dados desses usuários na tabela perfis
+    const { data: perfis } = await supabase
+      .from('perfis')
+      .select('id, nome_completo, quadra, lote')
+      .in('id', idsUsuarios)
+
+    // Mescla os dados
+    const mapaPerfis = {}
+    if (perfis) {
+      perfis.forEach(p => { mapaPerfis[p.id] = p })
+    }
+
+    const listaFinal = leituras.map(l => ({
+      ...l,
+      perfil: mapaPerfis[l.user_id] || null
+    })).filter(l => l.perfil) // Remove leitores que não têm perfil cadastrado
+
+    setListaVisu(listaFinal)
+    setCarregandoVisu(false)
+  }
+
   const handlePublicar = async (e) => {
     e.preventDefault()
     if (!titulo.trim() || !mensagem.trim()) return alert('Preencha título e mensagem.')
@@ -65,7 +109,7 @@ const AdmBVPage = () => {
       mensagem,
       criado_por: user.id,
       data_inicio: dataInicio ? new Date(dataInicio).toISOString() : new Date().toISOString(),
-      data_fim: dataFim ? new Date(dataFim).toISOString() : null, // null = não expira
+      data_fim: dataFim ? new Date(dataFim).toISOString() : null,
       ativo: true
     }
 
@@ -103,7 +147,6 @@ const AdmBVPage = () => {
   }
 
   const toggleForcarInativo = async (aviso) => {
-    // Permite o admin forçar a desativação manual, mesmo com data válida
     await supabase.from('avisos_admin').update({ ativo: !aviso.ativo }).eq('id', aviso.id)
     buscarAvisos()
   }
@@ -116,7 +159,6 @@ const AdmBVPage = () => {
 
   const handleLogout = async () => { await logout(); navigate('/login', { replace: true }) }
 
-  // Divide os avisos entre os que estão no período válido e os expirados
   const avisosAtivos = avisos.filter(a => a.ativo !== false && estaNoPeriodo(a.data_inicio, a.data_fim))
   const avisosHistorico = avisos.filter(a => a.ativo === false || !estaNoPeriodo(a.data_inicio, a.data_fim))
 
@@ -153,22 +195,12 @@ const AdmBVPage = () => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Início</label>
-                <input 
-                  type="datetime-local" 
-                  value={dataInicio} 
-                  onChange={(e) => setDataInicio(e.target.value)} 
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-                />
+                <input type="datetime-local" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 outline-none" />
                 <p className="text-[10px] text-gray-400 mt-1">Vazio = Agora</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Expiração</label>
-                <input 
-                  type="datetime-local" 
-                  value={dataFim} 
-                  onChange={(e) => setDataFim(e.target.value)} 
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-                />
+                <input type="datetime-local" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 outline-none" />
                 <p className="text-[10px] text-gray-400 mt-1">Vazio = Eterno</p>
               </div>
             </div>
@@ -182,7 +214,6 @@ const AdmBVPage = () => {
         {/* LISTAGEM COM ABAS */}
         <div className="md:col-span-3 bg-white rounded-2xl border border-gray-200 p-6 min-h-[400px] flex flex-col">
           
-          {/* ABAS */}
           <div className="flex border-b border-gray-200 mb-4 gap-4">
             <button 
               onClick={() => setAbaAtiva('ativos')}
@@ -220,7 +251,35 @@ const AdmBVPage = () => {
                     
                     <div className="flex gap-2 mt-3 border-t border-green-100 pt-3">
                       <button onClick={() => toggleForcarInativo(aviso)} className="text-xs font-medium px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition cursor-pointer">🚫 Desativar</button>
+                      <button onClick={() => buscarVisualizacoes(aviso.id)} className="text-xs font-medium px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition cursor-pointer">👁️ Ver visualizações</button>
                     </div>
+
+                    {/* ✅ MODAL DE VISUALIZAÇÕES */}
+                    {vendoVisu === aviso.id && (
+                      <div className="mt-3 p-4 bg-white border-2 border-blue-100 rounded-xl">
+                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center justify-between">
+                          <span>Quem visualizou este aviso</span>
+                          <button onClick={() => setVendoVisu(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer text-lg leading-none">&times;</button>
+                        </h4>
+                        {carregandoVisu ? (
+                          <div className="flex justify-center py-4"><div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
+                        ) : listaVisu.length === 0 ? (
+                          <p className="text-sm text-gray-400 text-center py-4">Nenhum morador visualizou ainda.</p>
+                        ) : (
+                          <div className="max-h-40 overflow-y-auto space-y-2">
+                            <p className="text-xs font-bold text-gray-500 mb-2">Total: {listaVisu.length} morador(es)</p>
+                            {listaVisu.map((v, i) => (
+                              <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-gray-800">{v.perfil.nome_completo}</p>
+                                  <p className="text-xs text-gray-500">Quadra: {v.perfil.quadra || 'N/A'} • Lote: {v.perfil.lote || 'N/A'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -240,17 +299,11 @@ const AdmBVPage = () => {
                       <span>🛑 Expirou em: {aviso.data_fim ? formatarData(aviso.data_fim) : 'Desativado manualmente'}</span>
                     </div>
                     
-                    {/* MODAL DE REATIVAÇÃO */}
                     {reativandoId === aviso.id ? (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-xs font-bold text-blue-700 mb-2">Defina a nova data de expiração:</p>
                         <div className="flex gap-2">
-                          <input 
-                            type="datetime-local" 
-                            value={novaDataFim} 
-                            onChange={(e) => setNovaDataFim(e.target.value)} 
-                            className="flex-1 px-2 py-1 border border-blue-300 rounded text-sm outline-none"
-                          />
+                          <input type="datetime-local" value={novaDataFim} onChange={(e) => setNovaDataFim(e.target.value)} className="flex-1 px-2 py-1 border border-blue-300 rounded text-sm outline-none" />
                           <button onClick={handleReativar} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 cursor-pointer">Salvar</button>
                           <button onClick={() => setReativandoId(null)} className="px-3 py-1 bg-gray-200 text-gray-600 rounded text-xs font-bold hover:bg-gray-300 cursor-pointer">Cancelar</button>
                         </div>
@@ -258,7 +311,35 @@ const AdmBVPage = () => {
                     ) : (
                       <div className="flex gap-2 mt-3 border-t border-gray-200 pt-3">
                         <button onClick={() => setReativandoId(aviso.id)} className="text-xs font-medium px-3 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition cursor-pointer">🔄 Reativar Agora</button>
+                        <button onClick={() => buscarVisualizacoes(aviso.id)} className="text-xs font-medium px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition cursor-pointer">👁️ Ver visualizações</button>
                         <button onClick={() => deletarAviso(aviso.id)} className="text-xs font-medium px-3 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition cursor-pointer">Excluir Definitivamente</button>
+                      </div>
+                    )}
+
+                    {/* MODAL DE VISUALIZAÇÕES NO HISTÓRICO TAMBÉM */}
+                    {vendoVisu === aviso.id && (
+                      <div className="mt-3 p-4 bg-white border-2 border-blue-100 rounded-xl">
+                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center justify-between">
+                          <span>Quem visualizou este aviso</span>
+                          <button onClick={() => setVendoVisu(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer text-lg leading-none">&times;</button>
+                        </h4>
+                        {carregandoVisu ? (
+                          <div className="flex justify-center py-4"><div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
+                        ) : listaVisu.length === 0 ? (
+                          <p className="text-sm text-gray-400 text-center py-4">Nenhum morador visualizou.</p>
+                        ) : (
+                          <div className="max-h-40 overflow-y-auto space-y-2">
+                            <p className="text-xs font-bold text-gray-500 mb-2">Total: {listaVisu.length} morador(es)</p>
+                            {listaVisu.map((v, i) => (
+                              <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-gray-800">{v.perfil.nome_completo}</p>
+                                  <p className="text-xs text-gray-500">Quadra: {v.perfil.quadra || 'N/A'} • Lote: {v.perfil.lote || 'N/A'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
