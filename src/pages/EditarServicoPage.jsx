@@ -17,6 +17,7 @@ const EditarServicoPage = () => {
   const [salvando, setSalvando] = useState(false)
   const [error, setError] = useState(null)
   const [ehNovo, setEhNovo] = useState(false)
+  const [sucesso, setSucesso] = useState(false)
 
   const [form, setForm] = useState({
     nome: '',
@@ -129,20 +130,18 @@ const EditarServicoPage = () => {
     const files = Array.from(e.target.files)
     if (!files.length) return
 
-    // ✅ NOVO: Validação de quantidade total
     const totalAtual = imagensExistentes.length + novasImagens.length
     if (totalAtual + files.length > MAX_IMAGENS) {
       alert(`Você atingiu o limite de ${MAX_IMAGENS} imagens. Pode ter até ${MAX_IMAGENS} no total.`)
-      e.target.value = '' // Limpa o input
+      e.target.value = ''
       return
     }
 
-    // ✅ NOVO: Validação de tamanho individual
     for (const file of files) {
       const tamanhoMb = file.size / (1024 * 1024)
       if (tamanhoMb > TAMANHO_MAX_MB) {
         alert(`A imagem "${file.name}" tem ${tamanhoMb.toFixed(1)}MB e excede o limite de ${TAMANHO_MAX_MB}MB.\n\nDica: Tire um novo print ou use um app de celular para reduzir a qualidade antes de enviar.`)
-        e.target.value = '' // Limpa o input
+        e.target.value = ''
         return
       }
     }
@@ -163,7 +162,7 @@ const EditarServicoPage = () => {
     }
     setNovasImagens(prev => [...prev, ...novas])
     setSalvando(false)
-    e.target.value = '' // Limpa o input para permitir selecionar o mesmo arquivo de novo
+    e.target.value = ''
   }
 
   const removeImagemExistente = (index) => {
@@ -208,21 +207,85 @@ const EditarServicoPage = () => {
     if (ehNovo) {
       const result = await supabase.from('prestadores_servico').insert(dadosServico).select('id').single()
       error = result.error
-      if (!error) {
-        navigate(`/editar-servico/${result.data.id}`, { replace: true })
-        setSalvando(false)
-        return
-      }
     } else {
       const result = await supabase.from('prestadores_servico').update(dadosServico).eq('id', id)
       error = result.error
     }
 
-    if (error) alert('Erro ao salvar: ' + error.message)
-    else navigate('/perfil')
     setSalvando(false)
+
+    if (error) {
+      alert('Erro ao salvar: ' + error.message)
+      return
+    }
+
+    // ✅ SUCESSO: mostra tela de confirmação e redireciona
+    setSucesso(true)
+    setTimeout(() => {
+      navigate('/perfil', { replace: true })
+    }, 3000)
   }
 
+  // ==================== TELA DE SUCESSO ====================
+  if (sucesso) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="bg-white rounded-3xl border border-gray-200 p-10 text-center space-y-6 animate-[fadeIn_0.4s_ease-out]">
+          <div className="relative inline-block">
+            <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-5xl">✅</span>
+            </div>
+            <div className="absolute -top-1 -right-1 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center animate-bounce">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {ehNovo ? 'Serviço Cadastrado!' : 'Alterações Salvas!'}
+            </h2>
+            <p className="text-gray-500 leading-relaxed">
+              {ehNovo
+                ? 'Seu serviço foi adicionado ao mapa da comunidade. Agora os moradores podem encontrar você!'
+                : 'As informações do seu serviço foram atualizadas com sucesso.'}
+            </p>
+          </div>
+
+          {ehNovo && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-left">
+              <p className="text-sm text-emerald-700 font-medium mb-2">💡 Dica:</p>
+              <p className="text-sm text-emerald-600">
+                Adicione fotos do seu trabalho para atrair mais clientes! Você pode editar isso a qualquer momento.
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+            <div className="w-4 h-4 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin" />
+            Redirecionando para seu perfil...
+          </div>
+
+          <button
+            onClick={() => navigate('/perfil', { replace: true })}
+            className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition cursor-pointer shadow-lg shadow-emerald-200"
+          >
+            Ir para meu perfil agora
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+          }
+        `}</style>
+      </div>
+    )
+  }
+
+  // ==================== LOADING ====================
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-gray-500 gap-3">
@@ -232,6 +295,7 @@ const EditarServicoPage = () => {
     )
   }
 
+  // ==================== ERRO ====================
   if (error) {
     return (
       <div className="max-w-3xl mx-auto py-20 text-center">
@@ -244,6 +308,7 @@ const EditarServicoPage = () => {
     )
   }
 
+  // ==================== FORMULÁRIO ====================
   const inputClass = 'w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none'
   const totalImagens = imagensExistentes.length + novasImagens.length
 
@@ -330,12 +395,10 @@ const EditarServicoPage = () => {
             </span>
           </div>
           
-          {/* Aviso de regras */}
           <div className="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
             📌 <strong>Regras de envio:</strong> Máximo de <strong>{MAX_IMAGENS} fotos</strong>. Cada imagem deve ter até <strong>{TAMANHO_MAX_MB}MB</strong>. Se a foto estiver pesada, reduza a qualidade no celular antes de enviar.
           </div>
 
-          {/* Imagens já existentes */}
           {imagensExistentes.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-3">
               {imagensExistentes.map((img, i) => (
@@ -353,7 +416,6 @@ const EditarServicoPage = () => {
             </div>
           )}
 
-          {/* Novas imagens (ainda não salvas) */}
           {novasImagens.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-3">
               {novasImagens.map((img, i) => (
@@ -372,7 +434,6 @@ const EditarServicoPage = () => {
             </div>
           )}
 
-          {/* Input bloqueado se atingiu o limite */}
           {totalImagens < MAX_IMAGENS ? (
             <input
               type="file"
@@ -415,8 +476,11 @@ const EditarServicoPage = () => {
           <button
             type="submit"
             disabled={salvando}
-            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50 cursor-pointer"
+            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
           >
+            {salvando && (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            )}
             {salvando
               ? 'Salvando...'
               : ehNovo

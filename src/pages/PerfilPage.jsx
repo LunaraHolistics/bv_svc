@@ -10,7 +10,6 @@ const formatarFone = (val) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-// ✅ NORMALIZADOR MASTER: Limpa vírgulas, "Rua/Av", espaços. Só fica letras e números.
 const normalizeAddr = (addr) => {
   if (!addr) return ''
   return addr.toLowerCase().replace(/[.,]/g, '').replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '').replace(/\s+/g, '').trim()
@@ -28,9 +27,8 @@ const PerfilPage = () => {
   const [avatarFile, setAvatarFile] = useState(null)
 
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
-  
-  // ✅ NOVO: Guarda TODOS os serviços do usuário (para exibir na lista)
   const [servicosDoUsuario, setServicosDoUsuario] = useState([])
+  const [excluindoId, setExcluindoId] = useState(null)
 
   const [form, setForm] = useState({
     nome_completo: '',
@@ -57,22 +55,24 @@ const PerfilPage = () => {
     if (user) buscarEstatisticas()
   }, [user])
 
-  // ✅ NOVO: Busca todos os serviços do usuário para listar no perfil
-  useEffect(() => {
-    if (ehPrestador && user) {
-      const buscarServicos = async () => {
-        const { data } = await supabase
-          .from('prestadores_servico')
-          .select('id, categoria, opt_in, casa_numero')
-          .eq('usuario_id', user.id)
-          .order('created_at', { ascending: false })
-
-        setServicosDoUsuario(data || [])
-      }
-      buscarServicos()
-    } else {
+  const buscarServicosDoUsuario = async () => {
+    if (!ehPrestador || !user) {
       setServicosDoUsuario([])
+      return
     }
+    const { data, error } = await supabase
+      .from('prestadores_servico')
+      .select('id, categoria, opt_in, casa_numero')
+      .eq('usuario_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (!error) {
+      setServicosDoUsuario(data || [])
+    }
+  }
+
+  useEffect(() => {
+    buscarServicosDoUsuario()
   }, [ehPrestador, user])
 
   const buscarEstatisticas = async () => {
@@ -150,20 +150,32 @@ const PerfilPage = () => {
     reader.readAsDataURL(file)
   }
 
-  // ✅ NOVO: Cria um novo serviço e redireciona
   const handleAdicionarServico = () => {
     const enderecoCompleto = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
     navigate(`/editar-servico/novo?endereco=${encodeURIComponent(enderecoCompleto)}`)
   }
 
-  // ✅ NOVO: Excluir serviço direto do perfil
+  // ✅ CORRIGIDO: Agora verifica erro do Supabase ANTES de remover do estado local
   const handleExcluirServico = async (id) => {
     if (!window.confirm('Excluir este serviço permanentemente?')) return
-    
-    await supabase.from('prestadores_servico').delete().eq('id', id)
-    
-    // Atualiza a lista local instantaneamente
+
+    setExcluindoId(id)
+
+    const { error } = await supabase
+      .from('prestadores_servico')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      alert('❌ Erro ao excluir: ' + error.message + '\n\nSe o erro for de permissão, verifique as políticas RLS no Supabase.')
+      setExcluindoId(null)
+      return
+    }
+
+    // Só remove da lista local DEPOIS que o Supabase confirmou
     setServicosDoUsuario(prev => prev.filter(s => s.id !== id))
+    setStats(prev => ({ ...prev, servicos: Math.max(0, prev.servicos - 1) }))
+    setExcluindoId(null)
   }
 
   const handleSalvar = async (e) => {
@@ -222,8 +234,6 @@ const PerfilPage = () => {
         throw new Error(dbError.message)
       }
 
-      // ✅ NOVO SYNC: Atualiza o endereço de TODOS os serviços do usuário com o formato do perfil
-      // Isso garante que empilham perfeitamente no mapa!
       if (ehPrestador && (form.endereco_rua || form.endereco_numero)) {
         const novoEnderecoFormatado = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
         
@@ -238,16 +248,7 @@ const PerfilPage = () => {
 
       await recarregarPerfil()
       buscarEstatisticas()
-      
-      // Atualiza a lista de serviços no perfil
-      if (ehPrestador) {
-        const { data } = await supabase
-          .from('prestadores_servico')
-          .select('id, categoria, opt_in, casa_numero')
-          .eq('usuario_id', user.id)
-          .order('created_at', { ascending: false })
-        setServicosDoUsuario(data || [])
-      }
+      buscarServicosDoUsuario()
 
       setSucesso(true)
       setAvatarFile(null)
@@ -290,14 +291,14 @@ const PerfilPage = () => {
 
           <button
             onClick={() => navigate('/')}
-            className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition"
+            className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
           >
             Voltar ao início
           </button>
         </div>
       </div>
 
-      {/* CARD DE ESTATÍSTICAS */}
+      {/* ESTATÍSTICAS */}
       <div className="grid grid-cols-3 gap-4">
         <button type="button" onClick={() => navigate('/anuncios')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
           <span className="text-3xl mb-2">📢</span>
@@ -353,13 +354,11 @@ const PerfilPage = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo *" className={inputClass} required />
             <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição (apelido)" className={inputClass} />
-
             <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
               <option value="">Selecione sua fase *</option>
               <option value="Fase 1">Fase 1</option>
               <option value="Fase 2">Fase 2</option>
             </select>
-
             <input name="whatsapp" value={form.whatsapp} onChange={handleChange} placeholder="WhatsApp (00) 00000-0000" autoComplete="tel" className={inputClass} />
             <input name="telefone2" value={form.telefone2} onChange={handleChange} placeholder="Telefone adicional (opcional)" autoComplete="tel" className={inputClass} />
             <input name="quadra" value={form.quadra} onChange={handleChange} placeholder="Quadra" className={inputClass} />
@@ -403,14 +402,13 @@ const PerfilPage = () => {
         {/* Tipo de Pessoa */}
         <div>
           <h2 className="text-xl font-bold mb-5">Tipo de perfil</h2>
-
           <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
             <option value="morador">Morador / Proprietário</option>
             <option value="prestador">Morador / Prestador de Serviços</option>
           </select>
         </div>
 
-        {/* ✅ CARD DE GERENCIAMENTO (Agora lista os serviços inline) */}
+        {/* GERENCIAMENTO DE SERVIÇOS */}
         {ehPrestador && (
           <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
             <div className="flex items-start gap-4">
@@ -426,7 +424,6 @@ const PerfilPage = () => {
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {/* Botão Adicionar Novo */}
                   <button
                     type="button"
                     onClick={handleAdicionarServico}
@@ -435,7 +432,6 @@ const PerfilPage = () => {
                     ➕ Adicionar novo serviço
                   </button>
 
-                  {/* Ver no Mapa */}
                   {servicosDoUsuario.length > 0 && (
                     <button
                       type="button"
@@ -447,34 +443,51 @@ const PerfilPage = () => {
                   )}
                 </div>
 
-                {/* Lista inline dos serviços */}
                 {servicosDoUsuario.length > 0 && (
                   <div className="mt-5 space-y-3">
-                    {servicosDoUsuario.map((servico) => (
-                      <div key={servico.id} className="p-3 bg-white rounded-xl border border-gray-100 flex items-center justify-between gap-3 hover:shadow-sm transition">
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{servico.categoria || 'Sem categoria'}</p>
-                          <p className="text-xs text-gray-400 truncate">
-                            {servico.casa_numero || 'Sem endereço'}
-                          </p>
+                    {servicosDoUsuario.map((servico) => {
+                      const estaExcluindo = excluindoId === servico.id
+                      return (
+                        <div
+                          key={servico.id}
+                          className={`p-3 bg-white rounded-xl border flex items-center justify-between gap-3 transition ${estaExcluindo ? 'border-red-300 opacity-60' : 'border-gray-100 hover:shadow-sm'}`}
+                        >
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 truncate">
+                              {estaExcluindo ? 'Excluindo...' : (servico.categoria || 'Sem categoria')}
+                            </p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {servico.casa_numero || 'Sem endereço'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/editar-servico/${servico.id}`)}
+                              disabled={estaExcluindo}
+                              className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleExcluirServico(servico.id)}
+                              disabled={estaExcluindo}
+                              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {estaExcluindo ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="w-3 h-3 border border-red-300 border-t-red-600 rounded-full animate-spin" />
+                                  Aguarde
+                                </span>
+                              ) : (
+                                '🗑️ Excluir'
+                              )}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/editar-servico/${servico.id}`)}
-                            className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
-                          >
-                            ✏️ Editar
-                          </button>
-                          <button
-                            onClick={() => handleExcluirServico(servico.id)}
-                            className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition cursor-pointer"
-                          >
-                            🗑️ Excluir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
