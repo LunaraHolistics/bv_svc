@@ -91,12 +91,11 @@ const Header = () => {
     const fetchNotificacoes = async () => {
       const agora = new Date().toISOString()
       
-      // ✅ CORRIGIDO: Busca avisos ativos E que NÃO expiraram pela data
       const { data, error } = await supabase
         .from('avisos_admin')
         .select('id, titulo, mensagem, created_at, data_fim')
         .eq('ativo', true)
-        .or(`data_fim.is.null,data_fim.gte.${agora}`) // Exclui expirados
+        .or(`data_fim.is.null,data_fim.gte.${agora}`)
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -119,7 +118,7 @@ const Header = () => {
 
     const subscription = supabase
       .channel('avisos-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'avisos_admin' }, fetchNotificacoes) // ✅ Ouve INSERT, UPDATE e DELETE
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'avisos_admin' }, fetchNotificacoes)
       .subscribe()
 
     return () => {
@@ -129,7 +128,6 @@ const Header = () => {
 
   const marcarComoLido = async (avisoId) => {
     if (!user) return
-    // ✅ CORRIGIDO: Usa upsert para não quebrar se o usuário clicar duas vezes
     await supabase
       .from('avisos_lidos')
       .upsert({ aviso_id: avisoId, user_id: user.id }, { onConflict: 'aviso_id,user_id' })
@@ -140,7 +138,6 @@ const Header = () => {
   const marcarTodasComoLidas = async () => {
     if (!user || naoLidas.length === 0) return
     
-    // Monta array para upsert em massa
     const registros = naoLidas.map(aviso => ({ aviso_id: aviso.id, user_id: user.id }))
     
     const { error } = await supabase
@@ -176,6 +173,9 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Pega o aviso mais recente para a barra
+  const avisoMaisRecente = naoLidas.length > 0 ? naoLidas[0] : null
 
   return (
     <>
@@ -280,7 +280,35 @@ const Header = () => {
         </div>
       </header>
 
-      {/* ===== MOBILE ===== */}
+      {/* ===== BARRA AMARELA DE AVISO GLOBAL (Desktop e Mobile) ===== */}
+      {avisoMaisRecente && (
+        <div className="bg-amber-50 border-b border-amber-200 relative z-40 animate-[slideDown_0.3s_ease-out]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-lg shrink-0">📢</span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-amber-800 truncate">
+                  Aviso da Administração {naoLidas.length > 1 ? `(${naoLidas.length} novos)` : '(Novo)'}
+                </p>
+                <p className="text-xs text-amber-600 truncate hidden sm:block">
+                  {avisoMaisRecente.titulo}: {avisoMaisRecente.mensagem}
+                </p>
+                <p className="text-xs text-amber-600 truncate sm:hidden">
+                  {avisoMaisRecente.titulo}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={marcarTodasComoLidas}
+              className="shrink-0 px-4 py-1.5 bg-amber-200/80 hover:bg-amber-300 text-amber-800 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Marcar como lido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MOBILE (MENU INFERIOR) ===== */}
       <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md pb-[env(safe-area-inset-bottom)]">
         <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-3xl px-1.5 py-2">
           <div className="flex items-center justify-around">

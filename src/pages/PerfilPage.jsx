@@ -69,14 +69,14 @@ const PerfilPage = () => {
       return 0
     }
 
-    // ✅ NOVO: Busca específica para anúncios (só conta os que estão "Ativo")
+    // ✅ BUSCA ESPECÍFICA PARA ANÚNCIOS (SÓ CONTA OS ATIVOS)
     const fetchAnunciosAtivos = async () => {
       try {
         const res = await supabase
           .from('anuncios_vendas')
           .select('*', { count: 'exact', head: true })
           .eq('usuario_id', user.id)
-          .eq('status', 'Ativo')
+          .eq('status', 'Ativo') // <--- O SEGREDO ESTÁ AQUI
         return res.error ? 0 : (res.count || 0)
       } catch (err) {
         return 0
@@ -84,7 +84,7 @@ const PerfilPage = () => {
     }
 
     const [anuncios, servicos, indicacoes] = await Promise.all([
-      fetchAnunciosAtivos(), // ✅ Substituiu o fetchCount genérico
+      fetchAnunciosAtivos(), // Usa a função nova aqui
       fetchCount('prestadores_servico'),
       fetchCount('indicacoes')
     ])
