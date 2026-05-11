@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
+import { Share2 } from 'lucide-react'
 
 const navItems = [
   {
@@ -152,6 +153,30 @@ const Header = () => {
     }
   }
 
+  // ✅ NOVA FUNÇÃO: Compartilhar Link
+  const handleShare = async () => {
+    const urlParaCompartilhar = window.location.href
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'BV Service - Bella Vittà',
+          text: 'Confira os serviços e anúncios do nosso condomínio!',
+          url: urlParaCompartilhar
+        })
+      } catch (err) {
+        console.error('Erro ao compartilhar:', err)
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(urlParaCompartilhar)
+        alert('✅ Link copiado para a área de transferência!\n\nCole no WhatsApp ou envie para outro morador. Ao abrir, a pessoa verá exatamente esta tela que você está vendo.')
+      } catch (err) {
+        prompt("Copie o link manualmente:", urlParaCompartilhar)
+      }
+    }
+  }
+
   const handleLogout = async () => {
     setMenuOpen(false)
     await logout()
@@ -217,6 +242,11 @@ const Header = () => {
                 <NavLink to="/novo-anuncio" className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-xl text-sm font-semibold shadow-md hover:scale-[1.02] transition no-underline">
                   + Anunciar
                 </NavLink>
+
+                {/* ✅ NOVO: Botão Compartilhar Desktop */}
+                <button onClick={handleShare} title="Compartilhar esta página" className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl transition cursor-pointer">
+                  <Share2 size={20} className="text-gray-600" />
+                </button>
 
                 {!loading && user ? (
                   <div className="flex items-center gap-2">
@@ -329,6 +359,12 @@ const Header = () => {
                 </NavLink>
               )
             })}
+
+            {/* ✅ NOVO: Botão Compartilhar Mobile */}
+            <button onClick={handleShare} className="flex flex-col items-center flex-1 cursor-pointer">
+              <span className="text-lg opacity-70">📤</span>
+              <span className="text-[10px] mt-0.5 text-gray-400">Compartilhar</span>
+            </button>
 
             <div className="flex flex-col items-center flex-1 relative">
               {user && naoLidas.length > 0 && (

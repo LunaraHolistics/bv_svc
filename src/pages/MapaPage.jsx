@@ -14,10 +14,15 @@ const formatarWhatsapp = (numero) => {
   return limpo.length >= 10 ? limpo : null
 }
 
-// Normaliza o endereço para agrupar corretamente (ignora maiúsculas e espaços extras)
+// ✅ NORMALIZADOR NINJA: Extrai SÓ números e letras, ignora vírgulas, "Rua", "Av", espaços extras
 const normalizeAddr = (addr) => {
   if (!addr) return ''
-  return addr.toLowerCase().trim().replace(/\s+/g, '')
+  return addr
+    .toLowerCase()
+    .replace(/[.,]/g, '') // Tira pontuação
+    .replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '') // Tira nomes de ruas
+    .replace(/\s+/g, '')     // Tira todos os espaços sobrando
+    .trim()
 }
 
 /* ---------------- CARD INTERNO (Conteúdo de cada carta) ---------------- */
@@ -55,9 +60,9 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
     <div
       onClick={handleCardClick}
       className={`bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 ${isFront ? 'cursor-pointer' : 'cursor-pointer select-none'}`}
-      style={{ pointerEvents: isFront ? 'auto' : 'none' }} // Evita cliques acidentais nos de trás
+    // ✅ TIRE a linha do pointerEvents: 'none' para permitir toque no mobile
     >
-      
+
       {prestador.imagens_url && (
         <div className="w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-400 shrink-0" />
       )}
@@ -67,9 +72,9 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           <div className="flex items-start gap-4 min-w-0 flex-1">
             <div className="relative shrink-0">
               {prestador.avatar_do_perfil ? (
-                <img 
-                  src={prestador.avatar_do_perfil} 
-                  alt={prestador.nome} 
+                <img
+                  src={prestador.avatar_do_perfil}
+                  alt={prestador.nome}
                   className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
                   onError={(e) => {
                     e.currentTarget.onerror = null
@@ -78,7 +83,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
                   }}
                 />
               ) : null}
-              <div 
+              <div
                 className={`w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${prestador.avatar_do_perfil ? 'hidden' : 'flex'}`}
               >
                 <span className="text-emerald-700 font-bold text-lg">{nomeInicial}</span>
@@ -195,12 +200,12 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   const prestadorDaFrente = grupo[activeIdx]
 
   return (
-    <div className="relative h-[420px] w-full">
+    // ✅ ALTURA MENOR NO MOBILE (h-[320px]) E MAIOR NO DESKTOP (sm:h-[420px])
+    <div className="relative h-[320px] sm:h-[420px] w-full">
       {grupo.map((prestador, i) => {
         const diff = activeIdx - i
         const isFront = diff === 0
-        
-        // Cálculo do efeito de profundidade
+
         const translateX = diff > 0 ? diff * 12 : 0
         const translateY = diff > 0 ? diff * 8 : 0
         const scale = 1 - (Math.abs(diff) * 0.03)
@@ -217,6 +222,7 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
               opacity,
               zIndex,
               filter: blur
+              // ✅ SEM pointerEvents: 'none' aqui! (Permite clicar nas cartas de trás no celular)
             }}
           >
             <CardConteudo
@@ -229,14 +235,15 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
         )
       })}
 
-      {/* Indicadores de quantidade (bolinhas na base) */}
+      {/* Indicadores mobile melhorados (Agora clicáveis para trocar de carta) */}
       {grupo.length > 1 && (
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-50 pointer-events-none">
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-50">
           {grupo.map((_, i) => (
-            <div 
-              className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                i === activeIdx ? 'bg-emerald-500 scale-125' : 'bg-white/90 shadow-sm'
-              }`} 
+            <button
+              type="button"
+              onClick={() => setActiveIdx(i)}
+              className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer ${i === activeIdx ? 'bg-emerald-500 scale-125' : 'bg-white/90 shadow-sm'
+                }`}
             />
           ))}
         </div>
@@ -244,7 +251,7 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
 
       {/* Faixa lateral indicando mais serviços (aparece se tiver mais de 1) */}
       {grupo.length > 1 && (
-        <div 
+        <div
           onClick={(e) => { e.stopPropagation(); setActiveIdx(prev => (prev + 1) % grupo.length) }}
           className="absolute -right-2 top-1/2 -translate-y-1/2 translate-x-full bg-emerald-600 text-white text-xs font-bold px-2 py-4 rounded-r-xl shadow-lg cursor-pointer hover:bg-emerald-700 transition z-40 hidden md:flex flex-col items-center justify-center h-24"
         >
@@ -278,23 +285,23 @@ const MapaPage = () => {
         supabase.from('prestadores_servico').select('*').eq('opt_in', true).order('nome'),
         supabase.from('categorias').select('*').eq('tipo', 'condominio').order('ordem')
       ])
-      
+
       if (resPrestadores.error) throw resPrestadores.error
       const listaCategorias = resCategorias.error ? [] : (resCategorias.data || [])
       const listaPrestadores = resPrestadores.data || []
 
       const listaIdsUnicos = [...new Set(listaPrestadores.map(p => p.usuario_id).filter(Boolean))]
       let mapaAvatares = {}
-      
+
       if (listaIdsUnicos.length > 0) {
         const { data: perfis } = await supabase
           .from('perfis')
           .select('id, avatar_url')
           .in('id', listaIdsUnicos)
-        
+
         if (perfis) {
-          perfis.forEach(p => { 
-            if (p.avatar_url) mapaAvatares[p.id] = p.avatar_url 
+          perfis.forEach(p => {
+            if (p.avatar_url) mapaAvatares[p.id] = p.avatar_url
           })
         }
       }
@@ -319,7 +326,7 @@ const MapaPage = () => {
     setPrestadores((prev) => prev.filter((p) => p.id !== id))
 
     const { error } = await supabase.from('prestadores_servico').delete().eq('id', id)
-    
+
     if (error) {
       alert('Erro ao excluir: ' + error.message)
       if (prestadorBackup) {
@@ -350,7 +357,7 @@ const MapaPage = () => {
   const gruposFiltrados = useMemo(() => {
     let resultado = agrupados
     if (filtroCategoria !== 'Todas') {
-      resultado = resultado.filter(grupo => 
+      resultado = resultado.filter(grupo =>
         grupo.some(p => p.categoria === filtroCategoria)
       )
     }
@@ -450,11 +457,11 @@ const MapaPage = () => {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
             {gruposFiltrados.map((grupo, index) => (
-              <CardAgrupado 
-                key={`${normalizeAddr(grupo[0]?.casa_numero)}-${index}`} 
-                grupo={grupo} 
+              <CardAgrupado
+                key={`${normalizeAddr(grupo[0]?.casa_numero)}-${index}`}
+                grupo={grupo}
                 filtroAtivo={filtroCategoria}
-                onDelete={handleDeleteServico} 
+                onDelete={handleDeleteServico}
               />
             ))}
           </div>

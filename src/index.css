@@ -119,3 +119,13 @@ main > div {
     font-size: 15px;
   }
 }
+
+/* Bloqueia seleção de texto acidental em todo o app */
+@layer base {
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
