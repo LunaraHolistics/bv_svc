@@ -14,6 +14,7 @@ const PerfilPage = () => {
   const navigate = useNavigate()
   const { user, perfil, loading: authLoading, recarregarPerfil } = useAuth()
   const fileInputRef = useRef(null)
+  const imgServicoRef = useRef(null)
 
   const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
@@ -22,6 +23,9 @@ const PerfilPage = () => {
   const [avatarFile, setAvatarFile] = useState(null)
   
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
+  
+  // NOVO: Estado para guardar as fotos de divulgação do serviço
+  const [imgServicos, setImgServicos] = useState([])
 
   const [form, setForm] = useState({
     nome_completo: '',
@@ -38,7 +42,11 @@ const PerfilPage = () => {
     instagram_url: '',
     facebook_url: '',
     site_url: '',
-    servicos_oferecidos: ''
+    servicos_oferecidos: '',
+    // NOVOS: Campos exclusivos do serviço para a tabela prestadores_servico
+    servico_casa: '',
+    servico_categoria: '',
+    servico_condicoes: ''
   })
 
   const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
@@ -50,9 +58,7 @@ const PerfilPage = () => {
   }, [authLoading, user, navigate])
 
   useEffect(() => {
-    if (user) {
-      buscarEstatisticas()
-    }
+    if (user) buscarEstatisticas()
   }, [user])
 
   // FUNÇÃO EVOLUÍDA: Tenta usuario_id, se falhar tenta user_id automaticamente
@@ -60,37 +66,20 @@ const PerfilPage = () => {
     try {
       const fetchCount = async (tabela) => {
         let count = 0
-        
-        // 1. Tenta buscar pela coluna usuario_id (padrão do nosso sistema)
-        const res1 = await supabase
-          .from(tabela)
-          .select('*', { count: 'exact', head: true })
-          .eq('usuario_id', user.id)
-          
+        const res1 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('usuario_id', user.id)
         if (!res1.error) {
           count = res1.count
         } else {
-          // 2. Se der erro (ex: coluna não existe), tenta com user_id
-          const res2 = await supabase
-            .from(tabela)
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            
-          if (!res2.error) {
-            count = res2.count
-          }
+          const res2 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+          if (!res2.error) count = res2.count
         }
-        
         return count || 0
       }
-
-      // Busca as 3 tabelas em paralelo usando a função à prova de falhas
       const [anuncios, servicos, indicacoes] = await Promise.all([
         fetchCount('anuncios_vendas'),
         fetchCount('prestadores_servico'),
         fetchCount('indicacoes')
       ])
-      
       setStats({ anuncios, servicos, indicacoes })
     } catch (error) {
       console.error('Erro ao buscar stats:', error)
@@ -114,65 +103,84 @@ const PerfilPage = () => {
         instagram_url: perfil.instagram_url || '',
         facebook_url: perfil.facebook_url || '',
         site_url: perfil.site_url || '',
-        servicos_oferecidos: (perfil.servicos_oferecidos || []).join(', ')
+        servicos_oferecidos: (perfil.servicos_oferecidos || []).join(', '),
+        // NOVO: Puxa dados do serviço se já existir
+        servico_casa: perfil.servico_casa || '',
+        servico_categoria: perfil.servico_categoria || '',
+        servico_condicoes: perfil.servico_condicoes || ''
       })
-
       setAvatarPreview(perfil.avatar_url || null)
     }
   }, [perfil])
 
+  // NOVO: Puxa fotos de divulgação do banco ao carregar a página
+  useEffect(() => {
+    if (ehPrestador && user) {
+      const buscarImagens = async () => {
+        const { data } = await supabase
+          .from('prestadores_servico')
+          .select('imagens_url')
+          .eq('usuario_id', user.id)
+          .single()
+        
+        if (data?.imagens_url) {
+          try {
+            setImgServicos(JSON.parse(data.imagens_url))
+          } catch { setImgServicos([]) }
+        }
+      }
+      buscarImagens()
+    }
+  }, [ehPrestador, user])
+
   const handleChange = (e) => {
     const { name, value } = e.target
-
-    if (name === 'whatsapp' || name === 'telefone2' || name === 'telefone') {
+    if (['whatsapp', 'telefone2', 'telefone'].includes(name)) {
       setForm((prev) => ({ ...prev, [name]: formatarFone(value) }))
     } else {
       setForm((prev) => ({ ...prev, [name]: value }))
     }
-
     setError(null)
   }
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      setError('Envie apenas imagens.')
-      return
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Imagem deve ter no máximo 2MB.')
-      return
-    }
-
+    if (!file.type.startsWith('image/')) { setError('Envie apenas imagens.'); return }
+    if (file.size > 2 * 1024 * 1024) { setError('Imagem deve ter no máximo 2MB.'); return }
     setAvatarFile(file)
-
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result)
-    }
+    reader.onloadend = () => setAvatarPreview(reader.result)
     reader.readAsDataURL(file)
   }
+
+  // NOVO: Upload de imagens de serviço
+  const handleUploadServico = async (e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    setSalvando(true)
+    const novas = []
+    for (const file of files) {
+      const ext = file.name.split('.').pop()
+      const fileName = `servicos/${user.id}-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('imagens-servicos').upload(fileName, file)
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('imagens-servicos').getPublicUrl(fileName)
+        novas.push(publicUrl)
+      }
+    }
+    setImgServicos(prev => [...prev, ...novas])
+    setSalvando(false)
+  }
+
+  const removeImgServico = (index) => setImgServicos(prev => prev.filter((_, i) => i !== index))
 
   const handleSalvar = async (e) => {
     e.preventDefault()
 
-    if (!form.nome_completo.trim()) {
-      setError('Nome completo é obrigatório.')
-      return
-    }
-
-    if (!form.fase) {
-      setError('Informe sua fase.')
-      return
-    }
-
-    if (!user?.id) {
-      setError('Sessão expirada. Faça login novamente.')
-      return
-    }
+    if (!form.nome_completo.trim()) { setError('Nome completo é obrigatório.'); return }
+    if (!form.fase) { setError('Informe sua fase.'); return }
+    if (!user?.id) { setError('Sessão expirada.'); return }
 
     setSalvando(true)
     setError(null)
@@ -183,11 +191,8 @@ const PerfilPage = () => {
       if (avatarFile) {
         const ext = avatarFile.name.split('.').pop()
         const filePath = `avatars/${user.id}.${ext}`
-
         const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile, { upsert: true })
-
         if (uploadError) throw new Error(`Upload falhou: ${uploadError.message}`)
-
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath)
         avatarUrl = publicUrl
       }
@@ -212,8 +217,8 @@ const PerfilPage = () => {
         updated_at: new Date().toISOString()
       }
 
+      // 1. Salva na tabela de perfis
       let dbError
-
       if (perfil) {
         const result = await supabase.from('perfis').update(dados).eq('id', user.id)
         dbError = result.error
@@ -227,9 +232,33 @@ const PerfilPage = () => {
         throw new Error(dbError.message)
       }
 
-      await recarregarPerfil()
+      // 2. NOVO: Se for Prestador/Ambos, garante que exista na tabela de serviços
+      if (ehPrestador) {
+        const dadosServico = {
+          nome: dados.nome_completo,
+          categoria: form.servico_categoria || null,
+          casa_numero: form.servico_casa || null,
+          descricao_comercial: form.descricao_comercial || null,
+          descricao: form.descricao_comercial || null,
+          nome_fantasia: form.nome_fantasia || null,
+          servicos_oferecidos: dados.servicos_oferecidos,
+          condicoes_moradores: form.servico_condicoes || null,
+          whatsapp: dados.whatsapp,
+          instagram_url: dados.instagram_url,
+          site_url: dados.site_url,
+          imagens_url: imgServicos.length > 0 ? JSON.stringify(imgServicos) : null,
+          avatar_url: avatarUrl,
+          opt_in: true,
+          usuario_id: user.id
+        }
 
-      // Atualiza os contadores imediatamente após salvar
+        // Upsert: Cria se não existir, atualiza se já existir
+        await supabase
+          .from('prestadores_servico')
+          .upsert(dadosServico, { onConflict: 'usuario_id' })
+      }
+
+      await recarregarPerfil()
       buscarEstatisticas()
 
       setSucesso(true)
@@ -272,7 +301,7 @@ const PerfilPage = () => {
           <div>
             <span className="text-xs bg-white/10 px-3 py-1 rounded-full">Área do morador</span>
             <h1 className="text-3xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
-            <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais, informações comerciais e personalize como você aparece para os moradores.</p>
+            <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais, informações comerciais e personalize como você aparece.</p>
           </div>
 
           <button
@@ -367,18 +396,71 @@ const PerfilPage = () => {
           </select>
 
           {ehPrestador && (
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <input name="nome_fantasia" value={form.nome_fantasia} onChange={handleChange} placeholder="Nome fantasia" className={inputClass} />
-              <input name="telefone" value={form.telefone} onChange={handleChange} placeholder="Telefone comercial (opcional)" autoComplete="tel" className={inputClass} />
-              <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleChange} placeholder="Serviços oferecidos" className={inputClass} />
-              <input name="instagram_url" value={form.instagram_url} onChange={handleChange} placeholder="Instagram" className={inputClass} />
-              <input name="facebook_url" value={form.facebook_url} onChange={handleChange} placeholder="Facebook" className={inputClass} />
-              <input name="site_url" value={form.site_url} onChange={handleChange} placeholder="Website" className={inputClass} />
-            </div>
-          )}
+            <div className="space-y-6 mt-6">
+              {/* NOVO: Caixa de dados do serviço */}
+              <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                <h3 className="text-sm font-bold text-emerald-800 mb-4 flex items-center gap-2">🛠️ Dados do seu Serviço no App</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <input name="servico_categoria" value={form.servico_categoria} onChange={handleChange} placeholder="Ex: Encanador" className={inputClass} />
+                  <input name="servico_casa" value={form.servico_casa} onChange={handleChange} placeholder="Rua/Av + Número" className={inputClass} />
+                  <input name="servico_condicoes" value={form.servico_condicoes} onChange={handleChange} placeholder="Ex: 10% desconto" className={`${inputClass} md:col-span-2`} />
+                </div>
+              </div>
 
-          {ehPrestador && (
-            <textarea name="descricao_comercial" value={form.descricao_comercial} onChange={handleChange} placeholder="Descreva seu serviço" rows="4" className={`${inputClass} mt-4`} />
+              {/* NOVO: Galeria de fotos de divulgação */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-800 mb-3">Fotos de divulgação</h3>
+                {imgServicos.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mb-3">
+                    {imgServicos.map((img, i) => (
+                      <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden group border">
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImgServico(i)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleUploadServico}
+                  ref={imgServicoRef}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                />
+              </div>
+
+              <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleChange} placeholder="Serviços oferecidos (separar por vírgula)" className={inputClass} />
+              
+              <textarea
+                name="descricao_comercial"
+                value={form.descricao_comercial}
+                onChange={handleChange}
+                placeholder="Descreva seu serviço em detalhes para os moradores"
+                rows="4"
+                className={`${inputClass} mt-4`}
+              />
+
+              {form.servico_condicoes && (
+                <div className="mt-3 bg-amber-50 border border-amber-100 rounded-2xl p-3">
+                  <p className="text-xs text-amber-700 font-medium">
+                    ⭐ Benefício moradores definido: {form.servico_condicoes}
+                  </p>
+                </div>
+              )}
+              
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <input name="instagram_url" value={form.instagram_url} onChange={handleChange} placeholder="Instagram" className={inputClass} />
+                <input name="facebook_url" value={form.facebook_url} onChange={handleChange} placeholder="Facebook" className={inputClass} />
+                <input name="site_url" value={form.site_url} onChange={handleChange} placeholder="Website" className={`${inputClass} md:col-span-2`} />
+              </div>
+            </div>
           )}
         </div>
 

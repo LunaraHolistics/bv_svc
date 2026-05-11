@@ -86,38 +86,31 @@ const CardPrestador = ({ prestador, onDelete }) => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
             
-            {/* 👤 AVATAR DO USUÁRIO - SEMPRE EXIBIDO */}
+            {/* 👤 AVATAR DO USUÁRIO (Busca prioritária pela foto do perfil) */}
             <div className="relative shrink-0">
-              {prestador.avatar_url ? (
+              {prestador.avatar_do_perfil ? (
                 <img 
-                  src={prestador.avatar_url} 
+                  src={prestador.avatar_do_perfil} 
                   alt={prestador.nome} 
-                  className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm hover:shadow-md transition-shadow"
+                  className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
                   onError={(e) => {
-                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(prestador.nome || 'U')}&background=10b981&color=fff&bold=true`
+                    e.currentTarget.onerror = null; // Prevém loop infinito
+                    e.currentTarget.style.display = 'none'
+                    e.currentTarget.nextElementSibling.style.display = 'flex'
                   }}
                 />
-              ) : (
-                <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm">
-                  <span className="text-emerald-700 font-bold text-lg">{nomeInicial}</span>
-                </div>
-              )}
-              {/* Indicador visual de usuário verificado (opcional) */}
-              {prestador.verificado && (
-                <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white">✓</span>
-              )}
+              ) : null}
+              <div 
+                className={`w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${prestador.avatar_do_perfil ? 'hidden' : 'flex'}`}
+              >
+                <span className="text-emerald-700 font-bold text-lg">{nomeInicial}</span>
+              </div>
             </div>
 
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-gray-900 truncate">{prestador.nome || 'Prestador'}</h3>
               {prestador.nome_fantasia && (
                 <p className="text-sm text-emerald-600 truncate">{prestador.nome_fantasia}</p>
-              )}
-              {/* Badge de tipo de usuário (opcional) */}
-              {prestador.tipo_usuario && (
-                <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-medium">
-                  {prestador.tipo_usuario}
-                </span>
               )}
             </div>
           </div>
@@ -142,9 +135,10 @@ const CardPrestador = ({ prestador, onDelete }) => {
           )}
         </div>
 
-        {prestador.descricao_comercial && (
+        {/* DESCRIÇÃO COM FALLBACK (Tenta descricao_comercial, senão usa descricao) */}
+        {(prestador.descricao_comercial || prestador.descricao) && (
           <p className="text-sm text-gray-500 mt-4 leading-relaxed line-clamp-3">
-            {prestador.descricao_comercial}
+            {prestador.descricao_comercial || prestador.descricao}
           </p>
         )}
 
@@ -186,12 +180,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
       {/* RODAPÉ DE CONTATO */}
       <div className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">
         {whatsappLink ? (
-          <a 
-            href={whatsappLink} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition"
-          >
+          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition">
             WhatsApp
           </a>
         ) : (
@@ -239,7 +228,33 @@ const MapaPage = () => {
       ])
       if (resPrestadores.error) throw resPrestadores.error
       if (resCategorias.error) throw resCategorias.error
-      setPrestadores(resPrestadores.data || [])
+      
+      const listaPrestadores = resPrestadores.data || []
+
+      // NOVA LÓGICA: Busca as fotos de perfil dos donos dos serviços
+      const listaIdsUnicos = [...new Set(listaPrestadores.map(p => p.usuario_id).filter(Boolean))]
+      let mapaAvatares = {}
+      
+      if (listaIdsUnicos.length > 0) {
+        const { data: perfis } = await supabase
+          .from('perfis')
+          .select('id, avatar_url')
+          .in('id', listaIdsUnicos)
+        
+        if (perfis) {
+          perfis.forEach(p => { 
+            if (p.avatar_url) mapaAvatares[p.id] = p.avatar_url 
+          })
+        }
+      }
+
+      // Mescla os avatares encontrados com os dados dos prestadores
+      const prestadoresComAvatar = listaPrestadores.map(p => ({
+        ...p,
+        avatar_do_perfil: p.avatar_url || mapaAvatares[p.usuario_id] || null
+      }))
+
+      setPrestadores(prestadoresComAvatar)
       setCategorias(resCategorias.data || [])
     } catch (err) {
       console.error(err)
@@ -270,7 +285,7 @@ const MapaPage = () => {
     if (busca.trim()) {
       const termo = busca.toLowerCase()
       resultado = resultado.filter((p) =>
-        [p.nome, p.nome_fantasia, p.categoria, p.descricao_comercial, String(p.casa_numero || '')]
+        [p.nome, p.nome_fantasia, p.categoria, p.descricao_comercial, p.descricao, String(p.casa_numero || '')]
           .filter(Boolean).some((item) => item.toLowerCase().includes(termo))
       )
     }
