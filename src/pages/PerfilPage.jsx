@@ -24,7 +24,6 @@ const PerfilPage = () => {
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
   const [servicoExistente, setServicoExistente] = useState(null)
 
-  // ✅ LIMPO: Só dados pessoais
   const [form, setForm] = useState({
     nome_completo: '',
     nome_exibicao: '',
@@ -36,7 +35,8 @@ const PerfilPage = () => {
     telefone2: ''
   })
 
-  const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
+  // ✅ ATUALIZADO: Agora só verifica se é prestador
+  const ehPrestador = form.tipo_pessoa === 'prestador'
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -90,16 +90,19 @@ const PerfilPage = () => {
     setServicoExistente(data || null)
   }
 
-  // ✅ LIMPO: Só preenche dados pessoais
   useEffect(() => {
     if (perfil) {
+      // ✅ ATUALIZADO: Normaliza o valor antigo "ambos" para "prestador"
+      let tipoPerfil = perfil.tipo_pessoa || 'morador'
+      if (tipoPerfil === 'ambos') tipoPerfil = 'prestador'
+
       setForm({
         nome_completo: perfil.nome_completo || '',
         nome_exibicao: perfil.nome_exibicao || '',
         fase: perfil.fase || '',
         quadra: perfil.quadra || '',
         lote: perfil.lote || '',
-        tipo_pessoa: perfil.tipo_pessoa || 'morador',
+        tipo_pessoa: tipoPerfil,
         whatsapp: perfil.whatsapp || '',
         telefone2: perfil.telefone2 || ''
       })
@@ -176,7 +179,6 @@ const PerfilPage = () => {
         avatarUrl = publicUrl
       }
 
-      // ✅ LIMPO: Só dados pessoais
       const dados = {
         nome_completo: form.nome_completo.trim(),
         whatsapp: form.whatsapp.replace(/\D/g, '') || '',
@@ -203,9 +205,6 @@ const PerfilPage = () => {
         console.error('[Perfil] Erro Supabase:', dbError)
         throw new Error(dbError.message)
       }
-
-      // ✅ REMOVIDO: Não faz mais sync com prestadores_servico
-      // Cada tabela cuida de si mesma
 
       await recarregarPerfil()
       buscarEstatisticas()
@@ -339,10 +338,10 @@ const PerfilPage = () => {
         <div>
           <h2 className="text-xl font-bold mb-5">Tipo de perfil</h2>
 
+          {/* ✅ ATUALIZADO: Opções simplificadas */}
           <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
-            <option value="morador">Morador</option>
-            <option value="prestador">Prestador de Serviços</option>
-            <option value="ambos">Ambos (Morador e Prestador)</option>
+            <option value="morador">Morador / Proprietário</option>
+            <option value="prestador">Morador / Prestador de Serviços</option>
           </select>
 
           {/* CARD DE GERENCIAMENTO DO SERVIÇO */}
