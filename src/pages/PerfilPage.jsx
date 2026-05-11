@@ -14,7 +14,6 @@ const PerfilPage = () => {
   const navigate = useNavigate()
   const { user, perfil, loading: authLoading, recarregarPerfil } = useAuth()
   const fileInputRef = useRef(null)
-  const imgServicoRef = useRef(null)
 
   const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
@@ -23,9 +22,7 @@ const PerfilPage = () => {
   const [avatarFile, setAvatarFile] = useState(null)
   
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
-  
-  // NOVO: Estado para guardar as fotos de divulgação do serviço
-  const [imgServicos, setImgServicos] = useState([])
+  const [servicoExistente, setServicoExistente] = useState(null)
 
   const [form, setForm] = useState({
     nome_completo: '',
@@ -42,11 +39,7 @@ const PerfilPage = () => {
     instagram_url: '',
     facebook_url: '',
     site_url: '',
-    servicos_oferecidos: '',
-    // NOVOS: Campos exclusivos do serviço para a tabela prestadores_servico
-    servico_casa: '',
-    servico_categoria: '',
-    servico_condicoes: ''
+    servicos_oferecidos: ''
   })
 
   const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
@@ -61,7 +54,15 @@ const PerfilPage = () => {
     if (user) buscarEstatisticas()
   }, [user])
 
-  // FUNÇÃO EVOLUÍDA: Tenta usuario_id, se falhar tenta user_id automaticamente
+  // Buscar serviço existente quando for prestador
+  useEffect(() => {
+    if (ehPrestador && user) {
+      buscarServicoExistente()
+    } else {
+      setServicoExistente(null)
+    }
+  }, [ehPrestador, user])
+
   const buscarEstatisticas = async () => {
     try {
       const fetchCount = async (tabela) => {
@@ -86,6 +87,16 @@ const PerfilPage = () => {
     }
   }
 
+  const buscarServicoExistente = async () => {
+    const { data } = await supabase
+      .from('prestadores_servico')
+      .select('id, categoria, opt_in')
+      .eq('usuario_id', user.id)
+      .single()
+    
+    setServicoExistente(data || null)
+  }
+
   useEffect(() => {
     if (perfil) {
       setForm({
@@ -103,35 +114,11 @@ const PerfilPage = () => {
         instagram_url: perfil.instagram_url || '',
         facebook_url: perfil.facebook_url || '',
         site_url: perfil.site_url || '',
-        servicos_oferecidos: (perfil.servicos_oferecidos || []).join(', '),
-        // NOVO: Puxa dados do serviço se já existir
-        servico_casa: perfil.servico_casa || '',
-        servico_categoria: perfil.servico_categoria || '',
-        servico_condicoes: perfil.servico_condicoes || ''
+        servicos_oferecidos: (perfil.servicos_oferecidos || []).join(', ')
       })
       setAvatarPreview(perfil.avatar_url || null)
     }
   }, [perfil])
-
-  // NOVO: Puxa fotos de divulgação do banco ao carregar a página
-  useEffect(() => {
-    if (ehPrestador && user) {
-      const buscarImagens = async () => {
-        const { data } = await supabase
-          .from('prestadores_servico')
-          .select('imagens_url')
-          .eq('usuario_id', user.id)
-          .single()
-        
-        if (data?.imagens_url) {
-          try {
-            setImgServicos(JSON.parse(data.imagens_url))
-          } catch { setImgServicos([]) }
-        }
-      }
-      buscarImagens()
-    }
-  }, [ehPrestador, user])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -154,26 +141,34 @@ const PerfilPage = () => {
     reader.readAsDataURL(file)
   }
 
-  // NOVO: Upload de imagens de serviço
-  const handleUploadServico = async (e) => {
-    const files = Array.from(e.target.files)
-    if (!files.length) return
-    setSalvando(true)
-    const novas = []
-    for (const file of files) {
-      const ext = file.name.split('.').pop()
-      const fileName = `servicos/${user.id}-${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('imagens-servicos').upload(fileName, file)
-      if (!error) {
-        const { data: { publicUrl } } = supabase.storage.from('imagens-servicos').getPublicUrl(fileName)
-        novas.push(publicUrl)
+  // Redireciona para edição do serviço (cria se não existir)
+  const handleGerenciarServico = async () => {
+    if (!servicoExistente) {
+      // Cria um novo registro de serviço
+      const novoServico = {
+        usuario_id: user.id,
+        nome: form.nome_completo,
+        whatsapp: form.whatsapp.replace(/\D/g, ''),
+        opt_in: true
       }
-    }
-    setImgServicos(prev => [...prev, ...novas])
-    setSalvando(false)
-  }
 
-  const removeImgServico = (index) => setImgServicos(prev => prev.filter((_, i) => i !== index))
+      const { data, error } = await supabase
+        .from('prestadores_servico')
+        .insert(novoServico)
+        .select('id')
+        .single()
+
+      if (error) {
+        setError('Erro ao criar serviço: ' + error.message)
+        return
+      }
+
+      navigate(`/editar-servico/${data.id}`)
+    } else {
+      // Redireciona para edição do serviço existente
+      navigate(`/editar-servico/${servicoExistente.id}`)
+    }
+  }
 
   const handleSalvar = async (e) => {
     e.preventDefault()
@@ -232,34 +227,21 @@ const PerfilPage = () => {
         throw new Error(dbError.message)
       }
 
-      // 2. NOVO: Se for Prestador/Ambos, garante que exista na tabela de serviços
-      if (ehPrestador) {
-        const dadosServico = {
-          nome: dados.nome_completo,
-          categoria: form.servico_categoria || null,
-          casa_numero: form.servico_casa || null,
-          descricao_comercial: form.descricao_comercial || null,
-          descricao: form.descricao_comercial || null,
-          nome_fantasia: form.nome_fantasia || null,
-          servicos_oferecidos: dados.servicos_oferecidos,
-          condicoes_moradores: form.servico_condicoes || null,
-          whatsapp: dados.whatsapp,
-          instagram_url: dados.instagram_url,
-          site_url: dados.site_url,
-          imagens_url: imgServicos.length > 0 ? JSON.stringify(imgServicos) : null,
-          avatar_url: avatarUrl,
-          opt_in: true,
-          usuario_id: user.id
-        }
-
-        // Upsert: Cria se não existir, atualiza se já existir
+      // 2. Se for Prestador/Ambos, atualiza dados básicos na tabela de serviços (se existir)
+      if (ehPrestador && servicoExistente) {
         await supabase
           .from('prestadores_servico')
-          .upsert(dadosServico, { onConflict: 'usuario_id' })
+          .update({
+            nome: dados.nome_completo,
+            whatsapp: dados.whatsapp,
+            avatar_url: avatarUrl
+          })
+          .eq('id', servicoExistente.id)
       }
 
       await recarregarPerfil()
       buscarEstatisticas()
+      if (ehPrestador) buscarServicoExistente()
 
       setSucesso(true)
       setAvatarFile(null)
@@ -369,7 +351,7 @@ const PerfilPage = () => {
         <div>
           <h2 className="text-xl font-bold mb-5">Dados pessoais</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo" className={inputClass} />
+            <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo" className={inputClass} required />
             <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição" className={inputClass} />
 
             <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
@@ -391,74 +373,47 @@ const PerfilPage = () => {
 
           <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
             <option value="morador">Morador</option>
-            <option value="prestador">Prestador</option>
-            <option value="ambos">Ambos</option>
+            <option value="prestador">Prestador de Serviços</option>
+            <option value="ambos">Ambos (Morador e Prestador)</option>
           </select>
 
+          {/* CARD DE GERENCIAMENTO DO SERVIÇO */}
           {ehPrestador && (
-            <div className="space-y-6 mt-6">
-              {/* NOVO: Caixa de dados do serviço */}
-              <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-2xl">
-                <h3 className="text-sm font-bold text-emerald-800 mb-4 flex items-center gap-2">🛠️ Dados do seu Serviço no App</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <input name="servico_categoria" value={form.servico_categoria} onChange={handleChange} placeholder="Ex: Encanador" className={inputClass} />
-                  <input name="servico_casa" value={form.servico_casa} onChange={handleChange} placeholder="Rua/Av + Número" className={inputClass} />
-                  <input name="servico_condicoes" value={form.servico_condicoes} onChange={handleChange} placeholder="Ex: 10% desconto" className={`${inputClass} md:col-span-2`} />
+            <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl shrink-0">
+                  🛠️
                 </div>
-              </div>
-
-              {/* NOVO: Galeria de fotos de divulgação */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-800 mb-3">Fotos de divulgação</h3>
-                {imgServicos.length > 0 && (
-                  <div className="flex gap-2 flex-wrap mb-3">
-                    {imgServicos.map((img, i) => (
-                      <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden group border">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImgServico(i)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleUploadServico}
-                  ref={imgServicoRef}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                />
-              </div>
-
-              <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleChange} placeholder="Serviços oferecidos (separar por vírgula)" className={inputClass} />
-              
-              <textarea
-                name="descricao_comercial"
-                value={form.descricao_comercial}
-                onChange={handleChange}
-                placeholder="Descreva seu serviço em detalhes para os moradores"
-                rows="4"
-                className={`${inputClass} mt-4`}
-              />
-
-              {form.servico_condicoes && (
-                <div className="mt-3 bg-amber-50 border border-amber-100 rounded-2xl p-3">
-                  <p className="text-xs text-amber-700 font-medium">
-                    ⭐ Benefício moradores definido: {form.servico_condicoes}
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    {servicoExistente ? 'Seu Serviço está cadastrado!' : 'Cadastre seu Serviço'}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {servicoExistente 
+                      ? `Categoria: ${servicoExistente.categoria || 'Não definida'} • Status: ${servicoExistente.opt_in ? '✅ Visível' : '⏸️ Oculto'}`
+                      : 'Preencha todas as informações do seu serviço para aparecer no Mapa de Serviços do condomínio.'}
                   </p>
+                  
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleGerenciarServico}
+                      className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20"
+                    >
+                      {servicoExistente ? '✏️ Editar Serviço Completo' : '📝 Cadastrar Serviço'}
+                    </button>
+                    
+                    {servicoExistente && stats.servicos > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/mapa')}
+                        className="px-6 py-3 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition"
+                      >
+                        👁️ Ver no Mapa
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
-              
-              <div className="grid md:grid-cols-2 gap-4 mt-4">
-                <input name="instagram_url" value={form.instagram_url} onChange={handleChange} placeholder="Instagram" className={inputClass} />
-                <input name="facebook_url" value={form.facebook_url} onChange={handleChange} placeholder="Facebook" className={inputClass} />
-                <input name="site_url" value={form.site_url} onChange={handleChange} placeholder="Website" className={`${inputClass} md:col-span-2`} />
               </div>
             </div>
           )}

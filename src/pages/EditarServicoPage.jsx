@@ -13,6 +13,7 @@ const EditarServicoPage = () => {
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [error, setError] = useState(null)
+  const [ehNovo, setEhNovo] = useState(false)
 
   const [form, setForm] = useState({
     nome: '',
@@ -32,8 +33,39 @@ const EditarServicoPage = () => {
   const [novasImagens, setNovasImagens] = useState([])
 
   useEffect(() => {
-    buscarServico()
+    if (id === 'novo') {
+      setEhNovo(true)
+      setLoading(false)
+      // Preenche com dados do perfil se disponível
+      carregarDadosPerfil()
+    } else {
+      buscarServico()
+    }
   }, [id])
+
+  const carregarDadosPerfil = async () => {
+    const { data } = await supabase
+      .from('perfis')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    
+    if (data) {
+      setForm({
+        nome: data.nome_completo || '',
+        casa_numero: '',
+        categoria: '',
+        whatsapp: data.whatsapp || '',
+        descricao_comercial: data.descricao_comercial || '',
+        nome_fantasia: data.nome_fantasia || '',
+        servicos_oferecidos: Array.isArray(data.servicos_oferecidos) ? data.servicos_oferecidos.join(', ') : '',
+        condicoes_moradores: '',
+        instagram_url: data.instagram_url || '',
+        site_url: data.site_url || '',
+        opt_in: true
+      })
+    }
+  }
 
   const buscarServico = async () => {
     const { data, error } = await supabase.from('prestadores_servico').select('*').eq('id', id).single()
@@ -96,7 +128,7 @@ const EditarServicoPage = () => {
   const handleDelete = async () => {
     if (window.confirm('Tem certeza que deseja EXCLUIR este serviço permanentemente?')) {
       await supabase.from('prestadores_servico').delete().eq('id', id)
-      navigate('/mapa', { replace: true })
+      navigate('/perfil', { replace: true })
     }
   }
 
@@ -107,7 +139,7 @@ const EditarServicoPage = () => {
     const todasImagens = [...imagensExistentes, ...novasImagens]
     const servicosArray = form.servicos_oferecidos.split(',').map(s => s.trim()).filter(Boolean)
 
-    const { error } = await supabase.from('prestadores_servico').update({
+    const dadosServico = {
       nome: form.nome,
       casa_numero: form.casa_numero,
       categoria: form.categoria,
@@ -119,11 +151,27 @@ const EditarServicoPage = () => {
       instagram_url: form.instagram_url,
       site_url: form.site_url,
       opt_in: form.opt_in,
-      imagens_url: JSON.stringify(todasImagens)
-    }).eq('id', id)
+      imagens_url: JSON.stringify(todasImagens),
+      usuario_id: user.id
+    }
+
+    let error
+    if (ehNovo || id === 'novo') {
+      // CRIAÇÃO
+      const result = await supabase.from('prestadores_servico').insert(dadosServico).select('id').single()
+      error = result.error
+      if (!error) {
+        navigate(`/editar-servico/${result.data.id}`)
+        return
+      }
+    } else {
+      // ATUALIZAÇÃO
+      const result = await supabase.from('prestadores_servico').update(dadosServico).eq('id', id)
+      error = result.error
+    }
 
     if (error) alert('Erro ao salvar: ' + error.message)
-    else navigate('/mapa')
+    else navigate('/perfil')
     setSalvando(false)
   }
 
@@ -133,10 +181,19 @@ const EditarServicoPage = () => {
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 md:p-8 space-y-6">
       <div className="flex justify-between items-center border-b pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Meu Serviço</h1>
-        <button onClick={handleDelete} className="px-4 py-2 text-sm text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition cursor-pointer font-medium">
-          🗑️ Excluir Serviço
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {ehNovo ? 'Cadastrar Meu Serviço' : 'Editar Meu Serviço'}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {ehNovo ? 'Preencha todas as informações para aparecer no mapa' : 'Atualize as informações do seu serviço'}
+          </p>
+        </div>
+        {!ehNovo && (
+          <button onClick={handleDelete} className="px-4 py-2 text-sm text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition cursor-pointer font-medium">
+            🗑️ Excluir Serviço
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -215,11 +272,11 @@ const EditarServicoPage = () => {
         </div>
 
         <div className="flex gap-4 pt-4">
-          <button type="button" onClick={() => navigate('/mapa')} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition cursor-pointer">
+          <button type="button" onClick={() => navigate('/perfil')} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition cursor-pointer">
             Cancelar
           </button>
           <button type="submit" disabled={salvando} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50 cursor-pointer">
-            {salvando ? 'Salvando...' : 'Salvar Alterações'}
+            {salvando ? 'Salvando...' : (ehNovo ? 'Cadastrar Serviço' : 'Salvar Alterações')}
           </button>
         </div>
       </form>
