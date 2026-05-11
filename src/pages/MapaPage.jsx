@@ -14,9 +14,15 @@ const formatarWhatsapp = (numero) => {
   return limpo.length >= 10 ? limpo : null
 }
 
-/* ---------------- CARD UNIFICADO ---------------- */
+// Normaliza o endereço para agrupar corretamente (ignora maiúsculas e espaços extras)
+const normalizeAddr = (addr) => {
+  if (!addr) return ''
+  return addr.toLowerCase().trim().replace(/\s+/g, '')
+}
 
-const CardPrestador = ({ prestador, onDelete }) => {
+/* ---------------- CARD INTERNO (Conteúdo de cada carta) ---------------- */
+
+const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const whatsapp = formatarWhatsapp(prestador.whatsapp)
@@ -36,30 +42,29 @@ const CardPrestador = ({ prestador, onDelete }) => {
   const handleDelete = async (e) => {
     e.stopPropagation()
     if (window.confirm(`Deseja realmente excluir o serviço de ${prestador.nome}?`)) {
-      onDelete(prestador.id)
+      await onDelete(prestador.id)
     }
   }
 
   const handleCardClick = () => {
-    navigate(`/servico/${prestador.id}`)
+    if (isFront) navigate(`/servico/${prestador.id}`)
+    else onBringToFront()
   }
 
   return (
     <div
       onClick={handleCardClick}
-      className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
+      className={`bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 ${isFront ? 'cursor-pointer' : 'cursor-pointer select-none'}`}
+      style={{ pointerEvents: isFront ? 'auto' : 'none' }} // Evita cliques acidentais nos de trás
     >
       
-      {/* ÍCONE DE DESTAQUE CASO TENHA IMAGEM (Sem carregar a foto) */}
       {prestador.imagens_url && (
-        <div className="w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-400" />
+        <div className="w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-400 shrink-0" />
       )}
 
       <div className="p-6 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
-            
-            {/* AVATAR */}
             <div className="relative shrink-0">
               {prestador.avatar_do_perfil ? (
                 <img 
@@ -114,14 +119,6 @@ const CardPrestador = ({ prestador, onDelete }) => {
           </p>
         )}
 
-        {prestador.servicos_oferecidos?.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {prestador.servicos_oferecidos.map((item, index) => (
-              <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs">{item}</span>
-            ))}
-          </div>
-        )}
-
         {prestador.condicoes_moradores && (
           <div className="mt-4 bg-amber-50 border border-amber-100 rounded-2xl p-3">
             <p className="text-xs text-amber-700 font-medium">
@@ -130,8 +127,8 @@ const CardPrestador = ({ prestador, onDelete }) => {
           </div>
         )}
 
-        {/* BOTÕES DE GERENCIAMENTO */}
-        {canManage && (
+        {/* Botões só aparecem no card da frente para não poluir visual */}
+        {canManage && isFront && (
           <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4 border-t border-dashed border-red-200 mt-6 flex gap-2">
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }}
@@ -149,28 +146,111 @@ const CardPrestador = ({ prestador, onDelete }) => {
         )}
       </div>
 
-      {/* RODAPÉ DE CONTATO */}
-      <div onClick={(e) => e.stopPropagation()} className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">
-        {whatsappLink ? (
-          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition">
-            WhatsApp
-          </a>
-        ) : (
-          <div className="px-4 py-2 text-sm text-gray-400">Sem contato</div>
-        )}
+      {/* Rodapé de contato só no card da frente */}
+      {isFront && (
+        <div onClick={(e) => e.stopPropagation()} className="border-t border-gray-100 p-4 flex gap-2 flex-wrap mt-auto">
+          {whatsappLink ? (
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition">
+              WhatsApp
+            </a>
+          ) : (
+            <div className="px-4 py-2 text-sm text-gray-400">Sem contato</div>
+          )}
+          {prestador.instagram_url && (
+            <a href={prestador.instagram_url.startsWith('http') ? prestador.instagram_url : `https://instagram.com/${prestador.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-medium no-underline">
+              Instagram
+            </a>
+          )}
+          {prestador.site_url && (
+            <a href={prestador.site_url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium no-underline hover:bg-gray-200 transition">
+              Site
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
-        {prestador.instagram_url && (
-          <a href={prestador.instagram_url.startsWith('http') ? prestador.instagram_url : `https://instagram.com/${prestador.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-medium no-underline">
-            Instagram
-          </a>
-        )}
+/* ---------------- CARD AGRUPADO (Efeito Baralho) ---------------- */
 
-        {prestador.site_url && (
-          <a href={prestador.site_url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium no-underline hover:bg-gray-200 transition">
-            Site
-          </a>
-        )}
-      </div>
+const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
+  const [activeIdx, setActiveIdx] = useState(0)
+
+  // Se o filtro da página mudar, traz o card correspondente para a frente
+  useEffect(() => {
+    if (filtroAtivo && filtroAtivo !== 'Todas') {
+      const idx = grupo.findIndex(p => p.categoria === filtroAtivo)
+      if (idx !== -1 && idx !== activeIdx) {
+        setActiveIdx(idx)
+      }
+    }
+  }, [filtroAtivo, grupo])
+
+  // Se o card da frente for deletado, volta para o primeiro
+  useEffect(() => {
+    if (activeIdx >= grupo.length) setActiveIdx(0)
+  }, [grupo.length, activeIdx])
+
+  const prestadorDaFrente = grupo[activeIdx]
+
+  return (
+    <div className="relative h-[420px] w-full">
+      {grupo.map((prestador, i) => {
+        const diff = activeIdx - i
+        const isFront = diff === 0
+        
+        // Cálculo do efeito de profundidade
+        const translateX = diff > 0 ? diff * 12 : 0
+        const translateY = diff > 0 ? diff * 8 : 0
+        const scale = 1 - (Math.abs(diff) * 0.03)
+        const opacity = isFront ? 1 : Math.max(0.2, 1 - (Math.abs(diff) * 0.25))
+        const zIndex = 20 - Math.abs(diff)
+        const blur = Math.abs(diff) > 2 ? 'blur(2px)' : 'none'
+
+        return (
+          <div
+            key={prestador.id}
+            className="absolute inset-0 transition-all duration-300 ease-out"
+            style={{
+              transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+              opacity,
+              zIndex,
+              filter: blur
+            }}
+          >
+            <CardConteudo
+              prestador={prestador}
+              onDelete={onDelete}
+              isFront={isFront}
+              onBringToFront={() => setActiveIdx(i)}
+            />
+          </div>
+        )
+      })}
+
+      {/* Indicadores de quantidade (bolinhas na base) */}
+      {grupo.length > 1 && (
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-50 pointer-events-none">
+          {grupo.map((_, i) => (
+            <div 
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                i === activeIdx ? 'bg-emerald-500 scale-125' : 'bg-white/90 shadow-sm'
+              }`} 
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Faixa lateral indicando mais serviços (aparece se tiver mais de 1) */}
+      {grupo.length > 1 && (
+        <div 
+          onClick={(e) => { e.stopPropagation(); setActiveIdx(prev => (prev + 1) % grupo.length) }}
+          className="absolute -right-2 top-1/2 -translate-y-1/2 translate-x-full bg-emerald-600 text-white text-xs font-bold px-2 py-4 rounded-r-xl shadow-lg cursor-pointer hover:bg-emerald-700 transition z-40 hidden md:flex flex-col items-center justify-center h-24"
+        >
+          <span className="rotate-90 whitespace-nowrap mb-6">+{grupo.length - 1} serviço{grupo.length - 1 > 1 ? 's' : ''}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -248,24 +328,49 @@ const MapaPage = () => {
     }
   }
 
+  // ✅ NOVA LÓGICA: Agrupa por endereço (rua e número)
+  const agrupados = useMemo(() => {
+    const grupos = new Map()
+    const soltos = [] // Para quem não preencheu endereço
+
+    prestadores.forEach(p => {
+      const key = normalizeAddr(p.casa_numero)
+      if (!key) {
+        soltos.push([p]) // Não agrupa quem não tem endereço
+        return
+      }
+      if (!grupos.has(key)) grupos.set(key, [])
+      grupos.get(key).push(p)
+    })
+
+    return [...soltos, ...Array.from(grupos.values())]
+  }, [prestadores])
+
+  // ✅ NOVA LÓGICA: Filtra os grupos (se qualquer membro bater, o grupo inteiro aparece)
+  const gruposFiltrados = useMemo(() => {
+    let resultado = agrupados
+    if (filtroCategoria !== 'Todas') {
+      resultado = resultado.filter(grupo => 
+        grupo.some(p => p.categoria === filtroCategoria)
+      )
+    }
+    if (busca.trim()) {
+      const termo = busca.toLowerCase()
+      resultado = resultado.filter(grupo =>
+        grupo.some(p =>
+          [p.nome, p.nome_fantasia, p.categoria, p.descricao_comercial, p.descricao, String(p.casa_numero || '')]
+            .filter(Boolean).some((item) => item.toLowerCase().includes(termo))
+        )
+      )
+    }
+    return resultado
+  }, [agrupados, filtroCategoria, busca])
+
   const categoriasFiltro = useMemo(() => {
     const doBanco = categorias.map((c) => c.nome)
     const doDados = [...new Set(prestadores.map((p) => p.categoria).filter(Boolean))]
     return ['Todas', ...new Set([...doBanco, ...doDados])]
   }, [categorias, prestadores])
-
-  const filtrados = useMemo(() => {
-    let resultado = prestadores
-    if (filtroCategoria !== 'Todas') resultado = resultado.filter((p) => p.categoria === filtroCategoria)
-    if (busca.trim()) {
-      const termo = busca.toLowerCase()
-      resultado = resultado.filter((p) =>
-        [p.nome, p.nome_fantasia, p.categoria, p.descricao_comercial, p.descricao, String(p.casa_numero || '')]
-          .filter(Boolean).some((item) => item.toLowerCase().includes(termo))
-      )
-    }
-    return resultado
-  }, [prestadores, filtroCategoria, busca])
 
   const totalCasas = useMemo(() => new Set(prestadores.map((p) => p.casa_numero).filter(Boolean)).size, [prestadores])
 
@@ -326,12 +431,12 @@ const MapaPage = () => {
         </div>
       </section>
 
-      {/* GRID */}
+      {/* GRID COM AGRUPAMENTO */}
       {loading ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{[...Array(6)].map((_, i) => <div key={i} className="h-72 bg-white rounded-3xl border border-gray-100 animate-pulse" />)}</div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{[...Array(6)].map((_, i) => <div key={i} className="h-[420px] bg-white rounded-3xl border border-gray-100 animate-pulse" />)}</div>
       ) : error ? (
         <div className="bg-red-50 border border-red-100 rounded-3xl p-10 text-center"><p className="text-red-600">{error}</p></div>
-      ) : filtrados.length === 0 ? (
+      ) : gruposFiltrados.length === 0 ? (
         <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
           <div className="text-5xl mb-4">🔍</div>
           <h3 className="text-xl font-semibold text-gray-900">Nenhum serviço encontrado</h3>
@@ -341,11 +446,16 @@ const MapaPage = () => {
         <div>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-semibold text-gray-900">Prestadores disponíveis</h2>
-            <span className="text-sm text-gray-500">{filtrados.length} resultado(s)</span>
+            <span className="text-sm text-gray-500">{gruposFiltrados.length} endereço(s) • {prestadores.length} serviço(s)</span>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtrados.map((prestador) => (
-              <CardPrestador key={prestador.id} prestador={prestador} onDelete={handleDeleteServico} />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+            {gruposFiltrados.map((grupo, index) => (
+              <CardAgrupado 
+                key={`${normalizeAddr(grupo[0]?.casa_numero)}-${index}`} 
+                grupo={grupo} 
+                filtroAtivo={filtroCategoria}
+                onDelete={handleDeleteServico} 
+              />
             ))}
           </div>
         </div>
