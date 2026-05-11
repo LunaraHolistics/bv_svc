@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 
-// ⚠️ COLE AQUI O SEU ID DE USUÁRIO MASTER DO SUPABASE
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
 const GOOGLE_MAPS_EMBED_URL =
@@ -15,17 +14,6 @@ const formatarWhatsapp = (numero) => {
   return limpo.length >= 10 ? limpo : null
 }
 
-const getImagens = (imagemUrl) => {
-  if (!imagemUrl) return []
-  try {
-    const parsed = JSON.parse(imagemUrl)
-    if (Array.isArray(parsed)) return parsed
-    return [imagemUrl]
-  } catch {
-    return [imagemUrl]
-  }
-}
-
 /* ---------------- CARD UNIFICADO ---------------- */
 
 const CardPrestador = ({ prestador, onDelete }) => {
@@ -33,14 +21,11 @@ const CardPrestador = ({ prestador, onDelete }) => {
   const navigate = useNavigate()
   const whatsapp = formatarWhatsapp(prestador.whatsapp)
   const nomeInicial = prestador.nome?.charAt(0)?.toUpperCase() || '🏡'
-  const imagens = getImagens(prestador.imagens_url)
 
-  // Permissões
   const isMaster = user?.id === MASTER_USER_ID
   const isOwner = user?.id === prestador.usuario_id
   const canManage = isMaster || isOwner
 
-  // Monta o link do WhatsApp com a mensagem automática
   const whatsappLink = useMemo(() => {
     if (!whatsapp) return null
     const servico = prestador.categoria || 'serviço disponível'
@@ -51,7 +36,6 @@ const CardPrestador = ({ prestador, onDelete }) => {
   const handleDelete = async (e) => {
     e.stopPropagation()
     if (window.confirm(`Deseja realmente excluir o serviço de ${prestador.nome}?`)) {
-      // ✅ CORRIGIDO: Alterando o estado local ANTES de chamar a API para resposta instantânea
       onDelete(prestador.id)
     }
   }
@@ -66,28 +50,9 @@ const CardPrestador = ({ prestador, onDelete }) => {
       className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
     >
       
-      {/* GALERIA DE IMAGENS DO SERVIÇO */}
-      {imagens.length > 0 && (
-        <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
-          <div className="flex h-full">
-            <div className="w-1/2 h-full border-r border-gray-100">
-              <img src={imagens[0]} alt="" className="w-full h-full object-cover" />
-            </div>
-            <div className="w-1/2 h-full grid grid-rows-2">
-              {imagens[1] && <img src={imagens[1]} alt="" className="w-full h-full object-cover border-b border-gray-100" />}
-              <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 text-sm relative">
-                {imagens[2] ? (
-                  <img src={imagens[2]} alt="" className="w-full h-full object-cover absolute inset-0" />
-                ) : null}
-                {imagens.length > 3 && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold z-10">
-                    +{imagens.length - 3}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ÍCONE DE DESTAQUE CASO TENHA IMAGEM (Sem carregar a foto) */}
+      {prestador.imagens_url && (
+        <div className="w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-400" />
       )}
 
       <div className="p-6 flex-1 flex flex-col">
@@ -126,7 +91,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
           <div className="flex items-center gap-2 shrink-0">
             {prestador.casa_numero && (
               <div className="px-3 py-1 bg-gray-100 rounded-xl text-xs font-medium text-gray-600">
-                Casa {prestador.casa_numero}
+                📍 {prestador.casa_numero}
               </div>
             )}
           </div>
@@ -138,8 +103,8 @@ const CardPrestador = ({ prestador, onDelete }) => {
               {prestador.categoria}
             </span>
           )}
-          {prestador.mapa_coords_x && prestador.mapa_coords_y && (
-            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs">📍 No mapa</span>
+          {prestador.imagens_url && (
+            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs">📸 Ver fotos</span>
           )}
         </div>
 
@@ -231,17 +196,13 @@ const MapaPage = () => {
     try {
       const [resPrestadores, resCategorias] = await Promise.all([
         supabase.from('prestadores_servico').select('*').eq('opt_in', true).order('nome'),
-        // ✅ CORRIGIDO: Se a tabela categorias falhar, não quebra o mapa
         supabase.from('categorias').select('*').eq('tipo', 'condominio').order('ordem')
       ])
       
       if (resPrestadores.error) throw resPrestadores.error
-      // Ignora erro das categorias silenciosamente
       const listaCategorias = resCategorias.error ? [] : (resCategorias.data || [])
-      
       const listaPrestadores = resPrestadores.data || []
 
-      // Busca as fotos de perfil dos donos dos serviços
       const listaIdsUnicos = [...new Set(listaPrestadores.map(p => p.usuario_id).filter(Boolean))]
       let mapaAvatares = {}
       
@@ -273,19 +234,14 @@ const MapaPage = () => {
     }
   }
 
-  // ✅ CORRIGIDO: Otimista (remove da tela primeiro), se der erro no banco, avisa.
   const handleDeleteServico = async (id) => {
     const prestadorBackup = prestadores.find(p => p.id === id)
-    
-    // Remove instantaneamente da tela
     setPrestadores((prev) => prev.filter((p) => p.id !== id))
 
-    // Tenta excluir no banco
     const { error } = await supabase.from('prestadores_servico').delete().eq('id', id)
     
     if (error) {
       alert('Erro ao excluir: ' + error.message)
-      // Se falhou, devolve o item para a tela
       if (prestadorBackup) {
         setPrestadores((prev) => [...prev, prestadorBackup])
       }

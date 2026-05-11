@@ -89,10 +89,14 @@ const Header = () => {
     if (!user) return
     
     const fetchNotificacoes = async () => {
-      const { data } = await supabase
+      const agora = new Date().toISOString()
+      
+      // ✅ CORRIGIDO: Busca avisos ativos E que NÃO expiraram pela data
+      const { data, error } = await supabase
         .from('avisos_admin')
-        .select('id, titulo, mensagem, created_at')
+        .select('id, titulo, mensagem, created_at, data_fim')
         .eq('ativo', true)
+        .or(`data_fim.is.null,data_fim.gte.${agora}`) // Exclui expirados
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -115,7 +119,7 @@ const Header = () => {
 
     const subscription = supabase
       .channel('avisos-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'avisos_admin' }, fetchNotificacoes)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'avisos_admin' }, fetchNotificacoes) // ✅ Ouve INSERT, UPDATE e DELETE
       .subscribe()
 
     return () => {
@@ -125,17 +129,27 @@ const Header = () => {
 
   const marcarComoLido = async (avisoId) => {
     if (!user) return
+    // ✅ CORRIGIDO: Usa upsert para não quebrar se o usuário clicar duas vezes
     await supabase
       .from('avisos_lidos')
-      .insert({ aviso_id: avisoId, user_id: user.id })
+      .upsert({ aviso_id: avisoId, user_id: user.id }, { onConflict: 'aviso_id,user_id' })
+    
     setNaoLidas(prev => prev.filter(n => n.id !== avisoId))
   }
 
-  const marcarTodasComoLidas = () => {
-    naoLidas.forEach(aviso => {
-      supabase.from('avisos_lidos').upsert({ aviso_id: aviso.id, user_id: user.id }, { onConflict: 'aviso_id,user_id' })
-    })
-    setNaoLidas([])
+  const marcarTodasComoLidas = async () => {
+    if (!user || naoLidas.length === 0) return
+    
+    // Monta array para upsert em massa
+    const registros = naoLidas.map(aviso => ({ aviso_id: aviso.id, user_id: user.id }))
+    
+    const { error } = await supabase
+      .from('avisos_lidos')
+      .upsert(registros, { onConflict: 'aviso_id,user_id' })
+
+    if (!error) {
+      setNaoLidas([])
+    }
   }
 
   const handleLogout = async () => {
@@ -220,8 +234,13 @@ const Header = () => {
                             <p className="p-4 text-sm text-gray-400 text-center">Nenhuma notificação nova 🎉</p>
                           ) : (
                             naoLidas.map(aviso => (
-                              <div key={aviso.id} className="p-3 border-b hover:bg-gray-50">
-                                <p className="text-sm font-medium text-gray-900">{aviso.titulo || 'Aviso'}</p>
+                              <div key={aviso.id} className="p-3 border-b hover:bg-gray-50 transition">
+                                <div className="flex justify-between items-start gap-2">
+                                  <p className="text-sm font-medium text-gray-900">{aviso.titulo || 'Aviso'}</p>
+                                  {aviso.data_fim && (
+                                    <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full shrink-0">Até {new Date(aviso.data_fim).toLocaleDateString('pt-BR')}</span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-gray-500 mt-1 line-clamp-2">{aviso.mensagem}</p>
                                 <button onClick={() => marcarComoLido(aviso.id)} className="text-xs text-blue-500 mt-2 hover:underline cursor-pointer">Marcar como lido</button>
                               </div>
@@ -261,7 +280,7 @@ const Header = () => {
         </div>
       </header>
 
-      {/* ===== MOBILE (SEM O BOTÃO FLUTUANTE "+") ===== */}
+      {/* ===== MOBILE ===== */}
       <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md pb-[env(safe-area-inset-bottom)]">
         <div className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-3xl px-1.5 py-2">
           <div className="flex items-center justify-around">
