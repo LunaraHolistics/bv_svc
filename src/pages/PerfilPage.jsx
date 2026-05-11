@@ -10,11 +10,6 @@ const formatarFone = (val) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-const normalizeAddr = (addr) => {
-  if (!addr) return ''
-  return addr.toLowerCase().replace(/[.,]/g, '').replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '').replace(/\s+/g, '').trim()
-}
-
 const PerfilPage = () => {
   const navigate = useNavigate()
   const { user, perfil, loading: authLoading, recarregarPerfil } = useAuth()
@@ -43,7 +38,7 @@ const PerfilPage = () => {
     telefone2: ''
   })
 
-  const ehPrestador = form.tipo_pessoa === 'prestador'
+  const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -56,7 +51,7 @@ const PerfilPage = () => {
   }, [user])
 
   const buscarServicosDoUsuario = async () => {
-    if (!ehPrestador || !user) {
+    if (!user) {
       setServicosDoUsuario([])
       return
     }
@@ -73,7 +68,7 @@ const PerfilPage = () => {
 
   useEffect(() => {
     buscarServicosDoUsuario()
-  }, [ehPrestador, user])
+  }, [user])
 
   const buscarEstatisticas = async () => {
     const fetchCount = async (tabela) => {
@@ -110,9 +105,6 @@ const PerfilPage = () => {
 
   useEffect(() => {
     if (perfil) {
-      let tipoPerfil = perfil.tipo_pessoa || 'morador'
-      if (tipoPerfil === 'ambos') tipoPerfil = 'prestador'
-
       setForm({
         nome_completo: perfil.nome_completo || '',
         nome_exibicao: perfil.nome_exibicao || '',
@@ -121,7 +113,7 @@ const PerfilPage = () => {
         lote: perfil.lote || '',
         endereco_rua: perfil.endereco_rua || '',
         endereco_numero: perfil.endereco_numero || '',
-        tipo_pessoa: tipoPerfil,
+        tipo_pessoa: perfil.tipo_pessoa || 'morador',
         whatsapp: perfil.whatsapp || '',
         telefone2: perfil.telefone2 || ''
       })
@@ -155,7 +147,6 @@ const PerfilPage = () => {
     navigate(`/editar-servico/novo?endereco=${encodeURIComponent(enderecoCompleto)}`)
   }
 
-  // ✅ CORRIGIDO: Agora verifica erro do Supabase ANTES de remover do estado local
   const handleExcluirServico = async (id) => {
     if (!window.confirm('Excluir este serviço permanentemente?')) return
 
@@ -167,12 +158,11 @@ const PerfilPage = () => {
       .eq('id', id)
 
     if (error) {
-      alert('❌ Erro ao excluir: ' + error.message + '\n\nSe o erro for de permissão, verifique as políticas RLS no Supabase.')
+      alert('❌ Erro ao excluir: ' + error.message)
       setExcluindoId(null)
       return
     }
 
-    // Só remove da lista local DEPOIS que o Supabase confirmou
     setServicosDoUsuario(prev => prev.filter(s => s.id !== id))
     setStats(prev => ({ ...prev, servicos: Math.max(0, prev.servicos - 1) }))
     setExcluindoId(null)
@@ -236,7 +226,6 @@ const PerfilPage = () => {
 
       if (ehPrestador && (form.endereco_rua || form.endereco_numero)) {
         const novoEnderecoFormatado = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
-        
         const idsParaAtualizar = (servicosDoUsuario || []).map(s => s.id)
         if (idsParaAtualizar.length > 0) {
           await supabase
@@ -252,7 +241,6 @@ const PerfilPage = () => {
 
       setSucesso(true)
       setAvatarFile(null)
-
       setTimeout(() => setSucesso(false), 3000)
     } catch (err) {
       console.error('[Perfil] Erro ao salvar:', err)
@@ -274,6 +262,9 @@ const PerfilPage = () => {
 
   if (!user) return null
 
+  // ✅ Mostra o card se for prestador OU se já tiver serviços cadastrados
+  const mostrarCardServicos = ehPrestador || servicosDoUsuario.length > 0
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
 
@@ -281,14 +272,12 @@ const PerfilPage = () => {
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 p-8 md:p-10 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-52 h-52 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
-
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <span className="text-xs bg-white/10 px-3 py-1 rounded-full">Área do morador</span>
             <h1 className="text-3xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
             <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais e personalize como você aparece.</p>
           </div>
-
           <button
             onClick={() => navigate('/')}
             className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
@@ -408,21 +397,24 @@ const PerfilPage = () => {
           </select>
         </div>
 
-        {/* GERENCIAMENTO DE SERVIÇOS */}
-        {ehPrestador && (
+        {/* ✅ CARD DE SERVIÇOS — aparece sempre que for prestador OU tiver serviços */}
+        {mostrarCardServicos && (
           <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl shrink-0">🛠️</div>
               <div className="flex-1">
                 <h3 className="font-bold text-gray-900 text-lg">
-                  {servicosDoUsuario.length > 0 
+                  {servicosDoUsuario.length > 0
                     ? `Você tem ${servicosDoUsuario.length} serviço${servicosDoUsuario.length > 1 ? 's cadastrados' : ' cadastrado'}`
                     : 'Cadastre seu primeiro serviço'}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Todos os seus serviços aparecerão empilhados no mapa pelo mesmo endereço.
+                  {servicosDoUsuario.length > 0
+                    ? 'Gerencie seus serviços abaixo ou adicione outro.'
+                    : 'Preencha as informações para aparecer no mapa de serviços do condomínio.'}
                 </p>
 
+                {/* ✅ BOTÕES — SEMPRE VISÍVEIS quando o card aparece */}
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
                     type="button"
@@ -443,6 +435,7 @@ const PerfilPage = () => {
                   )}
                 </div>
 
+                {/* Lista de serviços cadastrados */}
                 {servicosDoUsuario.length > 0 && (
                   <div className="mt-5 space-y-3">
                     {servicosDoUsuario.map((servico) => {
