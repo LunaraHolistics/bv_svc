@@ -10,6 +10,12 @@ const formatarFone = (val) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+// ✅ NORMALIZADOR MASTER: Limpa vírgulas, "Rua/Av", espaços. Só fica letras e números.
+const normalizeAddr = (addr) => {
+  if (!addr) return ''
+  return addr.toLowerCase().replace(/[.,]/g, '').replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '').replace(/\s+/g, '').trim()
+}
+
 const PerfilPage = () => {
   const navigate = useNavigate()
   const { user, perfil, loading: authLoading, recarregarPerfil } = useAuth()
@@ -22,7 +28,9 @@ const PerfilPage = () => {
   const [avatarFile, setAvatarFile] = useState(null)
 
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
-  const [servicoExistente, setServicoExistente] = useState(null)
+  
+  // ✅ NOVO: Guarda TODOS os serviços do usuário (para exibir na lista)
+  const [servicosDoUsuario, setServicosDoUsuario] = useState([])
 
   const [form, setForm] = useState({
     nome_completo: '',
@@ -49,11 +57,21 @@ const PerfilPage = () => {
     if (user) buscarEstatisticas()
   }, [user])
 
+  // ✅ NOVO: Busca todos os serviços do usuário para listar no perfil
   useEffect(() => {
     if (ehPrestador && user) {
-      buscarServicoExistente()
+      const buscarServicos = async () => {
+        const { data } = await supabase
+          .from('prestadores_servico')
+          .select('id, categoria, opt_in, casa_numero')
+          .eq('usuario_id', user.id)
+          .order('created_at', { ascending: false })
+
+        setServicosDoUsuario(data || [])
+      }
+      buscarServicos()
     } else {
-      setServicoExistente(null)
+      setServicosDoUsuario([])
     }
   }, [ehPrestador, user])
 
@@ -62,21 +80,19 @@ const PerfilPage = () => {
       try {
         const res1 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('usuario_id', user.id)
         if (!res1.error) return res1.count || 0
-
         const res2 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('user_id', user.id)
         if (!res2.error) return res2.count || 0
       } catch (err) { }
       return 0
     }
 
-    // ✅ BUSCA ESPECÍFICA PARA ANÚNCIOS (SÓ CONTA OS ATIVOS)
     const fetchAnunciosAtivos = async () => {
       try {
         const res = await supabase
           .from('anuncios_vendas')
           .select('*', { count: 'exact', head: true })
           .eq('usuario_id', user.id)
-          .eq('status', 'Ativo') // <--- O SEGREDO ESTÁ AQUI
+          .eq('status', 'Ativo')
         return res.error ? 0 : (res.count || 0)
       } catch (err) {
         return 0
@@ -84,26 +100,12 @@ const PerfilPage = () => {
     }
 
     const [anuncios, servicos, indicacoes] = await Promise.all([
-      fetchAnunciosAtivos(), // Usa a função nova aqui
+      fetchAnunciosAtivos(),
       fetchCount('prestadores_servico'),
       fetchCount('indicacoes')
     ])
 
     setStats({ anuncios, servicos, indicacoes })
-  }
-
-  const buscarServicoExistente = async () => {
-    try {
-      const { data } = await supabase
-        .from('prestadores_servico')
-        .select('id, categoria, opt_in')
-        .eq('usuario_id', user.id)
-        .maybeSingle()
-
-      setServicoExistente(data || null)
-    } catch (err) {
-      setServicoExistente(null)
-    }
   }
 
   useEffect(() => {
@@ -148,34 +150,20 @@ const PerfilPage = () => {
     reader.readAsDataURL(file)
   }
 
-  const handleGerenciarServico = async () => {
-    if (!servicoExistente) {
-      // Monta o endereço completo para mandar para o serviço
-      const enderecoCompleto = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
+  // ✅ NOVO: Cria um novo serviço e redireciona
+  const handleAdicionarServico = () => {
+    const enderecoCompleto = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
+    navigate(`/editar-servico/novo?endereco=${encodeURIComponent(enderecoCompleto)}`)
+  }
 
-      const novoServico = {
-        usuario_id: user.id,
-        nome: form.nome_completo,
-        whatsapp: form.whatsapp.replace(/\D/g, ''),
-        casa_numero: enderecoCompleto, // Puxa direto do perfil
-        opt_in: true
-      }
-
-      const { data, error } = await supabase
-        .from('prestadores_servico')
-        .insert(novoServico)
-        .select('id')
-        .single()
-
-      if (error) {
-        setError('Erro ao criar serviço: ' + error.message)
-        return
-      }
-
-      navigate(`/editar-servico/${data.id}`)
-    } else {
-      navigate(`/editar-servico/${servicoExistente.id}`)
-    }
+  // ✅ NOVO: Excluir serviço direto do perfil
+  const handleExcluirServico = async (id) => {
+    if (!window.confirm('Excluir este serviço permanentemente?')) return
+    
+    await supabase.from('prestadores_servico').delete().eq('id', id)
+    
+    // Atualiza a lista local instantaneamente
+    setServicosDoUsuario(prev => prev.filter(s => s.id !== id))
   }
 
   const handleSalvar = async (e) => {
@@ -183,13 +171,9 @@ const PerfilPage = () => {
 
     if (!form.nome_completo.trim()) { setError('Nome completo é obrigatório.'); return }
     if (!form.fase) { setError('Informe sua fase.'); return }
-
-    // ✅ NOVO: Validação condicional para prestador
-    if (ehPrestador) {
-      if (!form.endereco_rua.trim() || !form.endereco_numero.trim()) {
-        setError('Para prestadores, o nome da rua e número do imóvel são obrigatórios.')
-        return
-      }
+    if (ehPrestador && (!form.endereco_rua.trim() || !form.endereco_numero.trim())) {
+      setError('Para prestadores, o nome da rua e número do imóvel são obrigatórios.')
+      return
     }
 
     if (!user?.id) { setError('Sessão expirada.'); return }
@@ -238,16 +222,37 @@ const PerfilPage = () => {
         throw new Error(dbError.message)
       }
 
+      // ✅ NOVO SYNC: Atualiza o endereço de TODOS os serviços do usuário com o formato do perfil
+      // Isso garante que empilham perfeitamente no mapa!
+      if (ehPrestador && (form.endereco_rua || form.endereco_numero)) {
+        const novoEnderecoFormatado = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
+        
+        const idsParaAtualizar = (servicosDoUsuario || []).map(s => s.id)
+        if (idsParaAtualizar.length > 0) {
+          await supabase
+            .from('prestadores_servico')
+            .update({ casa_numero: novoEnderecoFormatado })
+            .in('id', idsParaAtualizar)
+        }
+      }
+
       await recarregarPerfil()
       buscarEstatisticas()
-      if (ehPrestador) buscarServicoExistente()
+      
+      // Atualiza a lista de serviços no perfil
+      if (ehPrestador) {
+        const { data } = await supabase
+          .from('prestadores_servico')
+          .select('id, categoria, opt_in, casa_numero')
+          .eq('usuario_id', user.id)
+          .order('created_at', { ascending: false })
+        setServicosDoUsuario(data || [])
+      }
 
       setSucesso(true)
       setAvatarFile(null)
 
-      setTimeout(() => {
-        setSucesso(false)
-      }, 3000)
+      setTimeout(() => setSucesso(false), 3000)
     } catch (err) {
       console.error('[Perfil] Erro ao salvar:', err)
       setError(err.message || 'Erro ao salvar perfil.')
@@ -266,9 +271,7 @@ const PerfilPage = () => {
     )
   }
 
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -296,29 +299,17 @@ const PerfilPage = () => {
 
       {/* CARD DE ESTATÍSTICAS */}
       <div className="grid grid-cols-3 gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/anuncios')}
-          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer"
-        >
+        <button type="button" onClick={() => navigate('/anuncios')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
           <span className="text-3xl mb-2">📢</span>
           <p className="text-2xl font-bold text-gray-900">{stats.anuncios}</p>
           <p className="text-xs text-gray-500 mt-1">Meus Anúncios</p>
         </button>
-        <button
-          type="button"
-          onClick={() => ehPrestador && servicoExistente ? navigate(`/editar-servico/${servicoExistente.id}`) : navigate('/mapa')}
-          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer"
-        >
+        <button type="button" onClick={() => navigate('/mapa')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
           <span className="text-3xl mb-2">🛠️</span>
           <p className="text-2xl font-bold text-gray-900">{stats.servicos}</p>
           <p className="text-xs text-gray-500 mt-1">Meus Serviços</p>
         </button>
-        <button
-          type="button"
-          onClick={() => navigate('/indicacoes')}
-          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer"
-        >
+        <button type="button" onClick={() => navigate('/indicacoes')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
           <span className="text-3xl mb-2">🤝</span>
           <p className="text-2xl font-bold text-gray-900">{stats.indicacoes}</p>
           <p className="text-xs text-gray-500 mt-1">Minhas Indicações</p>
@@ -349,9 +340,7 @@ const PerfilPage = () => {
               <div className="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center text-4xl">👤</div>
             )}
           </div>
-
           <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-
           <div>
             <h3 className="font-semibold text-gray-900">Foto de perfil</h3>
             <p className="text-sm text-gray-500 mt-1">Clique na foto para alterar sua imagem</p>
@@ -378,7 +367,7 @@ const PerfilPage = () => {
           </div>
         </div>
 
-        {/* ✅ NOVO: Localização do Imóvel */}
+        {/* Localização */}
         <div>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xl font-bold">Localização do imóvel</h2>
@@ -407,9 +396,7 @@ const PerfilPage = () => {
             />
           </div>
           {!ehPrestador && (
-            <p className="text-xs text-gray-400 mt-2">
-              Opcional para proprietários que ainda não construíram.
-            </p>
+            <p className="text-xs text-gray-400 mt-2">Opcional para proprietários que ainda não construíram.</p>
           )}
         </div>
 
@@ -421,48 +408,79 @@ const PerfilPage = () => {
             <option value="morador">Morador / Proprietário</option>
             <option value="prestador">Morador / Prestador de Serviços</option>
           </select>
+        </div>
 
-          {/* CARD DE GERENCIAMENTO DO SERVIÇO */}
-          {ehPrestador && (
-            <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl shrink-0">
-                  🛠️
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-lg">
-                    {servicoExistente ? 'Seu Serviço está cadastrado!' : 'Cadastre seu Serviço'}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {servicoExistente
-                      ? `Categoria: ${servicoExistente.categoria || 'Não definida'} • Status: ${servicoExistente.opt_in ? '✅ Visível' : '⏸️ Oculto'}`
-                      : 'Preencha todas as informações do seu serviço para aparecer no Mapa de Serviços do condomínio.'}
-                  </p>
+        {/* ✅ CARD DE GERENCIAMENTO (Agora lista os serviços inline) */}
+        {ehPrestador && (
+          <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl shrink-0">🛠️</div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 text-lg">
+                  {servicosDoUsuario.length > 0 
+                    ? `Você tem ${servicosDoUsuario.length} serviço${servicosDoUsuario.length > 1 ? 's cadastrados' : ' cadastrado'}`
+                    : 'Cadastre seu primeiro serviço'}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Todos os seus serviços aparecerão empilhados no mapa pelo mesmo endereço.
+                </p>
 
-                  <div className="mt-4 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {/* Botão Adicionar Novo */}
+                  <button
+                    type="button"
+                    onClick={handleAdicionarServico}
+                    className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 cursor-pointer"
+                  >
+                    ➕ Adicionar novo serviço
+                  </button>
+
+                  {/* Ver no Mapa */}
+                  {servicosDoUsuario.length > 0 && (
                     <button
                       type="button"
-                      onClick={handleGerenciarServico}
-                      className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 cursor-pointer"
+                      onClick={() => navigate('/mapa')}
+                      className="px-5 py-2.5 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
                     >
-                      {servicoExistente ? '✏️ Editar Serviço Completo' : '📝 Cadastrar Serviço'}
+                      👁️ Ver no Mapa
                     </button>
-
-                    {servicoExistente && stats.servicos > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => navigate('/mapa')}
-                        className="px-6 py-3 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
-                      >
-                        👁️ Ver no Mapa
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
+
+                {/* Lista inline dos serviços */}
+                {servicosDoUsuario.length > 0 && (
+                  <div className="mt-5 space-y-3">
+                    {servicosDoUsuario.map((servico) => (
+                      <div key={servico.id} className="p-3 bg-white rounded-xl border border-gray-100 flex items-center justify-between gap-3 hover:shadow-sm transition">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{servico.categoria || 'Sem categoria'}</p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {servico.casa_numero || 'Sem endereço'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/editar-servico/${servico.id}`)}
+                            className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            onClick={() => handleExcluirServico(servico.id)}
+                            className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition cursor-pointer"
+                          >
+                            🗑️ Excluir
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Botão Salvar */}
         <div className="pt-4 border-t border-gray-100">

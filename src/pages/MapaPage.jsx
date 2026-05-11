@@ -14,18 +14,18 @@ const formatarWhatsapp = (numero) => {
   return limpo.length >= 10 ? limpo : null
 }
 
-// ✅ NORMALIZADOR NINJA: Extrai SÓ números e letras, ignora vírgulas, "Rua", "Av", espaços extras
+// ✅ NORMALIZADOR NINJA
 const normalizeAddr = (addr) => {
   if (!addr) return ''
   return addr
     .toLowerCase()
-    .replace(/[.,]/g, '') // Tira pontuação
-    .replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '') // Tira nomes de ruas
-    .replace(/\s+/g, '')     // Tira todos os espaços sobrando
+    .replace(/[.,]/g, '')
+    .replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '')
+    .replace(/\s+/g, '')
     .trim()
 }
 
-/* ---------------- CARD INTERNO (Conteúdo de cada carta) ---------------- */
+/* ---------------- CARD INTERNO ---------------- */
 
 const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
   const { user } = useAuth()
@@ -60,9 +60,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
     <div
       onClick={handleCardClick}
       className={`bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 ${isFront ? 'cursor-pointer' : 'cursor-pointer select-none'}`}
-    // ✅ TIRE a linha do pointerEvents: 'none' para permitir toque no mobile
     >
-
       {prestador.imagens_url && (
         <div className="w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-400 shrink-0" />
       )}
@@ -132,7 +130,6 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           </div>
         )}
 
-        {/* Botões só aparecem no card da frente para não poluir visual */}
         {canManage && isFront && (
           <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4 border-t border-dashed border-red-200 mt-6 flex gap-2">
             <button
@@ -151,7 +148,6 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
         )}
       </div>
 
-      {/* Rodapé de contato só no card da frente */}
       {isFront && (
         <div onClick={(e) => e.stopPropagation()} className="border-t border-gray-100 p-4 flex gap-2 flex-wrap mt-auto">
           {whatsappLink ? (
@@ -177,12 +173,11 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
   )
 }
 
-/* ---------------- CARD AGRUPADO (Efeito Baralho) ---------------- */
+/* ---------------- CARD AGRUPADO ---------------- */
 
 const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   const [activeIdx, setActiveIdx] = useState(0)
 
-  // Se o filtro da página mudar, traz o card correspondente para a frente
   useEffect(() => {
     if (filtroAtivo && filtroAtivo !== 'Todas') {
       const idx = grupo.findIndex(p => p.categoria === filtroAtivo)
@@ -192,7 +187,6 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
     }
   }, [filtroAtivo, grupo])
 
-  // Se o card da frente for deletado, volta para o primeiro
   useEffect(() => {
     if (activeIdx >= grupo.length) setActiveIdx(0)
   }, [grupo.length, activeIdx])
@@ -200,7 +194,6 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   const prestadorDaFrente = grupo[activeIdx]
 
   return (
-    // ✅ ALTURA MENOR NO MOBILE (h-[320px]) E MAIOR NO DESKTOP (sm:h-[420px])
     <div className="relative h-[320px] sm:h-[420px] w-full">
       {grupo.map((prestador, i) => {
         const diff = activeIdx - i
@@ -222,7 +215,6 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
               opacity,
               zIndex,
               filter: blur
-              // ✅ SEM pointerEvents: 'none' aqui! (Permite clicar nas cartas de trás no celular)
             }}
           >
             <CardConteudo
@@ -235,21 +227,18 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
         )
       })}
 
-      {/* Indicadores mobile melhorados (Agora clicáveis para trocar de carta) */}
       {grupo.length > 1 && (
         <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-50">
           {grupo.map((_, i) => (
             <button
               type="button"
               onClick={() => setActiveIdx(i)}
-              className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer ${i === activeIdx ? 'bg-emerald-500 scale-125' : 'bg-white/90 shadow-sm'
-                }`}
+              className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer ${i === activeIdx ? 'bg-emerald-500 scale-125' : 'bg-white/90 shadow-sm'}`}
             />
           ))}
         </div>
       )}
 
-      {/* Faixa lateral indicando mais serviços (aparece se tiver mais de 1) */}
       {grupo.length > 1 && (
         <div
           onClick={(e) => { e.stopPropagation(); setActiveIdx(prev => (prev + 1) % grupo.length) }}
@@ -262,7 +251,7 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   )
 }
 
-/* ---------------- PAGE UNIFICADA ---------------- */
+/* ---------------- PAGE ---------------- */
 
 const MapaPage = () => {
   const { user } = useAuth()
@@ -338,12 +327,12 @@ const MapaPage = () => {
   // ✅ NOVA LÓGICA: Agrupa por endereço (rua e número)
   const agrupados = useMemo(() => {
     const grupos = new Map()
-    const soltos = [] // Para quem não preencheu endereço
+    const soltos = []
 
     prestadores.forEach(p => {
       const key = normalizeAddr(p.casa_numero)
       if (!key) {
-        soltos.push([p]) // Não agrupa quem não tem endereço
+        soltos.push([p])
         return
       }
       if (!grupos.has(key)) grupos.set(key, [])
@@ -353,7 +342,7 @@ const MapaPage = () => {
     return [...soltos, ...Array.from(grupos.values())]
   }, [prestadores])
 
-  // ✅ NOVA LÓGICA: Filtra os grupos (se qualquer membro bater, o grupo inteiro aparece)
+  // ✅ NOVA LÓGICA: Filtra os grupos
   const gruposFiltrados = useMemo(() => {
     let resultado = agrupados
     if (filtroCategoria !== 'Todas') {
