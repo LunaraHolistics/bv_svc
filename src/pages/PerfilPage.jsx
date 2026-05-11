@@ -30,12 +30,13 @@ const PerfilPage = () => {
     fase: '',
     quadra: '',
     lote: '',
+    endereco_rua: '',
+    endereco_numero: '',
     tipo_pessoa: 'morador',
     whatsapp: '',
     telefone2: ''
   })
 
-  // ✅ ATUALIZADO: Agora só verifica se é prestador
   const ehPrestador = form.tipo_pessoa === 'prestador'
 
   useEffect(() => {
@@ -57,42 +58,44 @@ const PerfilPage = () => {
   }, [ehPrestador, user])
 
   const buscarEstatisticas = async () => {
-    try {
-      const fetchCount = async (tabela) => {
-        let count = 0
+    const fetchCount = async (tabela) => {
+      try {
         const res1 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('usuario_id', user.id)
-        if (!res1.error) {
-          count = res1.count
-        } else {
-          const res2 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-          if (!res2.error) count = res2.count
-        }
-        return count || 0
+        if (!res1.error) return res1.count || 0
+        
+        const res2 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+        if (!res2.error) return res2.count || 0
+      } catch (err) {
+        // Tabela pode não existir ainda (ex: indicacoes). Silencioso.
       }
-      const [anuncios, servicos, indicacoes] = await Promise.all([
-        fetchCount('anuncios_vendas'),
-        fetchCount('prestadores_servico'),
-        fetchCount('indicacoes')
-      ])
-      setStats({ anuncios, servicos, indicacoes })
-    } catch (error) {
-      console.error('Erro ao buscar stats:', error)
+      return 0
     }
+
+    const [anuncios, servicos, indicacoes] = await Promise.all([
+      fetchCount('anuncios_vendas'),
+      fetchCount('prestadores_servico'),
+      fetchCount('indicacoes')
+    ])
+    
+    setStats({ anuncios, servicos, indicacoes })
   }
 
   const buscarServicoExistente = async () => {
-    const { data } = await supabase
-      .from('prestadores_servico')
-      .select('id, categoria, opt_in')
-      .eq('usuario_id', user.id)
-      .single()
-    
-    setServicoExistente(data || null)
+    try {
+      const { data } = await supabase
+        .from('prestadores_servico')
+        .select('id, categoria, opt_in')
+        .eq('usuario_id', user.id)
+        .maybeSingle()
+      
+      setServicoExistente(data || null)
+    } catch (err) {
+      setServicoExistente(null)
+    }
   }
 
   useEffect(() => {
     if (perfil) {
-      // ✅ ATUALIZADO: Normaliza o valor antigo "ambos" para "prestador"
       let tipoPerfil = perfil.tipo_pessoa || 'morador'
       if (tipoPerfil === 'ambos') tipoPerfil = 'prestador'
 
@@ -102,6 +105,8 @@ const PerfilPage = () => {
         fase: perfil.fase || '',
         quadra: perfil.quadra || '',
         lote: perfil.lote || '',
+        endereco_rua: perfil.endereco_rua || '',
+        endereco_numero: perfil.endereco_numero || '',
         tipo_pessoa: tipoPerfil,
         whatsapp: perfil.whatsapp || '',
         telefone2: perfil.telefone2 || ''
@@ -133,10 +138,14 @@ const PerfilPage = () => {
 
   const handleGerenciarServico = async () => {
     if (!servicoExistente) {
+      // Monta o endereço completo para mandar para o serviço
+      const enderecoCompleto = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
+
       const novoServico = {
         usuario_id: user.id,
         nome: form.nome_completo,
         whatsapp: form.whatsapp.replace(/\D/g, ''),
+        casa_numero: enderecoCompleto, // Puxa direto do perfil
         opt_in: true
       }
 
@@ -162,6 +171,15 @@ const PerfilPage = () => {
 
     if (!form.nome_completo.trim()) { setError('Nome completo é obrigatório.'); return }
     if (!form.fase) { setError('Informe sua fase.'); return }
+    
+    // ✅ NOVO: Validação condicional para prestador
+    if (ehPrestador) {
+      if (!form.endereco_rua.trim() || !form.endereco_numero.trim()) {
+        setError('Para prestadores, o nome da rua e número do imóvel são obrigatórios.')
+        return
+      }
+    }
+
     if (!user?.id) { setError('Sessão expirada.'); return }
 
     setSalvando(true)
@@ -187,6 +205,8 @@ const PerfilPage = () => {
         fase: form.fase,
         quadra: form.quadra.trim() || null,
         lote: form.lote.trim() || null,
+        endereco_rua: form.endereco_rua.trim() || null,
+        endereco_numero: form.endereco_numero.trim() || null,
         tipo_pessoa: form.tipo_pessoa || 'morador',
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
@@ -264,21 +284,33 @@ const PerfilPage = () => {
 
       {/* CARD DE ESTATÍSTICAS */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+        <button
+          type="button"
+          onClick={() => navigate('/anuncios')}
+          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer"
+        >
           <span className="text-3xl mb-2">📢</span>
           <p className="text-2xl font-bold text-gray-900">{stats.anuncios}</p>
           <p className="text-xs text-gray-500 mt-1">Meus Anúncios</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+        </button>
+        <button
+          type="button"
+          onClick={() => ehPrestador && servicoExistente ? navigate(`/editar-servico/${servicoExistente.id}`) : navigate('/mapa')}
+          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer"
+        >
           <span className="text-3xl mb-2">🛠️</span>
           <p className="text-2xl font-bold text-gray-900">{stats.servicos}</p>
           <p className="text-xs text-gray-500 mt-1">Meus Serviços</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition">
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/indicacoes')}
+          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer"
+        >
           <span className="text-3xl mb-2">🤝</span>
           <p className="text-2xl font-bold text-gray-900">{stats.indicacoes}</p>
           <p className="text-xs text-gray-500 mt-1">Minhas Indicações</p>
-        </div>
+        </button>
       </div>
 
       {sucesso && (
@@ -318,8 +350,8 @@ const PerfilPage = () => {
         <div>
           <h2 className="text-xl font-bold mb-5">Dados pessoais</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo" className={inputClass} required />
-            <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição" className={inputClass} />
+            <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo *" className={inputClass} required />
+            <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição (apelido)" className={inputClass} />
 
             <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
               <option value="">Selecione sua fase *</option>
@@ -334,11 +366,45 @@ const PerfilPage = () => {
           </div>
         </div>
 
+        {/* ✅ NOVO: Localização do Imóvel */}
+        <div>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold">Localização do imóvel</h2>
+            {ehPrestador && (
+              <span className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-medium">
+                Obrigatório para prestadores
+              </span>
+            )}
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <input 
+              name="endereco_rua" 
+              value={form.endereco_rua} 
+              onChange={handleChange} 
+              placeholder="Nome da rua / avenida" 
+              required={ehPrestador}
+              className={`${inputClass} ${ehPrestador && !form.endereco_rua.trim() ? 'border-red-300 focus:ring-red-400' : ''}`}
+            />
+            <input 
+              name="endereco_numero" 
+              value={form.endereco_numero} 
+              onChange={handleChange} 
+              placeholder="Número do lote / casa" 
+              required={ehPrestador}
+              className={`${inputClass} ${ehPrestador && !form.endereco_numero.trim() ? 'border-red-300 focus:ring-red-400' : ''}`}
+            />
+          </div>
+          {!ehPrestador && (
+            <p className="text-xs text-gray-400 mt-2">
+              Opcional para proprietários que ainda não construíram.
+            </p>
+          )}
+        </div>
+
         {/* Tipo de Pessoa */}
         <div>
           <h2 className="text-xl font-bold mb-5">Tipo de perfil</h2>
 
-          {/* ✅ ATUALIZADO: Opções simplificadas */}
           <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
             <option value="morador">Morador / Proprietário</option>
             <option value="prestador">Morador / Prestador de Serviços</option>

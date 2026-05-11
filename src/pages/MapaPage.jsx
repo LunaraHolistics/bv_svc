@@ -51,19 +51,19 @@ const CardPrestador = ({ prestador, onDelete }) => {
   const handleDelete = async (e) => {
     e.stopPropagation()
     if (window.confirm(`Deseja realmente excluir o serviço de ${prestador.nome}?`)) {
-      await onDelete(prestador.id)
+      // ✅ CORRIGIDO: Alterando o estado local ANTES de chamar a API para resposta instantânea
+      onDelete(prestador.id)
     }
   }
 
-  // ✅ NOVO: Navega para a página de detalhe ao clicar no card
   const handleCardClick = () => {
     navigate(`/servico/${prestador.id}`)
   }
 
   return (
     <div
-      onClick={handleCardClick}                                        // ✅ NOVO
-      className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"  // ✅ NOVO: cursor-pointer
+      onClick={handleCardClick}
+      className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
     >
       
       {/* GALERIA DE IMAGENS DO SERVIÇO */}
@@ -167,9 +167,9 @@ const CardPrestador = ({ prestador, onDelete }) => {
 
         {/* BOTÕES DE GERENCIAMENTO */}
         {canManage && (
-          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4 border-t border-dashed border-red-200 mt-6 flex gap-2">  {/* ✅ NOVO: stopPropagation */}
+          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4 border-t border-dashed border-red-200 mt-6 flex gap-2">
             <button
-              onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }}  // ✅ NOVO: stopPropagation
+              onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }}
               className="flex-1 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
             >
               ✏️ Editar
@@ -185,7 +185,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
       </div>
 
       {/* RODAPÉ DE CONTATO */}
-      <div onClick={(e) => e.stopPropagation()} className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">  {/* ✅ NOVO: stopPropagation */}
+      <div onClick={(e) => e.stopPropagation()} className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">
         {whatsappLink ? (
           <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition">
             WhatsApp
@@ -231,10 +231,13 @@ const MapaPage = () => {
     try {
       const [resPrestadores, resCategorias] = await Promise.all([
         supabase.from('prestadores_servico').select('*').eq('opt_in', true).order('nome'),
+        // ✅ CORRIGIDO: Se a tabela categorias falhar, não quebra o mapa
         supabase.from('categorias').select('*').eq('tipo', 'condominio').order('ordem')
       ])
+      
       if (resPrestadores.error) throw resPrestadores.error
-      if (resCategorias.error) throw resCategorias.error
+      // Ignora erro das categorias silenciosamente
+      const listaCategorias = resCategorias.error ? [] : (resCategorias.data || [])
       
       const listaPrestadores = resPrestadores.data || []
 
@@ -255,14 +258,13 @@ const MapaPage = () => {
         }
       }
 
-      // Mescla os avatares encontrados com os dados dos prestadores
       const prestadoresComAvatar = listaPrestadores.map(p => ({
         ...p,
         avatar_do_perfil: p.avatar_url || mapaAvatares[p.usuario_id] || null
       }))
 
       setPrestadores(prestadoresComAvatar)
-      setCategorias(resCategorias.data || [])
+      setCategorias(listaCategorias)
     } catch (err) {
       console.error(err)
       setError('Não foi possível carregar os serviços.')
@@ -271,12 +273,22 @@ const MapaPage = () => {
     }
   }
 
+  // ✅ CORRIGIDO: Otimista (remove da tela primeiro), se der erro no banco, avisa.
   const handleDeleteServico = async (id) => {
+    const prestadorBackup = prestadores.find(p => p.id === id)
+    
+    // Remove instantaneamente da tela
+    setPrestadores((prev) => prev.filter((p) => p.id !== id))
+
+    // Tenta excluir no banco
     const { error } = await supabase.from('prestadores_servico').delete().eq('id', id)
+    
     if (error) {
       alert('Erro ao excluir: ' + error.message)
-    } else {
-      setPrestadores((prev) => prev.filter((p) => p.id !== id))
+      // Se falhou, devolve o item para a tela
+      if (prestadorBackup) {
+        setPrestadores((prev) => [...prev, prestadorBackup])
+      }
     }
   }
 
