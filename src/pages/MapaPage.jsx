@@ -58,7 +58,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
   return (
     <div className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
       
-      {/* GALERIA DE IMAGENS */}
+      {/* GALERIA DE IMAGENS DO SERVIÇO */}
       {imagens.length > 0 && (
         <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
           <div className="flex h-full">
@@ -85,22 +85,39 @@ const CardPrestador = ({ prestador, onDelete }) => {
       <div className="p-6 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
-            {!imagens.length && (
-              <>
-                {prestador.avatar_url ? (
-                  <img src={prestador.avatar_url} alt={prestador.nome} className="w-14 h-14 rounded-2xl object-cover shrink-0" />
-                ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center shrink-0">
-                    <span className="text-emerald-700 font-bold text-lg">{nomeInicial}</span>
-                  </div>
-                )}
-              </>
-            )}
+            
+            {/* 👤 AVATAR DO USUÁRIO - SEMPRE EXIBIDO */}
+            <div className="relative shrink-0">
+              {prestador.avatar_url ? (
+                <img 
+                  src={prestador.avatar_url} 
+                  alt={prestador.nome} 
+                  className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm hover:shadow-md transition-shadow"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(prestador.nome || 'U')}&background=10b981&color=fff&bold=true`
+                  }}
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm">
+                  <span className="text-emerald-700 font-bold text-lg">{nomeInicial}</span>
+                </div>
+              )}
+              {/* Indicador visual de usuário verificado (opcional) */}
+              {prestador.verificado && (
+                <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white">✓</span>
+              )}
+            </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h3 className="font-bold text-gray-900 truncate">{prestador.nome || 'Prestador'}</h3>
               {prestador.nome_fantasia && (
                 <p className="text-sm text-emerald-600 truncate">{prestador.nome_fantasia}</p>
+              )}
+              {/* Badge de tipo de usuário (opcional) */}
+              {prestador.tipo_usuario && (
+                <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-medium">
+                  {prestador.tipo_usuario}
+                </span>
               )}
             </div>
           </div>
