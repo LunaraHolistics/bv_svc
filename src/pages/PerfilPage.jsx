@@ -55,20 +55,43 @@ const PerfilPage = () => {
     }
   }, [user])
 
+  // FUNÇÃO EVOLUÍDA: Tenta usuario_id, se falhar tenta user_id automaticamente
   const buscarEstatisticas = async () => {
     try {
-      // Tenta buscar usando 'usuario_id' OU 'user_id' (depende de como sua tabela foi criada)
-      const [resAnuncios, resServicos, resIndicacoes] = await Promise.all([
-        supabase.from('anuncios_vendas').select('*', { count: 'exact', head: true }).or(`usuario_id.eq.${user.id},user_id.eq.${user.id}`),
-        supabase.from('prestadores_servico').select('*', { count: 'exact', head: true }).or(`usuario_id.eq.${user.id},user_id.eq.${user.id}`),
-        supabase.from('indicacoes').select('*', { count: 'exact', head: true }).or(`usuario_id.eq.${user.id},user_id.eq.${user.id}`)
+      const fetchCount = async (tabela) => {
+        let count = 0
+        
+        // 1. Tenta buscar pela coluna usuario_id (padrão do nosso sistema)
+        const res1 = await supabase
+          .from(tabela)
+          .select('*', { count: 'exact', head: true })
+          .eq('usuario_id', user.id)
+          
+        if (!res1.error) {
+          count = res1.count
+        } else {
+          // 2. Se der erro (ex: coluna não existe), tenta com user_id
+          const res2 = await supabase
+            .from(tabela)
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            
+          if (!res2.error) {
+            count = res2.count
+          }
+        }
+        
+        return count || 0
+      }
+
+      // Busca as 3 tabelas em paralelo usando a função à prova de falhas
+      const [anuncios, servicos, indicacoes] = await Promise.all([
+        fetchCount('anuncios_vendas'),
+        fetchCount('prestadores_servico'),
+        fetchCount('indicacoes')
       ])
       
-      setStats({
-        anuncios: resAnuncios.count || 0,
-        servicos: resServicos.count || 0,
-        indicacoes: resIndicacoes.count || 0
-      })
+      setStats({ anuncios, servicos, indicacoes })
     } catch (error) {
       console.error('Erro ao buscar stats:', error)
     }
@@ -206,6 +229,9 @@ const PerfilPage = () => {
 
       await recarregarPerfil()
 
+      // Atualiza os contadores imediatamente após salvar
+      buscarEstatisticas()
+
       setSucesso(true)
       setAvatarFile(null)
 
@@ -237,6 +263,7 @@ const PerfilPage = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
 
+      {/* HERO */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 p-8 md:p-10 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-52 h-52 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
@@ -288,8 +315,10 @@ const PerfilPage = () => {
         </div>
       )}
 
+      {/* FORMULÁRIO */}
       <form onSubmit={handleSalvar} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-8">
         
+        {/* Avatar */}
         <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100">
           <div onClick={() => fileInputRef.current?.click()} className="cursor-pointer">
             {avatarPreview ? (
@@ -307,6 +336,7 @@ const PerfilPage = () => {
           </div>
         </div>
 
+        {/* Dados Pessoais */}
         <div>
           <h2 className="text-xl font-bold mb-5">Dados pessoais</h2>
           <div className="grid md:grid-cols-2 gap-4">
@@ -326,6 +356,7 @@ const PerfilPage = () => {
           </div>
         </div>
 
+        {/* Perfil Comercial */}
         <div>
           <h2 className="text-xl font-bold mb-5">Perfil comercial</h2>
 
@@ -351,6 +382,7 @@ const PerfilPage = () => {
           )}
         </div>
 
+        {/* Botão Salvar */}
         <div className="pt-4 border-t border-gray-100">
           <button
             type="submit"
