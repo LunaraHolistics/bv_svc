@@ -24,6 +24,7 @@ const PerfilPage = () => {
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
   const [servicoExistente, setServicoExistente] = useState(null)
 
+  // ✅ LIMPO: Só dados pessoais
   const [form, setForm] = useState({
     nome_completo: '',
     nome_exibicao: '',
@@ -32,14 +33,7 @@ const PerfilPage = () => {
     lote: '',
     tipo_pessoa: 'morador',
     whatsapp: '',
-    telefone2: '',
-    telefone: '',
-    nome_fantasia: '',
-    descricao_comercial: '',
-    instagram_url: '',
-    facebook_url: '',
-    site_url: '',
-    servicos_oferecidos: ''
+    telefone2: ''
   })
 
   const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
@@ -54,7 +48,6 @@ const PerfilPage = () => {
     if (user) buscarEstatisticas()
   }, [user])
 
-  // Buscar serviço existente quando for prestador
   useEffect(() => {
     if (ehPrestador && user) {
       buscarServicoExistente()
@@ -97,6 +90,7 @@ const PerfilPage = () => {
     setServicoExistente(data || null)
   }
 
+  // ✅ LIMPO: Só preenche dados pessoais
   useEffect(() => {
     if (perfil) {
       setForm({
@@ -107,14 +101,7 @@ const PerfilPage = () => {
         lote: perfil.lote || '',
         tipo_pessoa: perfil.tipo_pessoa || 'morador',
         whatsapp: perfil.whatsapp || '',
-        telefone2: perfil.telefone2 || '',
-        telefone: perfil.telefone || '',
-        nome_fantasia: perfil.nome_fantasia || '',
-        descricao_comercial: perfil.descricao_comercial || '',
-        instagram_url: perfil.instagram_url || '',
-        facebook_url: perfil.facebook_url || '',
-        site_url: perfil.site_url || '',
-        servicos_oferecidos: (perfil.servicos_oferecidos || []).join(', ')
+        telefone2: perfil.telefone2 || ''
       })
       setAvatarPreview(perfil.avatar_url || null)
     }
@@ -122,7 +109,7 @@ const PerfilPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    if (['whatsapp', 'telefone2', 'telefone'].includes(name)) {
+    if (['whatsapp', 'telefone2'].includes(name)) {
       setForm((prev) => ({ ...prev, [name]: formatarFone(value) }))
     } else {
       setForm((prev) => ({ ...prev, [name]: value }))
@@ -141,10 +128,8 @@ const PerfilPage = () => {
     reader.readAsDataURL(file)
   }
 
-  // Redireciona para edição do serviço (cria se não existir)
   const handleGerenciarServico = async () => {
     if (!servicoExistente) {
-      // Cria um novo registro de serviço
       const novoServico = {
         usuario_id: user.id,
         nome: form.nome_completo,
@@ -165,7 +150,6 @@ const PerfilPage = () => {
 
       navigate(`/editar-servico/${data.id}`)
     } else {
-      // Redireciona para edição do serviço existente
       navigate(`/editar-servico/${servicoExistente.id}`)
     }
   }
@@ -192,27 +176,20 @@ const PerfilPage = () => {
         avatarUrl = publicUrl
       }
 
+      // ✅ LIMPO: Só dados pessoais
       const dados = {
         nome_completo: form.nome_completo.trim(),
         whatsapp: form.whatsapp.replace(/\D/g, '') || '',
         telefone2: form.telefone2.replace(/\D/g, '') || null,
-        telefone: ehPrestador ? (form.telefone.replace(/\D/g, '') || null) : null,
         nome_exibicao: form.nome_exibicao.trim() || null,
         fase: form.fase,
         quadra: form.quadra.trim() || null,
         lote: form.lote.trim() || null,
         tipo_pessoa: form.tipo_pessoa || 'morador',
-        nome_fantasia: form.nome_fantasia.trim() || null,
-        descricao_comercial: form.descricao_comercial.trim() || null,
-        instagram_url: form.instagram_url.trim() || null,
-        facebook_url: form.facebook_url.trim() || null,
-        site_url: form.site_url.trim() || null,
-        servicos_oferecidos: form.servicos_oferecidos ? form.servicos_oferecidos.split(',').map((s) => s.trim()).filter(Boolean) : null,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString()
       }
 
-      // 1. Salva na tabela de perfis
       let dbError
       if (perfil) {
         const result = await supabase.from('perfis').update(dados).eq('id', user.id)
@@ -227,17 +204,8 @@ const PerfilPage = () => {
         throw new Error(dbError.message)
       }
 
-      // 2. Se for Prestador/Ambos, atualiza dados básicos na tabela de serviços (se existir)
-      if (ehPrestador && servicoExistente) {
-        await supabase
-          .from('prestadores_servico')
-          .update({
-            nome: dados.nome_completo,
-            whatsapp: dados.whatsapp,
-            avatar_url: avatarUrl
-          })
-          .eq('id', servicoExistente.id)
-      }
+      // ✅ REMOVIDO: Não faz mais sync com prestadores_servico
+      // Cada tabela cuida de si mesma
 
       await recarregarPerfil()
       buscarEstatisticas()
@@ -283,7 +251,7 @@ const PerfilPage = () => {
           <div>
             <span className="text-xs bg-white/10 px-3 py-1 rounded-full">Área do morador</span>
             <h1 className="text-3xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
-            <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais, informações comerciais e personalize como você aparece.</p>
+            <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais e personalize como você aparece.</p>
           </div>
 
           <button
@@ -367,9 +335,9 @@ const PerfilPage = () => {
           </div>
         </div>
 
-        {/* Perfil Comercial */}
+        {/* Tipo de Pessoa */}
         <div>
-          <h2 className="text-xl font-bold mb-5">Perfil comercial</h2>
+          <h2 className="text-xl font-bold mb-5">Tipo de perfil</h2>
 
           <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
             <option value="morador">Morador</option>
@@ -398,7 +366,7 @@ const PerfilPage = () => {
                     <button
                       type="button"
                       onClick={handleGerenciarServico}
-                      className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20"
+                      className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 cursor-pointer"
                     >
                       {servicoExistente ? '✏️ Editar Serviço Completo' : '📝 Cadastrar Serviço'}
                     </button>
@@ -407,7 +375,7 @@ const PerfilPage = () => {
                       <button
                         type="button"
                         onClick={() => navigate('/mapa')}
-                        className="px-6 py-3 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition"
+                        className="px-6 py-3 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
                       >
                         👁️ Ver no Mapa
                       </button>
@@ -424,7 +392,7 @@ const PerfilPage = () => {
           <button
             type="submit"
             disabled={salvando}
-            className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 disabled:opacity-70"
+            className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 disabled:opacity-70 cursor-pointer"
           >
             {salvando ? 'Salvando...' : 'Salvar alterações'}
           </button>

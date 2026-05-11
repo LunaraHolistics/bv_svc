@@ -6,6 +6,7 @@ import Header from './components/Header'
 
 import HomePage from './pages/HomePage'
 import MapaPage from './pages/MapaPage'
+import ServicoDetalhePage from './pages/ServicoDetalhePage'
 import IndicacoesPage from './pages/IndicacoesPage'
 import AnunciosPage from './pages/AnunciosPage'
 import AnuncioDetailPage from './pages/AnuncioDetailPage'
@@ -55,6 +56,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/mapa" element={<MapaPage />} />
+            <Route path="/servico/:id" element={<ServicoDetalhePage />} />
             <Route path="/servicos" element={<Navigate to="/mapa" replace />} />
             <Route path="/indicacoes" element={<IndicacoesPage />} />
             <Route path="/anuncios" element={<AnunciosPage />} />

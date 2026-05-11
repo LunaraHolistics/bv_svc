@@ -55,8 +55,16 @@ const CardPrestador = ({ prestador, onDelete }) => {
     }
   }
 
+  // ✅ NOVO: Navega para a página de detalhe ao clicar no card
+  const handleCardClick = () => {
+    navigate(`/servico/${prestador.id}`)
+  }
+
   return (
-    <div className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+    <div
+      onClick={handleCardClick}                                        // ✅ NOVO
+      className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"  // ✅ NOVO: cursor-pointer
+    >
       
       {/* GALERIA DE IMAGENS DO SERVIÇO */}
       {imagens.length > 0 && (
@@ -86,7 +94,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
             
-            {/* 👤 AVATAR DO USUÁRIO (Busca prioritária pela foto do perfil) */}
+            {/* AVATAR */}
             <div className="relative shrink-0">
               {prestador.avatar_do_perfil ? (
                 <img 
@@ -94,7 +102,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
                   alt={prestador.nome} 
                   className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
                   onError={(e) => {
-                    e.currentTarget.onerror = null; // Prevém loop infinito
+                    e.currentTarget.onerror = null
                     e.currentTarget.style.display = 'none'
                     e.currentTarget.nextElementSibling.style.display = 'flex'
                   }}
@@ -135,7 +143,6 @@ const CardPrestador = ({ prestador, onDelete }) => {
           )}
         </div>
 
-        {/* DESCRIÇÃO COM FALLBACK (Tenta descricao_comercial, senão usa descricao) */}
         {(prestador.descricao_comercial || prestador.descricao) && (
           <p className="text-sm text-gray-500 mt-4 leading-relaxed line-clamp-3">
             {prestador.descricao_comercial || prestador.descricao}
@@ -158,11 +165,11 @@ const CardPrestador = ({ prestador, onDelete }) => {
           </div>
         )}
 
-        {/* BOTÕES DE GERENCIAMENTO (SÓ DONO OU MASTER) */}
+        {/* BOTÕES DE GERENCIAMENTO */}
         {canManage && (
-          <div className="mt-auto pt-4 border-t border-dashed border-red-200 mt-6 flex gap-2">
+          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4 border-t border-dashed border-red-200 mt-6 flex gap-2">  {/* ✅ NOVO: stopPropagation */}
             <button
-              onClick={() => navigate(`/editar-servico/${prestador.id}`)}
+              onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }}  // ✅ NOVO: stopPropagation
               className="flex-1 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
             >
               ✏️ Editar
@@ -178,7 +185,7 @@ const CardPrestador = ({ prestador, onDelete }) => {
       </div>
 
       {/* RODAPÉ DE CONTATO */}
-      <div className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">
+      <div onClick={(e) => e.stopPropagation()} className="border-t border-gray-100 p-4 flex gap-2 flex-wrap">  {/* ✅ NOVO: stopPropagation */}
         {whatsappLink ? (
           <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium no-underline hover:bg-green-600 transition">
             WhatsApp
@@ -231,7 +238,7 @@ const MapaPage = () => {
       
       const listaPrestadores = resPrestadores.data || []
 
-      // NOVA LÓGICA: Busca as fotos de perfil dos donos dos serviços
+      // Busca as fotos de perfil dos donos dos serviços
       const listaIdsUnicos = [...new Set(listaPrestadores.map(p => p.usuario_id).filter(Boolean))]
       let mapaAvatares = {}
       
