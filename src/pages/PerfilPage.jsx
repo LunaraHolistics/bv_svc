@@ -20,7 +20,7 @@ const PerfilPage = () => {
   const [error, setError] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
-  
+
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
   const [servicoExistente, setServicoExistente] = useState(null)
 
@@ -62,21 +62,33 @@ const PerfilPage = () => {
       try {
         const res1 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('usuario_id', user.id)
         if (!res1.error) return res1.count || 0
-        
+
         const res2 = await supabase.from(tabela).select('*', { count: 'exact', head: true }).eq('user_id', user.id)
         if (!res2.error) return res2.count || 0
-      } catch (err) {
-        // Tabela pode não existir ainda (ex: indicacoes). Silencioso.
-      }
+      } catch (err) { }
       return 0
     }
 
+    // ✅ NOVO: Busca específica para anúncios (só conta os que estão "Ativo")
+    const fetchAnunciosAtivos = async () => {
+      try {
+        const res = await supabase
+          .from('anuncios_vendas')
+          .select('*', { count: 'exact', head: true })
+          .eq('usuario_id', user.id)
+          .eq('status', 'Ativo')
+        return res.error ? 0 : (res.count || 0)
+      } catch (err) {
+        return 0
+      }
+    }
+
     const [anuncios, servicos, indicacoes] = await Promise.all([
-      fetchCount('anuncios_vendas'),
+      fetchAnunciosAtivos(), // ✅ Substituiu o fetchCount genérico
       fetchCount('prestadores_servico'),
       fetchCount('indicacoes')
     ])
-    
+
     setStats({ anuncios, servicos, indicacoes })
   }
 
@@ -87,7 +99,7 @@ const PerfilPage = () => {
         .select('id, categoria, opt_in')
         .eq('usuario_id', user.id)
         .maybeSingle()
-      
+
       setServicoExistente(data || null)
     } catch (err) {
       setServicoExistente(null)
@@ -171,7 +183,7 @@ const PerfilPage = () => {
 
     if (!form.nome_completo.trim()) { setError('Nome completo é obrigatório.'); return }
     if (!form.fase) { setError('Informe sua fase.'); return }
-    
+
     // ✅ NOVO: Validação condicional para prestador
     if (ehPrestador) {
       if (!form.endereco_rua.trim() || !form.endereco_numero.trim()) {
@@ -327,7 +339,7 @@ const PerfilPage = () => {
 
       {/* FORMULÁRIO */}
       <form onSubmit={handleSalvar} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-8">
-        
+
         {/* Avatar */}
         <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100">
           <div onClick={() => fileInputRef.current?.click()} className="cursor-pointer">
@@ -377,19 +389,19 @@ const PerfilPage = () => {
             )}
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <input 
-              name="endereco_rua" 
-              value={form.endereco_rua} 
-              onChange={handleChange} 
-              placeholder="Nome da rua / avenida" 
+            <input
+              name="endereco_rua"
+              value={form.endereco_rua}
+              onChange={handleChange}
+              placeholder="Nome da rua / avenida"
               required={ehPrestador}
               className={`${inputClass} ${ehPrestador && !form.endereco_rua.trim() ? 'border-red-300 focus:ring-red-400' : ''}`}
             />
-            <input 
-              name="endereco_numero" 
-              value={form.endereco_numero} 
-              onChange={handleChange} 
-              placeholder="Número do lote / casa" 
+            <input
+              name="endereco_numero"
+              value={form.endereco_numero}
+              onChange={handleChange}
+              placeholder="Número do lote / casa"
               required={ehPrestador}
               className={`${inputClass} ${ehPrestador && !form.endereco_numero.trim() ? 'border-red-300 focus:ring-red-400' : ''}`}
             />
@@ -422,11 +434,11 @@ const PerfilPage = () => {
                     {servicoExistente ? 'Seu Serviço está cadastrado!' : 'Cadastre seu Serviço'}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {servicoExistente 
+                    {servicoExistente
                       ? `Categoria: ${servicoExistente.categoria || 'Não definida'} • Status: ${servicoExistente.opt_in ? '✅ Visível' : '⏸️ Oculto'}`
                       : 'Preencha todas as informações do seu serviço para aparecer no Mapa de Serviços do condomínio.'}
                   </p>
-                  
+
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
@@ -435,7 +447,7 @@ const PerfilPage = () => {
                     >
                       {servicoExistente ? '✏️ Editar Serviço Completo' : '📝 Cadastrar Serviço'}
                     </button>
-                    
+
                     {servicoExistente && stats.servicos > 0 && (
                       <button
                         type="button"
