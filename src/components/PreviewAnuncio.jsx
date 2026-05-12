@@ -1,11 +1,11 @@
-// src/components/PreviewAnuncio.jsx
 import React, { useState, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 
+// ✅ ÚNICA ALTERAÇÃO: Adicionado sm: para ajustar no mobile
 const inputClass =
-  'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white'
+  'w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white'
 
 const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
   const { user } = useAuth()
@@ -214,12 +214,12 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">
+      <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-6">
         Novo Anúncio
       </h2>
 
       {!user && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-2xl mb-5 text-sm">
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl mb-5 text-xs sm:text-sm">
           Faça login para publicar anúncios no marketplace do condomínio.{' '}
           <Link to="/login" className="font-semibold underline text-amber-800">
             Entrar agora
@@ -228,18 +228,18 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl mb-4 text-xs sm:text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl mb-4 text-sm">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl mb-4 text-xs sm:text-sm">
           {success}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
 
         <input
           type="text"
@@ -267,7 +267,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
           />
 
           {formData.preco && (
-            <p className="text-sm text-emerald-600 font-medium mt-1">
+            <p className="text-xs sm:text-sm text-emerald-600 font-medium mt-1">
               {formatarPreco(formData.preco)}
             </p>
           )}
@@ -281,13 +281,13 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
           disabled={loading}
           required
           placeholder="Descreva seu produto..."
-          className={inputClass}
+          className={`${inputClass} resize-none`}
         />
 
         {/* Fotos */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700">
               Fotos do produto
             </label>
 
@@ -298,13 +298,13 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
 
           <div
             onClick={() => !loading && fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer hover:border-emerald-500 transition"
+            className="border-2 border-dashed border-gray-300 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center cursor-pointer hover:border-emerald-500 transition"
           >
-            <div className="text-4xl mb-2">📷</div>
-            <p className="text-gray-500 text-sm">
+            <div className="text-3xl sm:text-4xl mb-2">📷</div>
+            <p className="text-gray-500 text-xs sm:text-sm">
               Clique para adicionar fotos
             </p>
-            <p className="text-gray-400 text-xs mt-1">
+            <p className="text-gray-400 text-[10px] sm:text-xs mt-1">
               Máximo 6 fotos • 5MB cada
             </p>
           </div>
@@ -326,13 +326,13 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
                   <img
                     src={img.preview}
                     alt={`Foto ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-xl"
+                    className="w-full h-20 sm:h-24 object-cover rounded-lg sm:rounded-xl"
                   />
                   <button
                     type="button"
                     onClick={() => removerImagem(index)}
                     disabled={loading}
-                    className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition disabled:opacity-0"
+                    className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 bg-black/60 text-white rounded-full text-[10px] sm:text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition disabled:opacity-0 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -342,7 +342,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
           )}
 
           {imagens.length === 1 && (
-            <p className="text-xs text-amber-600 mt-2">
+            <p className="text-[10px] sm:text-xs text-amber-600 mt-2">
               ⚠️ Adicione pelo menos mais 1 foto para o anúncio ficar mais atrativo.
             </p>
           )}
@@ -350,7 +350,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
 
@@ -368,7 +368,7 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Expirar em
             </label>
 
@@ -386,10 +386,10 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-3 rounded-2xl text-white font-semibold transition ${
+          className={`w-full py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-white font-semibold transition text-sm ${
             loading
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20'
+              : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 cursor-pointer'
           }`}
         >
           {loading ? 'Publicando...' : 'Publicar anúncio'}
@@ -398,12 +398,12 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
 
       {/* Preview */}
       {temConteudo && (
-        <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+        <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-xl sm:rounded-2xl">
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">
             Preview do anúncio
           </h3>
 
-          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm">
             {imagens.length > 0 ? (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {imagens.map((img, index) => (
@@ -411,25 +411,25 @@ const PreviewAnuncio = ({ onAnuncioCriado, onClose }) => {
                     key={index}
                     src={img.preview}
                     alt={`Preview ${index + 1}`}
-                    className="w-32 h-24 flex-shrink-0 object-cover rounded-xl"
+                    className="w-24 sm:w-32 h-20 sm:h-24 flex-shrink-0 object-cover rounded-lg sm:rounded-xl"
                   />
                 ))}
               </div>
             ) : (
-              <div className="w-full h-32 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300 text-2xl">
+              <div className="w-full h-28 sm:h-32 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300 text-2xl">
                 📷
               </div>
             )}
 
-            <h4 className="font-bold text-gray-900 mt-3">
+            <h4 className="font-bold text-gray-900 mt-3 text-sm sm:text-base">
               {formData.titulo || 'Título'}
             </h4>
 
-            <p className="text-emerald-600 font-bold mt-1">
+            <p className="text-emerald-600 font-bold mt-1 text-sm sm:text-base">
               {formatarPreco(formData.preco) || 'R$ 0,00'}
             </p>
 
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
               {formData.descricao || 'Descrição do produto'}
             </p>
           </div>

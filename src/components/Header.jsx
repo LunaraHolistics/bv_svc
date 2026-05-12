@@ -59,12 +59,7 @@ const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const {
-    user,
-    perfil,
-    logout,
-    loading
-  } = useAuth()
+  const { user, perfil, logout, loading } = useAuth()
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -73,13 +68,10 @@ const Header = () => {
   const dropdownRef = useRef(null)
   const notifRef = useRef(null)
 
-  // Esconde o menu interno em páginas de login/admin
   const hideChrome = ['/login', '/reset-password', '/admin', '/adm_bv'].includes(location.pathname)
 
   const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/'
-    }
+    if (path === '/') return location.pathname === '/'
     return location.pathname.startsWith(path)
   }
 
@@ -125,91 +117,49 @@ const Header = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'avisos_admin' }, fetchNotificacoes)
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(subscription)
-    }
+    return () => { supabase.removeChannel(subscription) }
   }, [user])
 
   const marcarComoLido = async (avisoId) => {
     if (!user) return
-    await supabase
-      .from('avisos_lidos')
-      .upsert({ aviso_id: avisoId, user_id: user.id }, { onConflict: 'aviso_id,user_id' })
-    
+    await supabase.from('avisos_lidos').upsert({ aviso_id: avisoId, user_id: user.id }, { onConflict: 'aviso_id,user_id' })
     setNaoLidas(prev => prev.filter(n => n.id !== avisoId))
   }
 
   const marcarTodasComoLidas = async () => {
     if (!user || naoLidas.length === 0) return
-    
     const registros = naoLidas.map(aviso => ({ aviso_id: aviso.id, user_id: user.id }))
-    
-    const { error } = await supabase
-      .from('avisos_lidos')
-      .upsert(registros, { onConflict: 'aviso_id,user_id' })
-
-    if (!error) {
-      setNaoLidas([])
-    }
+    const { error } = await supabase.from('avisos_lidos').upsert(registros, { onConflict: 'aviso_id,user_id' })
+    if (!error) setNaoLidas([])
   }
 
-  // ✅ NOVA FUNÇÃO: Compartilhar Link
   const handleShare = async () => {
     const urlParaCompartilhar = window.location.href
-    
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'BV Service - Bella Vittà',
-          text: 'Confira os serviços e anúncios do nosso condomínio!',
-          url: urlParaCompartilhar
-        })
-      } catch (err) {
-        console.error('Erro ao compartilhar:', err)
-      }
+      try { await navigator.share({ title: 'BV Service - Bella Vittà', text: 'Confira os serviços e anúncios do nosso condomínio!', url: urlParaCompartilhar }) } catch (err) { console.error('Erro ao compartilhar:', err) }
     } else {
-      try {
-        await navigator.clipboard.writeText(urlParaCompartilhar)
-        alert('✅ Link copiado para a área de transferência!\n\nCole no WhatsApp ou envie para outro morador. Ao abrir, a pessoa verá exatamente esta tela que você está vendo.')
-      } catch (err) {
-        prompt("Copie o link manualmente:", urlParaCompartilhar)
-      }
+      try { await navigator.clipboard.writeText(urlParaCompartilhar); alert('✅ Link copiado!\n\nCole no WhatsApp ou envie para outro morador.') } catch (err) { prompt("Copie o link manualmente:", urlParaCompartilhar) }
     }
   }
 
-  const handleLogout = async () => {
-    setMenuOpen(false)
-    await logout()
-    navigate('/login', { replace: true })
-  }
-
-  const irPerfil = () => {
-    setMenuOpen(false)
-    navigate('/perfil')
-  }
+  const handleLogout = async () => { setMenuOpen(false); await logout(); navigate('/login', { replace: true }) }
+  const irPerfil = () => { setMenuOpen(false); navigate('/perfil') }
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setMenuOpen(false)
-      }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setNotifOpen(false)
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setMenuOpen(false)
+      if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false)
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const avisoMaisRecente = naoLidas.length > 0 ? naoLidas[0] : null
 
-  // Se for página de login/admin, não renderiza nada
   if (hideChrome) return null
 
   return (
     <>
-      {/* WRAPPER STICKY: Garante que Menu + Barra Amarela fiquem grudados no topo juntos */}
       <div className="sticky top-0 z-50">
         
         {/* ===== DESKTOP ===== */}
@@ -243,7 +193,6 @@ const Header = () => {
                   + Anunciar
                 </NavLink>
 
-                {/* ✅ NOVO: Botão Compartilhar Desktop */}
                 <button onClick={handleShare} title="Compartilhar esta página" className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl transition cursor-pointer">
                   <Share2 size={20} className="text-gray-600" />
                 </button>
@@ -259,11 +208,12 @@ const Header = () => {
                       </button>
 
                       {notifOpen && (
-                        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-[60]">
+                        // ✅ CORREÇÃO: w-80 forçava 320px e estourava em telas pequenas. Agora é responsivo.
+                        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-[60]">
                           <div className="p-3 bg-gray-50 border-b font-semibold text-sm text-gray-700 flex justify-between items-center">
                             <span>Avisos da Administração</span>
                             {naoLidas.length > 0 && (
-                              <button onClick={marcarTodasComoLidas} className="text-xs text-emerald-600 font-medium hover:underline cursor-pointer">Marcar todas como lidas</button>
+                              <button onClick={marcarTodasComoLidas} className="text-xs text-emerald-600 font-medium hover:underline cursor-pointer shrink-0 ml-2">Ler todas</button>
                             )}
                           </div>
                           <div className="max-h-60 overflow-y-auto">
@@ -319,7 +269,8 @@ const Header = () => {
 
         {/* ===== BARRA AMARELA GLOBAL ===== */}
         {avisoMaisRecente && user && (
-          <div className="bg-amber-50 border-b border-amber-200 animate-[slideDown_0.3s_ease-out]">
+          // ✅ CORREÇÃO: Adicionado safe-area-top para não ficar por baixo da "notch" de celulares newer
+          <div className="bg-amber-50 border-b border-amber-200 animate-[slideDown_0.3s_ease-out] pt-[env(safe-area-inset-top)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-lg shrink-0">📢</span>
@@ -339,7 +290,7 @@ const Header = () => {
                 onClick={marcarTodasComoLidas}
                 className="shrink-0 px-4 py-1.5 bg-amber-200/80 hover:bg-amber-300 text-amber-800 rounded-lg text-xs font-bold transition cursor-pointer"
               >
-                Marcar como lido
+                OK
               </button>
             </div>
           </div>
@@ -360,7 +311,6 @@ const Header = () => {
               )
             })}
 
-            {/* ✅ NOVO: Botão Compartilhar Mobile */}
             <button onClick={handleShare} className="flex flex-col items-center flex-1 cursor-pointer">
               <span className="text-lg opacity-70">📤</span>
               <span className="text-[10px] mt-0.5 text-gray-400">Compartilhar</span>
@@ -394,6 +344,7 @@ const Header = () => {
         </div>
       </nav>
 
+      {/* Espaçamento para a barra inferior não cobrir o conteúdo */}
       <div className="md:hidden h-28" />
     </>
   )

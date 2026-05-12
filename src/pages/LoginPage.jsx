@@ -141,7 +141,8 @@ const LoginPage = () => {
       <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-300/20 blur-3xl rounded-full" />
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-300/20 blur-3xl rounded-full" />
 
-      <div className="relative z-10 w-full max-w-6xl bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.08)] flex flex-col lg:flex-row mb-8">
+      {/* ✅ CORREÇÃO: Adicionado padding inferior para não esconder atrás do rodapé fixo */}
+      <div className="relative z-10 w-full max-w-6xl bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.08)] flex flex-col lg:flex-row mb-24 sm:mb-28">
         
         {/* LADO ESQUERDO - IMAGEM */}
         <div className="hidden lg:block lg:w-[45%] relative min-h-[620px]">
@@ -333,24 +334,28 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* RODAPÉ DIVERTIDO */}
-      <div className="relative z-10 w-full max-w-lg bg-white/60 backdrop-blur-sm border border-gray-200 rounded-2xl p-5 text-center">
-        <p className="text-sm font-bold text-gray-700 mb-1">☕ Combustível para o Código</p>
-        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-          Sabia que o BV Service é movido a café e persistência?<br />
-          Se o app facilitou sua vida, que tal retribuir com um cafezinho?<br />
-          <span className="font-medium text-gray-700">Você ajuda a manter o servidor ligado e o dev acordado! 🚀</span>
-        </p>
-        <button
-          onClick={copiarPix}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-mono font-bold text-gray-700 transition cursor-pointer"
-        >
-          {pixCopiado ? (
-            <>✅ Copiado!</>
-          ) : (
-            <>📋 PIX: lunara_terapias@jim.com</>
-          )}
-        </button>
+      {/* ✅ CORREÇÃO: Rodapé agora é FIXO na tela, grudado embaixo, impossível de perder */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4">
+        <div className="max-w-lg mx-auto bg-white/80 sm:bg-white/90 backdrop-blur-xl border border-gray-200 sm:border-gray-300 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-bold text-gray-700">☕ Combustível para o Código</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 leading-relaxed hidden sm:block">
+                Sabia que o BV Service é movido a café? Se o app facilitou sua vida, que tal retribuir com um cafezinho? <span className="font-medium text-gray-700">Você ajuda a manter o servidor ligado e o dev acordado! 🚀</span>
+              </p>
+            </div>
+            <button
+              onClick={copiarPix}
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-mono font-bold text-gray-700 transition cursor-pointer"
+            >
+              {pixCopiado ? (
+                <>✅ Copiado!</>
+              ) : (
+                <>📋 Copiar PIX</>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

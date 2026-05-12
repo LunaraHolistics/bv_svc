@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// ✅ ÚNICA ALTERAÇÃO: Adicionado sm: para ajustar no mobile
 const inputClass =
-  'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
+  'w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
 
 const FormIndicacao = ({ onSucesso, onFechar }) => {
   const [categorias, setCategorias] = useState([])

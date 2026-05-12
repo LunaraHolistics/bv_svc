@@ -1,4 +1,3 @@
-// src/App.jsx
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth.jsx'
 
@@ -43,7 +42,8 @@ function AppContent() {
   const hideChrome = ['/login', '/reset-password', '/admin', '/adm_bv'].includes(location.pathname)
 
   return (
-    <div className="min-h-screen bg-[#f6f8f7] flex flex-col relative overflow-hidden">
+    // ✅ CORREÇÃO: overflow-x-hidden (bloqueia scroll horizontal) em vez de overflow-hidden (que cortava tudo)
+    <div className="min-h-screen bg-[#f6f8f7] flex flex-col relative overflow-x-hidden">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-150px] right-[-120px] w-[420px] h-[420px] bg-emerald-200/30 rounded-full blur-3xl" />
         <div className="absolute bottom-[10%] left-[-150px] w-[350px] h-[350px] bg-teal-200/20 rounded-full blur-3xl" />

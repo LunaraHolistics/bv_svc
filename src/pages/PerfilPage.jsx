@@ -26,24 +26,14 @@ const PerfilPage = () => {
   const [excluindoId, setExcluindoId] = useState(null)
 
   const [form, setForm] = useState({
-    nome_completo: '',
-    nome_exibicao: '',
-    fase: '',
-    quadra: '',
-    lote: '',
-    endereco_rua: '',
-    endereco_numero: '',
-    tipo_pessoa: 'morador',
-    whatsapp: '',
-    telefone2: ''
+    nome_completo: '', nome_exibicao: '', fase: '', quadra: '', lote: '',
+    endereco_rua: '', endereco_numero: '', tipo_pessoa: 'morador', whatsapp: '', telefone2: ''
   })
 
   const ehPrestador = form.tipo_pessoa === 'prestador' || form.tipo_pessoa === 'ambos'
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/login', { replace: true })
-    }
+    if (!authLoading && !user) navigate('/login', { replace: true })
   }, [authLoading, user, navigate])
 
   useEffect(() => {
@@ -51,24 +41,12 @@ const PerfilPage = () => {
   }, [user])
 
   const buscarServicosDoUsuario = async () => {
-    if (!user) {
-      setServicosDoUsuario([])
-      return
-    }
-    const { data, error } = await supabase
-      .from('prestadores_servico')
-      .select('id, categoria, opt_in, casa_numero')
-      .eq('usuario_id', user.id)
-      .order('created_at', { ascending: false })
-
-    if (!error) {
-      setServicosDoUsuario(data || [])
-    }
+    if (!user) { setServicosDoUsuario([]); return }
+    const { data, error } = await supabase.from('prestadores_servico').select('id, categoria, opt_in, casa_numero').eq('usuario_id', user.id).order('created_at', { ascending: false })
+    if (!error) setServicosDoUsuario(data || [])
   }
 
-  useEffect(() => {
-    buscarServicosDoUsuario()
-  }, [user])
+  useEffect(() => { buscarServicosDoUsuario() }, [user])
 
   const buscarEstatisticas = async () => {
     const fetchCount = async (tabela) => {
@@ -80,42 +58,22 @@ const PerfilPage = () => {
       } catch (err) { }
       return 0
     }
-
     const fetchAnunciosAtivos = async () => {
       try {
-        const res = await supabase
-          .from('anuncios_vendas')
-          .select('*', { count: 'exact', head: true })
-          .eq('usuario_id', user.id)
-          .eq('status', 'Ativo')
+        const res = await supabase.from('anuncios_vendas').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id).eq('status', 'Ativo')
         return res.error ? 0 : (res.count || 0)
-      } catch (err) {
-        return 0
-      }
+      } catch (err) { return 0 }
     }
-
-    const [anuncios, servicos, indicacoes] = await Promise.all([
-      fetchAnunciosAtivos(),
-      fetchCount('prestadores_servico'),
-      fetchCount('indicacoes')
-    ])
-
+    const [anuncios, servicos, indicacoes] = await Promise.all([fetchAnunciosAtivos(), fetchCount('prestadores_servico'), fetchCount('indicacoes')])
     setStats({ anuncios, servicos, indicacoes })
   }
 
   useEffect(() => {
     if (perfil) {
       setForm({
-        nome_completo: perfil.nome_completo || '',
-        nome_exibicao: perfil.nome_exibicao || '',
-        fase: perfil.fase || '',
-        quadra: perfil.quadra || '',
-        lote: perfil.lote || '',
-        endereco_rua: perfil.endereco_rua || '',
-        endereco_numero: perfil.endereco_numero || '',
-        tipo_pessoa: perfil.tipo_pessoa || 'morador',
-        whatsapp: perfil.whatsapp || '',
-        telefone2: perfil.telefone2 || ''
+        nome_completo: perfil.nome_completo || '', nome_exibicao: perfil.nome_exibicao || '', fase: perfil.fase || '', quadra: perfil.quadra || '',
+        lote: perfil.lote || '', endereco_rua: perfil.endereco_rua || '', endereco_numero: perfil.endereco_numero || '',
+        tipo_pessoa: perfil.tipo_pessoa || 'morador', whatsapp: perfil.whatsapp || '', telefone2: perfil.telefone2 || ''
       })
       setAvatarPreview(perfil.avatar_url || null)
     }
@@ -123,11 +81,8 @@ const PerfilPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    if (['whatsapp', 'telefone2'].includes(name)) {
-      setForm((prev) => ({ ...prev, [name]: formatarFone(value) }))
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }))
-    }
+    if (['whatsapp', 'telefone2'].includes(name)) setForm((prev) => ({ ...prev, [name]: formatarFone(value) }))
+    else setForm((prev) => ({ ...prev, [name]: value }))
     setError(null)
   }
 
@@ -149,20 +104,9 @@ const PerfilPage = () => {
 
   const handleExcluirServico = async (id) => {
     if (!window.confirm('Excluir este serviço permanentemente?')) return
-
     setExcluindoId(id)
-
-    const { error } = await supabase
-      .from('prestadores_servico')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      alert('❌ Erro ao excluir: ' + error.message)
-      setExcluindoId(null)
-      return
-    }
-
+    const { error } = await supabase.from('prestadores_servico').delete().eq('id', id)
+    if (error) { alert('❌ Erro ao excluir: ' + error.message); setExcluindoId(null); return }
     setServicosDoUsuario(prev => prev.filter(s => s.id !== id))
     setStats(prev => ({ ...prev, servicos: Math.max(0, prev.servicos - 1) }))
     setExcluindoId(null)
@@ -170,22 +114,14 @@ const PerfilPage = () => {
 
   const handleSalvar = async (e) => {
     e.preventDefault()
-
     if (!form.nome_completo.trim()) { setError('Nome completo é obrigatório.'); return }
     if (!form.fase) { setError('Informe sua fase.'); return }
-    if (ehPrestador && (!form.endereco_rua.trim() || !form.endereco_numero.trim())) {
-      setError('Para prestadores, o nome da rua e número do imóvel são obrigatórios.')
-      return
-    }
-
+    if (ehPrestador && (!form.endereco_rua.trim() || !form.endereco_numero.trim())) { setError('Para prestadores, o nome da rua e número do imóvel são obrigatórios.'); return }
     if (!user?.id) { setError('Sessão expirada.'); return }
 
-    setSalvando(true)
-    setError(null)
-
+    setSalvando(true); setError(null)
     try {
       let avatarUrl = perfil?.avatar_url || null
-
       if (avatarFile) {
         const ext = avatarFile.name.split('.').pop()
         const filePath = `avatars/${user.id}.${ext}`
@@ -196,151 +132,111 @@ const PerfilPage = () => {
       }
 
       const dados = {
-        nome_completo: form.nome_completo.trim(),
-        whatsapp: form.whatsapp.replace(/\D/g, '') || '',
-        telefone2: form.telefone2.replace(/\D/g, '') || null,
-        nome_exibicao: form.nome_exibicao.trim() || null,
-        fase: form.fase,
-        quadra: form.quadra.trim() || null,
-        lote: form.lote.trim() || null,
-        endereco_rua: form.endereco_rua.trim() || null,
-        endereco_numero: form.endereco_numero.trim() || null,
-        tipo_pessoa: form.tipo_pessoa || 'morador',
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString()
+        nome_completo: form.nome_completo.trim(), whatsapp: form.whatsapp.replace(/\D/g, '') || '', telefone2: form.telefone2.replace(/\D/g, '') || null,
+        nome_exibicao: form.nome_exibicao.trim() || null, fase: form.fase, quadra: form.quadra.trim() || null, lote: form.lote.trim() || null,
+        endereco_rua: form.endereco_rua.trim() || null, endereco_numero: form.endereco_numero.trim() || null,
+        tipo_pessoa: form.tipo_pessoa || 'morador', avatar_url: avatarUrl, updated_at: new Date().toISOString()
       }
 
       let dbError
-      if (perfil) {
-        const result = await supabase.from('perfis').update(dados).eq('id', user.id)
-        dbError = result.error
-      } else {
-        const result = await supabase.from('perfis').insert({ ...dados, id: user.id })
-        dbError = result.error
-      }
+      if (perfil) { const result = await supabase.from('perfis').update(dados).eq('id', user.id); dbError = result.error }
+      else { const result = await supabase.from('perfis').insert({ ...dados, id: user.id }); dbError = result.error }
 
-      if (dbError) {
-        console.error('[Perfil] Erro Supabase:', dbError)
-        throw new Error(dbError.message)
-      }
+      if (dbError) { console.error('[Perfil] Erro Supabase:', dbError); throw new Error(dbError.message) }
 
       if (ehPrestador && (form.endereco_rua || form.endereco_numero)) {
         const novoEnderecoFormatado = [form.endereco_rua.trim(), form.endereco_numero.trim()].filter(Boolean).join(', ')
         const idsParaAtualizar = (servicosDoUsuario || []).map(s => s.id)
-        if (idsParaAtualizar.length > 0) {
-          await supabase
-            .from('prestadores_servico')
-            .update({ casa_numero: novoEnderecoFormatado })
-            .in('id', idsParaAtualizar)
-        }
+        if (idsParaAtualizar.length > 0) await supabase.from('prestadores_servico').update({ casa_numero: novoEnderecoFormatado }).in('id', idsParaAtualizar)
       }
 
-      await recarregarPerfil()
-      buscarEstatisticas()
-      buscarServicosDoUsuario()
-
-      setSucesso(true)
-      setAvatarFile(null)
+      await recarregarPerfil(); buscarEstatisticas(); buscarServicosDoUsuario()
+      setSucesso(true); setAvatarFile(null)
       setTimeout(() => setSucesso(false), 3000)
     } catch (err) {
-      console.error('[Perfil] Erro ao salvar:', err)
-      setError(err.message || 'Erro ao salvar perfil.')
-    } finally {
-      setSalvando(false)
-    }
+      console.error('[Perfil] Erro ao salvar:', err); setError(err.message || 'Erro ao salvar perfil.')
+    } finally { setSalvando(false) }
   }
 
-  const inputClass = 'w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all'
+  // ✅ CORREÇÃO: Inputs menores no mobile (py-2.5) e arredondamento mais leve
+  const inputClass = 'w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm sm:text-base'
 
-  if (authLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-      </div>
-    )
-  }
+  if (authLoading) return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+    </div>
+  )
 
   if (!user) return null
 
-  // ✅ Mostra o card se for prestador OU se já tiver serviços cadastrados
   const mostrarCardServicos = ehPrestador || servicosDoUsuario.length > 0
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    // ✅ CORREÇÃO: Gap vertical menor no mobile
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
 
       {/* HERO */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 p-8 md:p-10 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 p-6 sm:p-8 md:p-10 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-52 h-52 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <span className="text-xs bg-white/10 px-3 py-1 rounded-full">Área do morador</span>
-            <h1 className="text-3xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
-            <p className="text-white/80 mt-2 max-w-xl">Atualize seus dados pessoais e personalize como você aparece.</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
+            <p className="text-white/80 mt-2 max-w-xl text-sm sm:text-base">Atualize seus dados pessoais e personalize como você aparece.</p>
           </div>
-          <button
-            onClick={() => navigate('/')}
-            className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
-          >
+          <button onClick={() => navigate('/')} className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition cursor-pointer text-sm sm:text-base">
             Voltar ao início
           </button>
         </div>
       </div>
 
-      {/* ESTATÍSTICAS */}
-      <div className="grid grid-cols-3 gap-4">
-        <button type="button" onClick={() => navigate('/anuncios')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
-          <span className="text-3xl mb-2">📢</span>
-          <p className="text-2xl font-bold text-gray-900">{stats.anuncios}</p>
-          <p className="text-xs text-gray-500 mt-1">Meus Anúncios</p>
+      {/* ✅ CORREÇÃO: Grid de estatísticas compacto no mobile para não estourar a largura */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <button type="button" onClick={() => navigate('/anuncios')} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
+          <span className="text-2xl sm:text-3xl mb-1 sm:mb-2">📢</span>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.anuncios}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Meus Anúncios</p>
         </button>
-        <button type="button" onClick={() => navigate('/mapa')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
-          <span className="text-3xl mb-2">🛠️</span>
-          <p className="text-2xl font-bold text-gray-900">{stats.servicos}</p>
-          <p className="text-xs text-gray-500 mt-1">Meus Serviços</p>
+        <button type="button" onClick={() => navigate('/mapa')} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
+          <span className="text-2xl sm:text-3xl mb-1 sm:mb-2">🛠️</span>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.servicos}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Meus Serviços</p>
         </button>
-        <button type="button" onClick={() => navigate('/indicacoes')} className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
-          <span className="text-3xl mb-2">🤝</span>
-          <p className="text-2xl font-bold text-gray-900">{stats.indicacoes}</p>
-          <p className="text-xs text-gray-500 mt-1">Minhas Indicações</p>
+        <button type="button" onClick={() => navigate('/indicacoes')} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
+          <span className="text-2xl sm:text-3xl mb-1 sm:mb-2">🤝</span>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.indicacoes}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Minhas Indicações</p>
         </button>
       </div>
 
-      {sucesso && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-2xl">
-          Perfil salvo com sucesso ✨
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl">
-          {error}
-        </div>
-      )}
+      {sucesso && <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-2xl text-sm sm:text-base">Perfil salvo com sucesso ✨</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm sm:text-base">{error}</div>}
 
       {/* FORMULÁRIO */}
-      <form onSubmit={handleSalvar} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 space-y-8">
+      <form onSubmit={handleSalvar} className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
 
         {/* Avatar */}
-        <div className="flex flex-col sm:flex-row items-center gap-5 pb-6 border-b border-gray-100">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 pb-6 border-b border-gray-100">
           <div onClick={() => fileInputRef.current?.click()} className="cursor-pointer">
             {avatarPreview ? (
-              <img src={avatarPreview} alt="avatar" className="w-24 h-24 rounded-3xl object-cover shadow-md" />
+              // ✅ CORREÇÃO: Avatar menor no mobile (80px)
+              <img src={avatarPreview} alt="avatar" className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl object-cover shadow-md" />
             ) : (
-              <div className="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center text-4xl">👤</div>
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-emerald-50 flex items-center justify-center text-3xl sm:text-4xl">👤</div>
             )}
           </div>
           <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-          <div>
-            <h3 className="font-semibold text-gray-900">Foto de perfil</h3>
-            <p className="text-sm text-gray-500 mt-1">Clique na foto para alterar sua imagem</p>
+          <div className="text-center sm:text-left">
+            <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Foto de perfil</h3>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Clique na foto para alterar</p>
           </div>
         </div>
 
         {/* Dados Pessoais */}
         <div>
-          <h2 className="text-xl font-bold mb-5">Dados pessoais</h2>
-          <div className="grid md:grid-cols-2 gap-4">
+          <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-5">Dados pessoais</h2>
+          <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
             <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo *" className={inputClass} required />
             <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição (apelido)" className={inputClass} />
             <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
@@ -357,125 +253,72 @@ const PerfilPage = () => {
 
         {/* Localização */}
         <div>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-bold">Localização do imóvel</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-2">
+            <h2 className="text-lg sm:text-xl font-bold">Localização do imóvel</h2>
             {ehPrestador && (
-              <span className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-medium">
+              <span className="text-[10px] sm:text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-medium text-center sm:text-left">
                 Obrigatório para prestadores
               </span>
             )}
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input
-              name="endereco_rua"
-              value={form.endereco_rua}
-              onChange={handleChange}
-              placeholder="Nome da rua / avenida"
-              required={ehPrestador}
-              className={`${inputClass} ${ehPrestador && !form.endereco_rua.trim() ? 'border-red-300 focus:ring-red-400' : ''}`}
-            />
-            <input
-              name="endereco_numero"
-              value={form.endereco_numero}
-              onChange={handleChange}
-              placeholder="Número do lote / casa"
-              required={ehPrestador}
-              className={`${inputClass} ${ehPrestador && !form.endereco_numero.trim() ? 'border-red-300 focus:ring-red-400' : ''}`}
-            />
+          <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+            <input name="endereco_rua" value={form.endereco_rua} onChange={handleChange} placeholder="Nome da rua / avenida" required={ehPrestador} className={`${inputClass} ${ehPrestador && !form.endereco_rua.trim() ? 'border-red-300 focus:ring-red-400' : ''}`} />
+            <input name="endereco_numero" value={form.endereco_numero} onChange={handleChange} placeholder="Número do lote / casa" required={ehPrestador} className={`${inputClass} ${ehPrestador && !form.endereco_numero.trim() ? 'border-red-300 focus:ring-red-400' : ''}`} />
           </div>
-          {!ehPrestador && (
-            <p className="text-xs text-gray-400 mt-2">Opcional para proprietários que ainda não construíram.</p>
-          )}
+          {!ehPrestador && <p className="text-xs text-gray-400 mt-2">Opcional para proprietários que ainda não construíram.</p>}
         </div>
 
         {/* Tipo de Pessoa */}
         <div>
-          <h2 className="text-xl font-bold mb-5">Tipo de perfil</h2>
+          <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-5">Tipo de perfil</h2>
           <select name="tipo_pessoa" value={form.tipo_pessoa} onChange={handleChange} className={inputClass}>
             <option value="morador">Morador / Proprietário</option>
             <option value="prestador">Morador / Prestador de Serviços</option>
           </select>
         </div>
 
-        {/* ✅ CARD DE SERVIÇOS — aparece sempre que for prestador OU tiver serviços */}
+        {/* CARD DE SERVIÇOS */}
         {mostrarCardServicos && (
-          <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl shrink-0">🛠️</div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">
-                  {servicosDoUsuario.length > 0
-                    ? `Você tem ${servicosDoUsuario.length} serviço${servicosDoUsuario.length > 1 ? 's cadastrados' : ' cadastrado'}`
-                    : 'Cadastre seu primeiro serviço'}
+          <div className="mt-6 p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0">🛠️</div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {servicosDoUsuario.length > 0 ? `Você tem ${servicosDoUsuario.length} serviço${servicosDoUsuario.length > 1 ? 's cadastrados' : ' cadastrado'}` : 'Cadastre seu primeiro serviço'}
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {servicosDoUsuario.length > 0
-                    ? 'Gerencie seus serviços abaixo ou adicione outro.'
-                    : 'Preencha as informações para aparecer no mapa de serviços do condomínio.'}
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                  {servicosDoUsuario.length > 0 ? 'Gerencie seus serviços abaixo.' : 'Preencha as informações para aparecer no mapa.'}
                 </p>
 
-                {/* ✅ BOTÕES — SEMPRE VISÍVEIS quando o card aparece */}
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={handleAdicionarServico}
-                    className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 cursor-pointer"
-                  >
-                    ➕ Adicionar novo serviço
+                <div className="mt-4 flex flex-wrap gap-2 sm:gap-3">
+                  <button type="button" onClick={handleAdicionarServico} className="px-4 py-2 sm:px-5 sm:py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 cursor-pointer text-sm sm:text-base">
+                    ➕ Adicionar novo
                   </button>
-
                   {servicosDoUsuario.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => navigate('/mapa')}
-                      className="px-5 py-2.5 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition cursor-pointer"
-                    >
+                    <button type="button" onClick={() => navigate('/mapa')} className="px-4 py-2 sm:px-5 sm:py-2.5 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl font-semibold hover:bg-emerald-50 transition cursor-pointer text-sm sm:text-base">
                       👁️ Ver no Mapa
                     </button>
                   )}
                 </div>
 
-                {/* Lista de serviços cadastrados */}
                 {servicosDoUsuario.length > 0 && (
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
                     {servicosDoUsuario.map((servico) => {
                       const estaExcluindo = excluindoId === servico.id
                       return (
-                        <div
-                          key={servico.id}
-                          className={`p-3 bg-white rounded-xl border flex items-center justify-between gap-3 transition ${estaExcluindo ? 'border-red-300 opacity-60' : 'border-gray-100 hover:shadow-sm'}`}
-                        >
+                        <div key={servico.id} className={`p-2.5 sm:p-3 bg-white rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 transition ${estaExcluindo ? 'border-red-300 opacity-60' : 'border-gray-100 hover:shadow-sm'}`}>
                           <div className="min-w-0">
-                            <p className="font-medium text-gray-900 truncate">
-                              {estaExcluindo ? 'Excluindo...' : (servico.categoria || 'Sem categoria')}
-                            </p>
-                            <p className="text-xs text-gray-400 truncate">
-                              {servico.casa_numero || 'Sem endereço'}
-                            </p>
+                            <p className="font-medium text-gray-900 truncate text-sm">{estaExcluindo ? 'Excluindo...' : (servico.categoria || 'Sem categoria')}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-400 truncate">{servico.casa_numero || 'Sem endereço'}</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/editar-servico/${servico.id}`)}
-                              disabled={estaExcluindo}
-                              className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
+                            <button type="button" onClick={() => navigate(`/editar-servico/${servico.id}`)} disabled={estaExcluindo} className="flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                               ✏️ Editar
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleExcluirServico(servico.id)}
-                              disabled={estaExcluindo}
-                              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
+                            <button type="button" onClick={() => handleExcluirServico(servico.id)} disabled={estaExcluindo} className="flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                               {estaExcluindo ? (
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="w-3 h-3 border border-red-300 border-t-red-600 rounded-full animate-spin" />
-                                  Aguarde
-                                </span>
-                              ) : (
-                                '🗑️ Excluir'
-                              )}
+                                <span className="inline-flex items-center gap-1"><span className="w-3 h-3 border border-red-300 border-t-red-600 rounded-full animate-spin" />Aguarde</span>
+                              ) : '🗑️ Excluir'}
                             </button>
                           </div>
                         </div>
@@ -490,11 +333,7 @@ const PerfilPage = () => {
 
         {/* Botão Salvar */}
         <div className="pt-4 border-t border-gray-100">
-          <button
-            type="submit"
-            disabled={salvando}
-            className="w-full md:w-auto px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 disabled:opacity-70 cursor-pointer"
-          >
+          <button type="submit" disabled={salvando} className="w-full md:w-auto px-6 sm:px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 disabled:opacity-70 cursor-pointer text-sm sm:text-base">
             {salvando ? 'Salvando...' : 'Salvar alterações'}
           </button>
         </div>

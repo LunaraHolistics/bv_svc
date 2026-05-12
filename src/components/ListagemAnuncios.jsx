@@ -16,9 +16,7 @@ const getImagens = (imagemUrl) => {
     const parsed = JSON.parse(imagemUrl)
     if (Array.isArray(parsed)) return parsed
     return [imagemUrl]
-  } catch {
-    return [imagemUrl]
-  }
+  } catch { return [imagemUrl] }
 }
 
 const CardAnuncio = ({ anuncio, podeGerenciar, onDelete }) => {
@@ -26,30 +24,18 @@ const CardAnuncio = ({ anuncio, podeGerenciar, onDelete }) => {
   const imagens = getImagens(anuncio.imagem_url)
   const imagem = imagens.length > 0 ? imagens[0] : null
 
-  const statusNormalizado = anuncio.status
-    ? anuncio.status.charAt(0).toUpperCase() + anuncio.status.slice(1).toLowerCase()
-    : 'Ativo'
-
-  const statusCor =
-    statusNormalizado === 'Ativo'
-      ? 'bg-emerald-100 text-emerald-700'
-      : statusNormalizado === 'Vendido'
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-gray-100 text-gray-600'
+  const statusNormalizado = anuncio.status ? anuncio.status.charAt(0).toUpperCase() + anuncio.status.slice(1).toLowerCase() : 'Ativo'
+  const statusCor = statusNormalizado === 'Ativo' ? 'bg-emerald-100 text-emerald-700' : statusNormalizado === 'Vendido' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
 
   const handleDelete = (e) => {
     e.stopPropagation()
-    if (window.confirm('Excluir este anúncio?')) {
-      onDelete(anuncio.id)
-    }
+    if (window.confirm('Excluir este anúncio?')) onDelete(anuncio.id)
   }
 
   return (
-    <div
-      onClick={() => navigate(`/anuncio/${anuncio.id}`)}
-      className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative"
-    >
-      <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
+    // ✅ CORREÇÃO: Card levemente menor no mobile
+    <div onClick={() => navigate(`/anuncio/${anuncio.id}`)} className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative">
+      <div className="relative w-full h-40 sm:h-48 bg-gray-100 overflow-hidden">
         {imagem ? (
           <img src={imagem} alt={anuncio.titulo} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
@@ -62,21 +48,22 @@ const CardAnuncio = ({ anuncio, podeGerenciar, onDelete }) => {
         )}
         
         {podeGerenciar && (
-          <div className="absolute top-2 right-2 z-10 flex gap-2">
-            <button onClick={(e) => { e.stopPropagation(); navigate(`/editar-anuncio/${anuncio.id}`) }} className="px-2 py-1 bg-white/90 backdrop-blur text-xs font-bold text-gray-700 rounded-lg shadow hover:bg-white transition cursor-pointer">✏️ Editar</button>
-            <button onClick={handleDelete} className="px-2 py-1 bg-red-500/90 backdrop-blur text-xs font-bold text-white rounded-lg shadow hover:bg-red-600 transition cursor-pointer">🗑️</button>
+          <div className="absolute top-2 right-2 z-10 flex gap-1.5 sm:gap-2">
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/editar-anuncio/${anuncio.id}`) }} className="px-2 py-1 bg-white/90 backdrop-blur text-[10px] sm:text-xs font-bold text-gray-700 rounded-lg shadow hover:bg-white transition cursor-pointer">✏️</button>
+            <button onClick={handleDelete} className="px-2 py-1 bg-red-500/90 backdrop-blur text-[10px] sm:text-xs font-bold text-white rounded-lg shadow hover:bg-red-600 transition cursor-pointer">🗑️</button>
           </div>
         )}
       </div>
 
-      <div className="p-4">
+      {/* ✅ CORREÇÃO: Padding menor no mobile */}
+      <div className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-1">{anuncio.titulo}</h3>
-          <span className={`shrink-0 px-2 py-0.5 text-[10px] font-medium rounded-full ${statusCor}`}>{statusNormalizado}</span>
+          <h3 className="font-semibold text-gray-900 text-xs sm:text-sm leading-snug line-clamp-1">{anuncio.titulo}</h3>
+          <span className={`shrink-0 px-2 py-0.5 text-[9px] sm:text-[10px] font-medium rounded-full ${statusCor}`}>{statusNormalizado}</span>
         </div>
-        <p className="text-emerald-600 font-bold mt-1">{formatarPreco(anuncio.preco)}</p>
-        <p className="text-gray-500 text-xs mt-1 line-clamp-1">{anuncio.descricao}</p>
-        <button type="button" onClick={(e) => { e.stopPropagation(); navigate(`/anuncio/${anuncio.id}`) }} className="text-[11px] text-emerald-600 font-medium hover:text-emerald-700 mt-2 block text-left">Clique para mais informações →</button>
+        <p className="text-emerald-600 font-bold mt-1 text-sm sm:text-base">{formatarPreco(anuncio.preco)}</p>
+        <p className="text-gray-500 text-[10px] sm:text-xs mt-1 line-clamp-1">{anuncio.descricao}</p>
+        <button type="button" onClick={(e) => { e.stopPropagation(); navigate(`/anuncio/${anuncio.id}`) }} className="text-[10px] sm:text-[11px] text-emerald-600 font-medium hover:text-emerald-700 mt-2 block text-left cursor-pointer">Clique para mais informações →</button>
       </div>
     </div>
   )
@@ -87,7 +74,6 @@ const ListagemAnuncios = () => {
   const [anuncios, setAnuncios] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
   const isMaster = user?.id === MASTER_USER_ID
 
   useEffect(() => { buscarAnuncios() }, [])
@@ -99,8 +85,7 @@ const ListagemAnuncios = () => {
   }
 
   const buscarAnuncios = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     try {
       const agora = new Date().toISOString()
       const { data, error: err } = await supabase.from('anuncios_vendas').select('*').ilike('status', 'ativo').or(`data_expiracao.is.null,data_expiracao.gt.${agora}`).order('destaque', { ascending: false }).order('created_at', { ascending: false })
@@ -109,21 +94,29 @@ const ListagemAnuncios = () => {
     } catch (err) { setError('Não foi possível carregar.') } finally { setLoading(false) }
   }
 
-  if (loading) return (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{[...Array(6)].map((_, i) => (<div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse"><div className="w-full h-48 bg-gray-200" /><div className="p-4 space-y-3"><div className="h-4 bg-gray-200 rounded w-3/4" /><div className="h-4 bg-gray-200 rounded w-1/3" /></div></div>))}</div>)
-  if (error) return (<div className="text-center py-12"><p className="text-red-500 mb-2">{error}</p></div>)
+  if (loading) return (
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
+          <div className="w-full h-40 sm:h-48 bg-gray-200" />
+          <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+            <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  if (error) return (<div className="text-center py-12"><p className="text-red-500 mb-2 text-sm">{error}</p></div>)
   if (anuncios.length === 0) return (<div className="text-center py-16"><div className="text-5xl mb-4">🏷️</div><h3 className="text-lg font-semibold text-gray-700 mb-2">Nenhum anúncio ativo</h3></div>)
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-4">{anuncios.length} anúncio(s) ativo(s)</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">{anuncios.length} anúncio(s) ativo(s)</p>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {anuncios.map(anuncio => (
-          <CardAnuncio
-            key={anuncio.id}
-            anuncio={anuncio}
-            podeGerenciar={user ? (anuncio.usuario_id === user.id || isMaster) : false}
-            onDelete={handleDeleteAnuncio}
-          />
+          <CardAnuncio key={anuncio.id} anuncio={anuncio} podeGerenciar={user ? (anuncio.usuario_id === user.id || isMaster) : false} onDelete={handleDeleteAnuncio} />
         ))}
       </div>
     </div>

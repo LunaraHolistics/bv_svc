@@ -120,12 +120,19 @@ main > div {
   }
 }
 
-/* Bloqueia seleção de texto acidental em todo o app */
+/* ✅ CORREÇÃO: Bloqueia seleção fora dos inputs, mas PERMITE dentro deles */
 @layer base {
   body {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+  }
+  
+  input, textarea, select, [contenteditable="true"] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
   }
 }
