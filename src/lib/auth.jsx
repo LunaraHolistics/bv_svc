@@ -79,10 +79,9 @@ export function AuthProvider({ children }) {
           setLoading(false)
         }
       }
-
     }
 
-    await init()
+    init()
 
     const {
       data: { subscription }
