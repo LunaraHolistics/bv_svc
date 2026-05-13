@@ -12,7 +12,7 @@ const formatarFone = (val) => {
 
 const PerfilPage = () => {
   const navigate = useNavigate()
-  const { user, perfil, loading: authLoading, recarregarPerfil } = useAuth()
+  const { user, perfil, loading: authLoading, recarregarPerfil, isAdm } = useAuth()
   const fileInputRef = useRef(null)
 
   const [salvando, setSalvando] = useState(false)
@@ -115,7 +115,7 @@ const PerfilPage = () => {
   const handleSalvar = async (e) => {
     e.preventDefault()
     if (!form.nome_completo.trim()) { setError('Nome completo é obrigatório.'); return }
-    if (!form.fase) { setError('Informe sua fase.'); return }
+    if (!isAdm(user?.id) && !form.fase) { setError('Informe sua fase.'); return }
     if (ehPrestador && (!form.endereco_rua.trim() || !form.endereco_numero.trim())) { setError('Para prestadores, o nome da rua e número do imóvel são obrigatórios.'); return }
     if (!user?.id) { setError('Sessão expirada.'); return }
 
@@ -239,15 +239,21 @@ const PerfilPage = () => {
           <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
             <input name="nome_completo" value={form.nome_completo} onChange={handleChange} placeholder="Nome completo *" className={inputClass} required />
             <input name="nome_exibicao" value={form.nome_exibicao} onChange={handleChange} placeholder="Nome de exibição (apelido)" className={inputClass} />
-            <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
-              <option value="">Selecione sua fase *</option>
-              <option value="Fase 1">Fase 1</option>
-              <option value="Fase 2">Fase 2</option>
-            </select>
+            
+            {!isAdm(user?.id) && (
+              <>
+                <select name="fase" value={form.fase} onChange={handleChange} required className={inputClass}>
+                  <option value="">Selecione sua fase *</option>
+                  <option value="Fase 1">Fase 1</option>
+                  <option value="Fase 2">Fase 2</option>
+                </select>
+                <input name="quadra" value={form.quadra} onChange={handleChange} placeholder="Quadra" className={inputClass} />
+                <input name="lote" value={form.lote} onChange={handleChange} placeholder="Lote" className={inputClass} />
+              </>
+            )}
+
             <input name="whatsapp" value={form.whatsapp} onChange={handleChange} placeholder="WhatsApp (00) 00000-0000" autoComplete="tel" className={inputClass} />
             <input name="telefone2" value={form.telefone2} onChange={handleChange} placeholder="Telefone adicional (opcional)" autoComplete="tel" className={inputClass} />
-            <input name="quadra" value={form.quadra} onChange={handleChange} placeholder="Quadra" className={inputClass} />
-            <input name="lote" value={form.lote} onChange={handleChange} placeholder="Lote" className={inputClass} />
           </div>
         </div>
 
