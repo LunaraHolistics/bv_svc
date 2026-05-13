@@ -1,57 +1,75 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-// ✅ ÚNICA ALTERAÇÃO: Adicionado sm: para ajustar no mobile
 const inputClass =
-  'w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
+  'w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-sm outline-none transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
 
 const FormIndicacao = ({ onSucesso, onFechar }) => {
   const [categorias, setCategorias] = useState([])
-  const [loadingCategorias, setLoadingCategorias] =
-    useState(true)
-
+  const [loadingCategorias, setLoadingCategorias] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [sucesso, setSucesso] = useState(false)
 
   const [form, setForm] = useState({
-    categoria: '',
-    nome_profissional: '',
-    descricao: '',
-    contato_whatsapp: '',
-    contato_telefone: '',
-    instagram_url: '',
-    site_url: '',
-    endereco: '',
-    servicos_texto: '',
-    condicoes_moradores: ''
+    categoria: '', nome_profissional: '', descricao: '', contato_whatsapp: '',
+    contato_telefone: '', instagram_url: '', site_url: '', endereco: '',
+    servicos_texto: '', condicoes_moradores: ''
   })
+
+  // ✅ NOVA VARIÁVEL: O texto exato que a pessoa digitar (para comparar com as categorias)
+  const [textoCategoria, setTextoCategoria] = useState('')
+
+  // ✅ NOVO ESTADO: O que foi detectado automaticamente (NULL se não detectou)
+  const [categoriaAutoDetectada, setCategoriaAutoDetectada] = useState(null)
 
   useEffect(() => {
     carregarCategorias()
   }, [])
 
+  // ✅ NOVA LÓGICA: Tenta adivinhar a categoria com base no que a pessoa digitou
+  useEffect(() => {
+    if (!textoCategoria || !textoCategoria.trim()) {
+      setCategoriaAutoDetectada(null)
+      return
+    }
+
+    const termo = textoCategoria.toLowerCase().trim()
+
+    const encontrada = categorias.find(cat => {
+      const catNome = cat.nome.toLowerCase()
+      // Verifica se o texto digitado contém a categoria (ex: "pedreiro" bate com "Pedreiro para reparos")
+      if (catNome.includes(termo) || termo.includes(catNome)) {
+        return cat.nome
+      }
+    })
+
+    if (encontrada) {
+      setCategoriaAutoDetectada(encontrada.nome)
+    } else {
+      setCategoriaAutoDetectada(null)
+    }
+  }, [textoCategoria, categorias])
+
   const carregarCategorias = async () => {
     try {
       setLoadingCategorias(true)
-
-      const { data, error } = await supabase
-        .from('categorias')
-        .select('*')
-        .in('tipo', ['indicacao', 'ambos'])
-        .order('ordem')
-
+      const { data, error } = await supabase.from('categorias').select('*').in('tipo', ['indicacao', 'ambos']).order('ordem')
       if (error) throw error
-
       setCategorias(data || [])
     } catch (err) {
-      console.error(
-        'Erro ao carregar categorias:',
-        err
-      )
+      console.error('Erro ao carregar categorias:', err)
     } finally {
       setLoadingCategorias(false)
     }
+  }
+
+  const resetFormulario = () => {
+    setForm({
+      categoria: '', nome_profissional: '', descricao: '', contato_whatsapp: '',
+      contato_telefone: '', instagram_url: '', site_url: '', endereco: '',
+      servicos_texto: '', condicoes_moradores: ''
+    })
   }
 
   const handleChange = (e) => {
@@ -61,21 +79,6 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
     }))
 
     if (error) setError(null)
-  }
-
-  const resetForm = () => {
-    setForm({
-      categoria: '',
-      nome_profissional: '',
-      descricao: '',
-      contato_whatsapp: '',
-      contato_telefone: '',
-      instagram_url: '',
-      site_url: '',
-      endereco: '',
-      servicos_texto: '',
-      condicoes_moradores: ''
-    })
   }
 
   const handleSubmit = async (e) => {
@@ -88,15 +91,10 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
 
     try {
       if (!form.nome_profissional.trim()) {
-        throw new Error(
-          'Nome do profissional é obrigatório.'
-        )
+        throw new Error('Nome do profissional é obrigatório.')
       }
-
       if (!form.categoria) {
-        throw new Error(
-          'Selecione uma categoria.'
-        )
+        throw new Error('Selecione uma categoria.')
       }
 
       const servicosArray =
@@ -107,37 +105,29 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
 
       const payload = {
         categoria: form.categoria,
-        nome_profissional:
-          form.nome_profissional.trim(),
-        descricao:
-          form.descricao.trim() || null,
-        contato_whatsapp:
-          form.contato_whatsapp.trim() || null,
-        contato_telefone:
-          form.contato_telefone.trim() || null,
-        instagram_url:
-          form.instagram_url.trim() || null,
-        site_url:
-          form.site_url.trim() || null,
-        endereco:
-          form.endereco.trim() || null,
+        nome_profissional: form.nome_profissional.trim(),
+        descricao: form.descricao.trim() || null,
+        contato_whatsapp: form.contato_whatsapp.trim() || null,
+        contato_telefone: form.contato_telefone.trim() || null,
+        instagram_url: form.instagram_url.trim() || null,
+        site_url: form.site_url.trim() || null,
+        endereco: form.endereco.trim() || null,
         servicos:
           servicosArray.length > 0
             ? servicosArray
             : null,
         condicoes_moradores:
-          form.condicoes_moradores.trim() ||
-          null
+          form.condicoes_moradores.trim() || null
       }
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('indicacoes')
         .insert(payload)
 
-      if (error) throw error
+      if (insertError) throw new Error(insertError.message)
 
-      setSucesso(true)
-      resetForm()
+      setSucesso('Indicação enviada com sucesso! Obrigado por fortalecer a rede do condomínio.')
+      resetFormulario()
 
       setTimeout(() => {
         if (onSucesso) {
@@ -145,15 +135,8 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
         }
       }, 1500)
     } catch (err) {
-      console.error(
-        'Erro ao salvar indicação:',
-        err
-      )
-
-      setError(
-        err.message ||
-          'Falha ao salvar indicação.'
-      )
+      console.error('Erro ao salvar indicação:', err)
+      setError(err.message || 'Falha ao salvar indicação.')
     } finally {
       setLoading(false)
     }
@@ -164,13 +147,12 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
       <div className="text-center py-12">
         <div className="text-5xl mb-4">✨</div>
 
-        <h3 className="text-xl font-bold text-gray-900">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900">
           Indicação enviada com sucesso
         </h3>
 
         <p className="text-gray-500 mt-2 text-sm">
-          Obrigado por fortalecer a rede do
-          condomínio.
+          Obrigado por fortalecer a rede do condomínio.
         </p>
       </div>
     )
@@ -179,17 +161,17 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5"
+      className="space-y-4 sm:space-y-5"
     >
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl mb-4 text-xs sm:text-sm">
           {error}
         </div>
       )}
 
-      {/* Categoria */}
+      {/* Categoria com Auto-Detecção */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
           Categoria *
         </label>
 
@@ -198,34 +180,30 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
           value={form.categoria}
           onChange={handleChange}
           className={inputClass}
-          disabled={
-            loading || loadingCategorias
-          }
+          disabled={loading || loadingCategorias}
           required
         >
           <option value="">
             {loadingCategorias
               ? 'Carregando categorias...'
-              : 'Selecione uma categoria'}
+              : !categoriaAutoDetectada
+                ? 'Selecione uma categoria...'
+                : `✅ "${categoriaAutoDetectada}" (detectado automaticamente)`}
           </option>
 
-          {categorias.map((cat) => (
-            <option
-              key={cat.id}
-              value={cat.nome}
-            >
-              {cat.icone
-                ? `${cat.icone} `
-                : ''}
-              {cat.nome}
-            </option>
-          ))}
+          {!loadingCategorias && categorias.length > 0 && (
+            categorias.map((cat) => (
+              <option key={cat.id} value={cat.nome}>
+                {cat.icone ? `${cat.icone} ` : ''}{cat.nome}
+              </option>
+            ))
+          )}
         </select>
       </div>
 
       {/* Nome */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
           Nome do profissional *
         </label>
 
@@ -243,7 +221,7 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
 
       {/* Descrição */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
           Descrição
         </label>
 
@@ -252,14 +230,14 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
           value={form.descricao}
           onChange={handleChange}
           rows="4"
-          className={inputClass}
-          placeholder="Conte por que recomenda este profissional"
+          className={`${inputClass} resize-none`}
+          placeholder="Conte por que recomenda este profissional..."
           disabled={loading}
         />
       </div>
 
       {/* Contatos */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
         <input
           type="text"
           name="contato_whatsapp"
@@ -282,7 +260,7 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
       </div>
 
       {/* Social */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
         <input
           type="text"
           name="instagram_url"
@@ -325,7 +303,7 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
           value={form.servicos_texto}
           onChange={handleChange}
           className={inputClass}
-          placeholder="Serviços oferecidos (separe por vírgula)"
+          placeholder="Serviços oferecidos (separe por vírgula: Reparo hidráulico, Instalação)"
           disabled={loading}
         />
       </div>
@@ -342,9 +320,8 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
           disabled={loading}
         />
 
-        <p className="text-xs text-amber-600 mt-2">
-          ⭐ Esse benefício aparece em destaque
-          no card
+        <p className="text-[10px] sm:text-xs text-amber-600 mt-1.5 sm:mt-2">
+          ⭐ Esse benefício aparece em destaque no card da listagem
         </p>
       </div>
 
@@ -355,7 +332,7 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
             type="button"
             onClick={onFechar}
             disabled={loading}
-            className="px-5 py-3 border border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-50 transition"
+            className="px-5 py-2.5 sm:py-3 border border border-gray-200 rounded-xl sm:rounded-2xl text-gray-700 hover:bg-gray-50 transition text-sm cursor-pointer"
           >
             Cancelar
           </button>
@@ -364,15 +341,20 @@ const FormIndicacao = ({ onSucesso, onFechar }) => {
         <button
           type="submit"
           disabled={loading}
-          className={`flex-1 py-3 rounded-2xl font-semibold text-white transition ${
+          className={`flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold text-white transition text-sm ${
             loading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20'
+              ? 'Enviando...'
+              : 'Enviar indicação'
           }`}
         >
-          {loading
-            ? 'Enviando...'
-            : 'Enviar indicação'}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Enviando...
+            </span>
+          ) : (
+            'Enviar indicação'
+          )}
         </button>
       </div>
     </form>

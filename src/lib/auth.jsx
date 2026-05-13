@@ -1,4 +1,3 @@
-// src/lib/auth.jsx
 import React, {
   createContext,
   useContext,
@@ -11,6 +10,17 @@ import { supabase } from './supabase'
 const AuthContext = createContext({})
 
 export const useAuth = () => useContext(AuthContext)
+
+// ✅ CENTRALIZANDO OS ADMs AQUI:
+const ADMIN_IDS = [
+  'aaddc383-2f72-45ff-bb01-cec19c695a86',
+  '84f7670e-b3a6-4986-8cc1-f8e798374a34',
+  'cf009181-37e3-47ae-9144-021c29c58168'
+  // Quando o síndico se cadastrar, é só adicionar o ID aqui dentro desse array!
+]
+
+// Função universal para saber se é ADM
+const isAdm = (userId) => userId && ADMIN_IDS.includes(userId)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -69,9 +79,10 @@ export function AuthProvider({ children }) {
           setLoading(false)
         }
       }
+
     }
 
-    init()
+    await init()
 
     const {
       data: { subscription }
@@ -120,6 +131,21 @@ export function AuthProvider({ children }) {
     })
 
     if (error) throw error
+
+    // ✅ FORÇA A ATUALIZAÇÃO AQUI PARA SUMIR O LOADING
+    if (data.user) {
+      setUser(data.user)
+      const { data: perfilData } = await supabase
+        .from('perfis')
+        .select('id, nome_completo, whatsapp, avatar_url, tipo_pessoa')
+        .eq('id', data.user.id)
+        .single()
+      
+      if (perfilData) {
+        setPerfil(perfilData)
+      }
+    }
+
     return data
   }
 
@@ -154,6 +180,7 @@ export function AuthProvider({ children }) {
         user,
         perfil,
         loading,
+        isAdm,
         cadastrar,
         login,
         recuperarSenha,
