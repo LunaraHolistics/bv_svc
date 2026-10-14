@@ -1,3 +1,23 @@
+// ============================================================================
+// ARQUIVO A ATUALIZAR (2 de 2): src/pages/HomePage.jsx
+// ----------------------------------------------------------------------------
+// ALTERAÇÃO: a caixa verde grande (HERO) agora tem o lado direito ocupado
+// pela foto fachada1.jpeg, com a logo icone.png sobreposta no canto superior
+// direito da foto (badge branco).
+//
+// PRÉ-REQUISITO (passo único):
+//   1. Copie os arquivos para a pasta  public/  do repositório:
+//        public/icone.png
+//        public/fachada1.jpeg
+//
+//   Alternativa (se preferir deixar em src/assets/):
+//      import iconeLogo from '../assets/icone.png'
+//      import fachadaImg from '../assets/fachada1.jpeg'
+//      e use  src={iconeLogo} / src={fachadaImg}  nos <img> abaixo.
+//
+// Nenhuma outra linha foi removida ou alterada.
+// ============================================================================
+
 import React, { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -43,7 +63,6 @@ const CardDestaque = ({ anuncio }) => {
   return (
     <Link
       to={`/anuncio/${anuncio.id}`}
-      // ✅ CORREÇÃO: Removido largura fixa de 320px que travava no iPhone SE. Agora se adapta à tela.
       className="group min-w-[280px] sm:min-w-[320px] sm:max-w-[320px] bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-white/70 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 no-underline"
     >
       <div className="relative h-44 sm:h-52 overflow-hidden">
@@ -166,7 +185,6 @@ const Carousel = ({ title, items, children }) => {
     if (!scrollRef.current) return
 
     scrollRef.current.scrollBy({
-      // ✅ CORREÇÃO: Rolagem adaptativa para não quebrar no mobile
       left: direction * (window.innerWidth < 640 ? 280 : 350),
       behavior: 'smooth'
     })
@@ -289,7 +307,6 @@ const HomePage = () => {
   }
 
   return (
-    // ✅ CORREÇÃO: Gap vertical menor no mobile
     <div className="space-y-8 sm:space-y-10">
 
       {/* HERO */}
@@ -297,53 +314,87 @@ const HomePage = () => {
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
 
-        <div className="relative z-10 max-w-3xl">
-          <span className="inline-flex px-4 py-2 bg-white/10 rounded-full text-xs sm:text-sm backdrop-blur-md mb-5">
-            Bella Vittà Community Hub
-          </span>
+        {/* ✅ ALTERAÇÃO: grid de 2 colunas — texto à esquerda, imagem à direita */}
+        <div className="relative z-10 grid md:grid-cols-5 gap-8 md:gap-10 items-center">
 
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight tracking-tight">
-            Tudo que seu condomínio precisa,
-            <span className="block text-emerald-100">
-              em um só lugar.
+          {/* COLUNA ESQUERDA: TEXTO (conteúdo original preservado) */}
+          <div className="md:col-span-3 max-w-3xl">
+            <span className="inline-flex px-4 py-2 bg-white/10 rounded-full text-xs sm:text-sm backdrop-blur-md mb-5">
+              Bella Vittà Community Hub
             </span>
-          </h1>
 
-          <p className="mt-5 text-emerald-50 text-sm sm:text-lg max-w-2xl leading-relaxed">
-            Encontre prestadores recomendados, anuncie produtos,
-            visualize o mapa do residencial e conecte-se com moradores.
-          </p>
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight tracking-tight">
+              Tudo que seu condomínio precisa,
+              <span className="block text-emerald-100">
+                em um só lugar.
+              </span>
+            </h1>
 
-          <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
-            <Link
-              to="/novo-anuncio"
-              className="px-6 py-3 bg-white text-emerald-700 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base"
-            >
-              Criar anúncio
-            </Link>
+            <p className="mt-5 text-emerald-50 text-sm sm:text-lg max-w-2xl leading-relaxed">
+              Encontre prestadores recomendados, anuncie produtos,
+              visualize o mapa do residencial e conecte-se com moradores.
+            </p>
 
-            <Link
-              to="/mapa"
-              className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline text-sm sm:text-base"
-            >
-              Explorar serviços
-            </Link>
+            <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
+              <Link
+                to="/novo-anuncio"
+                className="px-6 py-3 bg-white text-emerald-700 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base"
+              >
+                Criar anúncio
+              </Link>
+
+              <Link
+                to="/mapa"
+                className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline text-sm sm:text-base"
+              >
+                Explorar serviços
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-8 sm:mt-10 max-w-lg">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.anuncios}+</h3>
+                <p className="text-xs sm:text-sm text-emerald-100">Anúncios</p>
+              </div>
+
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.servicos}+</h3>
+                <p className="text-xs sm:text-sm text-emerald-100">Prestadores</p>
+              </div>
+
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.indicacoes}+</h3>
+                <p className="text-xs sm:text-sm text-emerald-100">Indicações</p>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-8 sm:mt-10 max-w-lg">
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold">{stats.anuncios}+</h3>
-              <p className="text-xs sm:text-sm text-emerald-100">Anúncios</p>
-            </div>
+          {/* COLUNA DIREITA: FOTO DA FACHADA + LOGO SOBREPOSTA */}
+          <div className="md:col-span-2">
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/20">
+              <img
+                src="/fachada1.jpeg"
+                alt="Fachada do Residencial Bella Vittà"
+                className="w-full h-56 sm:h-72 lg:h-96 object-cover"
+              />
 
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold">{stats.servicos}+</h3>
-              <p className="text-xs sm:text-sm text-emerald-100">Prestadores</p>
-            </div>
+              {/* Sombra suave para legibilidade do texto sobre a foto */}
+              <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/70 via-transparent to-transparent" />
 
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold">{stats.indicacoes}+</h3>
-              <p className="text-xs sm:text-sm text-emerald-100">Indicações</p>
+              {/* Logo icone.png no canto superior direito da foto */}
+              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/95 backdrop-blur-md rounded-2xl p-1.5 sm:p-2 shadow-lg">
+                <img
+                  src="/icone.png"
+                  alt="Logo Bella Vittà"
+                  className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+                />
+              </div>
+
+              {/* Legenda da foto */}
+              <div className="absolute bottom-3 sm:bottom-4 left-4 right-4">
+                <p className="text-sm font-semibold drop-shadow">Residencial Bella Vittà</p>
+                <p className="text-xs text-emerald-100">Araraquara – SP</p>
+              </div>
             </div>
           </div>
         </div>

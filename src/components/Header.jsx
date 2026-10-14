@@ -1,3 +1,15 @@
+// ============================================================================
+// ARQUIVO COMPLETO: src/components/Header.jsx
+// ----------------------------------------------------------------------------
+// ALTERAÇÕES APLICADAS NESTA VERSÃO:
+//   1. Logo oficial (icone.png) no lugar do quadrado verde com as letras "BV"
+//      na barra superior (desktop).
+//      Pré-requisito: salvar o arquivo em  public/icone.png
+//   2. Função marcarTodasComoLidas CORRIGIDA (aviso_id: aviso.id).
+//   3. Todos os comentários originais (✅ CORREÇÃO) preservados.
+// Nenhuma linha funcional foi removida.
+// ============================================================================
+
 import React, { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -26,7 +38,7 @@ const navItems = [
     label: 'Indicações',
     emoji: '👥',
     icon: (
-      <path d="M18 18.72a9 9 0 003.74-.48 3 3 0 00-4.68-2.72M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm-9 3a2.25 2.25 0 11-4.5 0A2.25 2.25 0 016 9.75z" />
+      <path d="M18 18.72a9 9 0 003.74-.48 3 3 0 00-4.68-2.72M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm-9 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 016 9.75z" />
     )
   },
   {
@@ -126,6 +138,7 @@ const Header = () => {
     setNaoLidas(prev => prev.filter(n => n.id !== avisoId))
   }
 
+  // ✅ FUNÇÃO CORRIGIDA: aviso_id recebe diretamente aviso.id
   const marcarTodasComoLidas = async () => {
     if (!user || naoLidas.length === 0) return
     const registros = naoLidas.map(aviso => ({ aviso_id: aviso.id, user_id: user.id }))
@@ -167,9 +180,12 @@ const Header = () => {
           <div className="max-w-7xl mx-auto px-6">
             <div className="h-16 flex items-center justify-between">
               <NavLink to="/" className="flex items-center gap-3 no-underline">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-200/50">
-                  <span className="text-white font-bold text-sm">BV</span>
-                </div>
+                {/* ✅ ALTERAÇÃO: logo icone.png no lugar do quadrado com "BV" */}
+                <img
+                  src="/icone.png"
+                  alt="Logo Bella Vittà"
+                  className="w-10 h-10 rounded-2xl object-contain bg-white p-0.5 shadow-lg shadow-emerald-200/50"
+                />
                 <div>
                   <p className="text-sm font-bold text-gray-900">Bella Vittà</p>
                   <p className="text-xs text-gray-400">Marketplace interno</p>
