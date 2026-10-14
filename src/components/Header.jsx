@@ -2,11 +2,20 @@
 // ARQUIVO COMPLETO: src/components/Header.jsx
 // ----------------------------------------------------------------------------
 // ALTERAÇÕES APLICADAS NESTA VERSÃO:
-//   1. Logo oficial (icone.png) no lugar do quadrado verde com as letras "BV"
-//      na barra superior (desktop).
+//   1. ✅ COMPARTILHAR CORRIGIDO: nova função handleShare com cadeia de
+//      fallbacks garantida:
+//        a) Web Share API (navigator.share) — quando disponível (HTTPS + gesto);
+//        b) Se falhar ou não existir → copia o link via navigator.clipboard;
+//        c) Se o clipboard não existir (contexto não seguro) → fallback legacy
+//           com document.execCommand('copy');
+//        d) Último recurso → window.prompt com o link para cópia manual.
+//      Também trata AbortError (usuário cancelou) sem disparar fallback,
+//      e SEMPRE dá feedback visual (alert) quando copia — antes o erro era
+//      apenas console.error e nada acontecia na tela ("não funciona").
+//   2. Logo oficial (icone.png) no lugar do quadrado verde com "BV".
 //      Pré-requisito: salvar o arquivo em  public/icone.png
-//   2. Função marcarTodasComoLidas CORRIGIDA (aviso_id: aviso.id).
-//   3. Todos os comentários originais (✅ CORREÇÃO) preservados.
+//   3. Função marcarTodasComoLidas corrigida (aviso_id: aviso.id).
+//   4. Todos os comentários originais (✅ CORREÇÃO) preservados.
 // Nenhuma linha funcional foi removida.
 // ============================================================================
 
@@ -66,6 +75,42 @@ const Icon = ({ path, active = false }) => (
     {path}
   </svg>
 )
+
+/* ---------------------------------------------------------------------------
+   ✅ HELPERS DE COMPARTILHAMENTO (correção da função que não funcionava)
+--------------------------------------------------------------------------- */
+
+// Copia texto com fallback duplo: Clipboard API (HTTPS) → execCommand (legacy)
+const copiarParaAreaDeTransferencia = async (texto) => {
+  // 1) API moderna — disponível apenas em contexto seguro (HTTPS/localhost)
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(texto)
+      return true
+    } catch (err) {
+      console.error('Clipboard API falhou, tentando fallback legacy:', err)
+    }
+  }
+
+  // 2) Fallback legacy — funciona mesmo sem HTTPS
+  try {
+    const area = document.createElement('textarea')
+    area.value = texto
+    area.setAttribute('readonly', '')
+    area.style.position = 'fixed'
+    area.style.top = '-1000px'
+    area.style.opacity = '0'
+    document.body.appendChild(area)
+    area.focus()
+    area.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(area)
+    return ok
+  } catch (err) {
+    console.error('Fallback legacy de cópia falhou:', err)
+    return false
+  }
+}
 
 const Header = () => {
   const location = useLocation()
@@ -146,12 +191,43 @@ const Header = () => {
     if (!error) setNaoLidas([])
   }
 
+  // ✅ COMPARTILHAR CORRIGIDO: cadeia de fallbacks + feedback sempre visível
   const handleShare = async () => {
     const urlParaCompartilhar = window.location.href
-    if (navigator.share) {
-      try { await navigator.share({ title: 'BV Service - Bella Vittà', text: 'Confira os serviços e anúncios do nosso condomínio!', url: urlParaCompartilhar }) } catch (err) { console.error('Erro ao compartilhar:', err) }
+    const dadosShare = {
+      title: 'BV Service - Bella Vittà',
+      text: 'Confira os serviços e anúncios do nosso condomínio!',
+      url: urlParaCompartilhar
+    }
+
+    // 1) Web Share API (celulares / desktops compatíveis) — requer HTTPS + gesto do usuário
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      // canShare (quando existir) valida se os dados são compartilháveis
+      const podeCompartilhar = typeof navigator.canShare === 'function'
+        ? navigator.canShare(dadosShare)
+        : true
+
+      if (podeCompartilhar) {
+        try {
+          await navigator.share(dadosShare)
+          return // ✅ compartilhou com sucesso
+        } catch (err) {
+          // AbortError = o usuário cancelou o painel nativo → não faz fallback
+          if (err && err.name === 'AbortError') return
+          console.error('Web Share API falhou, ativando fallback de cópia:', err)
+          // segue para o fallback abaixo
+        }
+      }
+    }
+
+    // 2) Fallback: copia o link para a área de transferência e avisa
+    const copiado = await copiarParaAreaDeTransferencia(urlParaCompartilhar)
+
+    if (copiado) {
+      alert('✅ Link copiado!\n\nCole no WhatsApp ou envie para outro morador.')
     } else {
-      try { await navigator.clipboard.writeText(urlParaCompartilhar); alert('✅ Link copiado!\n\nCole no WhatsApp ou envie para outro morador.') } catch (err) { prompt("Copie o link manualmente:", urlParaCompartilhar) }
+      // 3) Último recurso: exibe o link para cópia manual
+      window.prompt('Não foi possível copiar automaticamente.\nCopie o link manualmente:', urlParaCompartilhar)
     }
   }
 
