@@ -1,22 +1,24 @@
 // ============================================================================
 // ARQUIVO COMPLETO: src/components/Header.jsx
 // ----------------------------------------------------------------------------
-// ALTERAÇÕES APLICADAS NESTA VERSÃO:
-//   1. ✅ COMPARTILHAR CORRIGIDO: nova função handleShare com cadeia de
-//      fallbacks garantida:
-//        a) Web Share API (navigator.share) — quando disponível (HTTPS + gesto);
-//        b) Se falhar ou não existir → copia o link via navigator.clipboard;
-//        c) Se o clipboard não existir (contexto não seguro) → fallback legacy
-//           com document.execCommand('copy');
-//        d) Último recurso → window.prompt com o link para cópia manual.
-//      Também trata AbortError (usuário cancelou) sem disparar fallback,
-//      e SEMPRE dá feedback visual (alert) quando copia — antes o erro era
-//      apenas console.error e nada acontecia na tela ("não funciona").
-//   2. Logo oficial (icone.png) no lugar do quadrado verde com "BV".
-//      Pré-requisito: salvar o arquivo em  public/icone.png
-//   3. Função marcarTodasComoLidas corrigida (aviso_id: aviso.id).
-//   4. Todos os comentários originais (✅ CORREÇÃO) preservados.
-// Nenhuma linha funcional foi removida.
+// ✅ COMPARTILHAR CORRIGIDO (definitivamente):
+// O painel cinza que "abria e sumia" era o painel NATIVO do Windows/Edge
+// (navigator.share) falhando no desktop — e como o erro vinha como
+// AbortError/OperationError, o código anterior ficava em silêncio.
+//
+// NOVO COMPORTAMENTO:
+//   • Em DESKTOP (pointer: fine) o navigator.share NUNCA é chamado.
+//     Em vez disso, abre um PAINEL PRÓPRIO dentro do app (sempre funciona),
+//     com opções: Copiar link, WhatsApp, Telegram e E-mail.
+//   • Em CELULAR/Tablet (pointer: coarse) tenta o compartilhamento nativo;
+//     se falhar (e não for cancelamento do usuário), abre o painel próprio.
+//   • Cópia de link com tríplice fallback: Clipboard API → execCommand → prompt.
+//   • Feedback visual "✅ Link copiado!" dentro do painel (sem alert bloqueado).
+//
+// DEMAIS ALTERAÇÕES MANTIDAS:
+//   • Logo icone.png no lugar do quadrado "BV" (salvar em public/icone.png).
+//   • marcarTodasComoLidas corrigida (aviso_id: aviso.id).
+//   • Comentários originais (✅ CORREÇÃO) preservados.
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -77,7 +79,7 @@ const Icon = ({ path, active = false }) => (
 )
 
 /* ---------------------------------------------------------------------------
-   ✅ HELPERS DE COMPARTILHAMENTO (correção da função que não funcionava)
+   ✅ HELPERS DE COMPARTILHAMENTO / CÓPIA
 --------------------------------------------------------------------------- */
 
 // Copia texto com fallback duplo: Clipboard API (HTTPS) → execCommand (legacy)
@@ -112,6 +114,12 @@ const copiarParaAreaDeTransferencia = async (texto) => {
   }
 }
 
+// Detecta dispositivo touch (celular/tablet) vs desktop
+const ehDispositivoTouch = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(pointer: coarse)').matches
+
 const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -121,9 +129,12 @@ const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [naoLidas, setNaoLidas] = useState([])
+  const [shareOpen, setShareOpen] = useState(false)
+  const [linkCopiado, setLinkCopiado] = useState(false)
   
   const dropdownRef = useRef(null)
   const notifRef = useRef(null)
+  const shareModalRef = useRef(null)
 
   const hideChrome = ['/login', '/reset-password', '/admin', '/adm_bv'].includes(location.pathname)
 
@@ -191,7 +202,12 @@ const Header = () => {
     if (!error) setNaoLidas([])
   }
 
-  // ✅ COMPARTILHAR CORRIGIDO: cadeia de fallbacks + feedback sempre visível
+  /* ------------------------------------------------------------------
+     ✅ COMPARTILHAR — CORRIGIDO
+     Desktop: NUNCA chama navigator.share (painel do Windows abre vazio
+     e some). Abre direto o painel próprio do app.
+     Touch: tenta nativo; se falhar (menos cancelamento), painel próprio.
+  ------------------------------------------------------------------ */
   const handleShare = async () => {
     const urlParaCompartilhar = window.location.href
     const dadosShare = {
@@ -200,35 +216,53 @@ const Header = () => {
       url: urlParaCompartilhar
     }
 
-    // 1) Web Share API (celulares / desktops compatíveis) — requer HTTPS + gesto do usuário
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-      // canShare (quando existir) valida se os dados são compartilháveis
-      const podeCompartilhar = typeof navigator.canShare === 'function'
-        ? navigator.canShare(dadosShare)
-        : true
-
-      if (podeCompartilhar) {
-        try {
-          await navigator.share(dadosShare)
-          return // ✅ compartilhou com sucesso
-        } catch (err) {
-          // AbortError = o usuário cancelou o painel nativo → não faz fallback
-          if (err && err.name === 'AbortError') return
-          console.error('Web Share API falhou, ativando fallback de cópia:', err)
-          // segue para o fallback abaixo
-        }
+    if (ehDispositivoTouch() && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share(dadosShare)
+        return // ✅ compartilhou pelo painel nativo do celular
+      } catch (err) {
+        // Usuário cancelou o painel nativo → encerra sem fallback
+        if (err && err.name === 'AbortError') return
+        console.error('Web Share API falhou, abrindo painel próprio:', err)
       }
     }
 
-    // 2) Fallback: copia o link para a área de transferência e avisa
-    const copiado = await copiarParaAreaDeTransferencia(urlParaCompartilhar)
+    // Desktop OU falha do nativo → painel próprio (sempre funciona)
+    setLinkCopiado(false)
+    setShareOpen(true)
+  }
 
-    if (copiado) {
-      alert('✅ Link copiado!\n\nCole no WhatsApp ou envie para outro morador.')
+  const copiarLink = async () => {
+    const ok = await copiarParaAreaDeTransferencia(window.location.href)
+    if (ok) {
+      setLinkCopiado(true)
+      setTimeout(() => setLinkCopiado(false), 2500)
     } else {
-      // 3) Último recurso: exibe o link para cópia manual
-      window.prompt('Não foi possível copiar automaticamente.\nCopie o link manualmente:', urlParaCompartilhar)
+      window.prompt('Não foi possível copiar automaticamente.\nCopie o link manualmente:', window.location.href)
     }
+  }
+
+  const compartilharWhatsApp = () => {
+    const url = window.location.href
+    const texto = 'Confira os serviços e anúncios do condomínio Bella Vittà: ' + url
+    window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener,noreferrer')
+  }
+
+  const compartilharTelegram = () => {
+    const url = window.location.href
+    const texto = 'Confira os serviços e anúncios do condomínio Bella Vittà!'
+    window.open(
+      'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(texto),
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+
+  const compartilharEmail = () => {
+    const url = window.location.href
+    window.location.href =
+      'mailto:?subject=' + encodeURIComponent('BV Service - Bella Vittà') +
+      '&body=' + encodeURIComponent('Confira os serviços e anúncios do nosso condomínio: ' + url)
   }
 
   const handleLogout = async () => { setMenuOpen(false); await logout(); navigate('/login', { replace: true }) }
@@ -238,6 +272,8 @@ const Header = () => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setMenuOpen(false)
       if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false)
+      // Fecha o painel de compartilhar ao clicar fora dele
+      if (shareModalRef.current && !shareModalRef.current.contains(event.target)) setShareOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -438,6 +474,69 @@ const Header = () => {
 
       {/* Espaçamento para a barra inferior não cobrir o conteúdo */}
       <div className="md:hidden h-28" />
+
+      {/* ===== PAINEL PRÓPRIO DE COMPARTILHAR (fallback garantido) ===== */}
+      {shareOpen && (
+        <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div
+            ref={shareModalRef}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-bold text-gray-900">Compartilhar</h2>
+              <button
+                onClick={() => setShareOpen(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg cursor-pointer"
+                aria-label="Fechar"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-3 space-y-1">
+              <button
+                onClick={copiarLink}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer text-left transition"
+              >
+                <span className="text-lg">📋</span>
+                <span className={`text-sm font-medium ${linkCopiado ? 'text-emerald-600' : 'text-gray-800'}`}>
+                  {linkCopiado ? '✅ Link copiado!' : 'Copiar link'}
+                </span>
+              </button>
+
+              <button
+                onClick={compartilharWhatsApp}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer text-left transition"
+              >
+                <span className="text-lg">💬</span>
+                <span className="text-sm font-medium text-gray-800">WhatsApp</span>
+              </button>
+
+              <button
+                onClick={compartilharTelegram}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer text-left transition"
+              >
+                <span className="text-lg">✈️</span>
+                <span className="text-sm font-medium text-gray-800">Telegram</span>
+              </button>
+
+              <button
+                onClick={compartilharEmail}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 cursor-pointer text-left transition"
+              >
+                <span className="text-lg">✉️</span>
+                <span className="text-sm font-medium text-gray-800">E-mail</span>
+              </button>
+            </div>
+
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
+              <p className="text-[11px] text-gray-400 break-all">{window.location.href}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
