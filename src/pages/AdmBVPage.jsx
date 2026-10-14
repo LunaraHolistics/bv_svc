@@ -1,3 +1,16 @@
+// ============================================================================
+// ARQUIVO COMPLETO: src/pages/AdmBVPage.jsx
+// ----------------------------------------------------------------------------
+// ALTERAÇÕES:
+//   1. Publicar / Reativar / Ativar gravam reativado_em (início do ciclo).
+//      → Aviso reativado volta a aparecer como NOVO para quem já tinha lido.
+//   2. "Ver visualizações" agora mostra QUEM viu e QUANDO viu (lido_em/created_at),
+//      com badge do ciclo (atual vs anterior à reativação) e contagem por ciclo.
+//   3. Cards mostram "🔄 Reativado em: ..." quando houver reativação.
+//   4. Modal de visualizações unificado (usado nas abas Ao Vivo e Histórico).
+// Nenhuma função essencial foi removida.
+// ============================================================================
+
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -40,7 +53,7 @@ const AdmBVPage = () => {
   const [reativandoId, setReativandoId] = useState(null)
   const [novaDataFim, setNovaDataFim] = useState('')
   
-  // ✅ NOVO: Estado para visualizações
+  // Estado para visualizações
   const [vendoVisu, setVendoVisu] = useState(null)
   const [listaVisu, setListaVisu] = useState([])
   const [carregandoVisu, setCarregandoVisu] = useState(false)
@@ -58,14 +71,14 @@ const AdmBVPage = () => {
     setLoading(false)
   }
 
-  // ✅ NOVO: Busca quem leu um aviso específico
+  // Busca quem leu um aviso específico, com QUANDO leu
   const buscarVisualizacoes = async (avisoId) => {
     setVendoVisu(avisoId)
     setCarregandoVisu(true)
     
     const { data: leituras } = await supabase
       .from('avisos_lidos')
-      .select('user_id')
+      .select('user_id, created_at, lido_em')
       .eq('aviso_id', avisoId)
 
     if (!leituras || leituras.length === 0) {
@@ -92,7 +105,9 @@ const AdmBVPage = () => {
     const listaFinal = leituras.map(l => ({
       ...l,
       perfil: mapaPerfis[l.user_id] || null
-    })).filter(l => l.perfil) // Remove leitores que não têm perfil cadastrado
+    }))
+      .filter(l => l.perfil) // Remove leitores que não têm perfil cadastrado
+      .sort((a, b) => new Date(b.lido_em || b.created_at) - new Date(a.lido_em || a.created_at)) // ✅ mais recente primeiro
 
     setListaVisu(listaFinal)
     setCarregandoVisu(false)
@@ -104,13 +119,15 @@ const AdmBVPage = () => {
     
     setEnviando(true)
     
+    const agoraIso = new Date().toISOString()
     const dadosAviso = {
       titulo,
       mensagem,
       criado_por: user.id,
-      data_inicio: dataInicio ? new Date(dataInicio).toISOString() : new Date().toISOString(),
+      data_inicio: dataInicio ? new Date(dataInicio).toISOString() : agoraIso,
       data_fim: dataFim ? new Date(dataFim).toISOString() : null,
-      ativo: true
+      ativo: true,
+      reativado_em: agoraIso // ✅ início do ciclo
     }
 
     const { error } = await supabase.from('avisos_admin').insert(dadosAviso)
@@ -134,7 +151,8 @@ const AdmBVPage = () => {
       .update({
         data_inicio: new Date().toISOString(),
         data_fim: new Date(novaDataFim).toISOString(),
-        ativo: true
+        ativo: true,
+        reativado_em: new Date().toISOString() // ✅ novo ciclo: volta a ser "novo" para todos
       })
       .eq('id', reativandoId)
 
@@ -147,7 +165,11 @@ const AdmBVPage = () => {
   }
 
   const toggleForcarInativo = async (aviso) => {
-    await supabase.from('avisos_admin').update({ ativo: !aviso.ativo }).eq('id', aviso.id)
+    const vaiAtivar = !aviso.ativo
+    const payload = vaiAtivar
+      ? { ativo: true, reativado_em: new Date().toISOString() } // ✅ reativou = novo ciclo
+      : { ativo: false }
+    await supabase.from('avisos_admin').update(payload).eq('id', aviso.id)
     buscarAvisos()
   }
 
@@ -161,6 +183,63 @@ const AdmBVPage = () => {
 
   const avisosAtivos = avisos.filter(a => a.ativo !== false && estaNoPeriodo(a.data_inicio, a.data_fim))
   const avisosHistorico = avisos.filter(a => a.ativo === false || !estaNoPeriodo(a.data_inicio, a.data_fim))
+
+  // Dados do aviso aberto no modal de visualizações (para o badge de ciclo)
+  const avisoVisu = avisos.find(a => a.id === vendoVisu) || null
+  const inicioCicloVisu = avisoVisu
+    ? (avisoVisu.reativado_em || avisoVisu.data_inicio || avisoVisu.created_at)
+    : null
+  const ehLeituraDoCicloAtual = (v) =>
+    !inicioCicloVisu || new Date(v.lido_em || v.created_at) >= new Date(inicioCicloVisu)
+
+  // ✅ MODAL UNIFICADO DE VISUALIZAÇÕES (quem viu e quando viu)
+  const ModalVisualizacoes = () => (
+    <div className="mt-3 p-4 bg-white border-2 border-blue-100 rounded-xl">
+      <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center justify-between">
+        <span>Quem visualizou este aviso</span>
+        <button onClick={() => setVendoVisu(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer text-lg leading-none">&times;</button>
+      </h4>
+      {carregandoVisu ? (
+        <div className="flex justify-center py-4"><div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
+      ) : listaVisu.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">Nenhum morador visualizou ainda.</p>
+      ) : (
+        <div className="max-h-40 overflow-y-auto space-y-2">
+          <p className="text-xs font-bold text-gray-500 mb-2">
+            Total: {listaVisu.length} morador(es) • Ciclo atual: {listaVisu.filter(ehLeituraDoCicloAtual).length}
+          </p>
+          {inicioCicloVisu && (
+            <p className="text-[10px] text-gray-400 mb-2">
+              Início do ciclo atual (publicação/reativação): {formatarData(inicioCicloVisu)}
+            </p>
+          )}
+          {listaVisu.map((v, i) => (
+            <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-800">{v.perfil.nome_completo}</p>
+                <p className="text-xs text-gray-500">Quadra: {v.perfil.quadra || 'N/A'} • Lote: {v.perfil.lote || 'N/A'}</p>
+                {/* ✅ QUANDO VIU */}
+                <p className="text-xs text-gray-400 mt-0.5">
+                  👁️ Viu em: {formatarData(v.lido_em || v.created_at)}
+                  {v.lido_em && v.created_at && v.lido_em !== v.created_at
+                    ? ` (1ª vez: ${formatarData(v.created_at)})`
+                    : ''}
+                </p>
+              </div>
+              {/* ✅ BADGE DO CICLO */}
+              <span className={`shrink-0 ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                ehLeituraDoCicloAtual(v)
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {ehLeituraDoCicloAtual(v) ? 'Ciclo atual' : 'Ciclo anterior'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -178,7 +257,7 @@ const AdmBVPage = () => {
         
         {isMasterDev && (
           <div className="mt-4 bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-xl text-sm">
-            ⚠️ <strong>Modo Desenvolvedor:</strong> Você está acessando como Master. Em produção, apenas o perfil de Administração do Condomínio terá acesso a este local.
+            ️ <strong>Modo Desenvolvedor:</strong> Você está acessando como Master. Em produção, apenas o perfil de Administração do Condomínio terá acesso a este local.
           </div>
         )}
       </div>
@@ -247,6 +326,8 @@ const AdmBVPage = () => {
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
                       <span>📅 Início: {formatarData(aviso.data_inicio)}</span>
                       {aviso.data_fim ? <span>⏳ Expira: {formatarData(aviso.data_fim)}</span> : <span className="text-green-600 font-medium">∞ Sem expiração</span>}
+                      {/* ✅ mostra quando foi reativado */}
+                      {aviso.reativado_em && <span>🔄 Reativado: {formatarData(aviso.reativado_em)}</span>}
                     </div>
                     
                     <div className="flex gap-2 mt-3 border-t border-green-100 pt-3">
@@ -254,32 +335,7 @@ const AdmBVPage = () => {
                       <button onClick={() => buscarVisualizacoes(aviso.id)} className="text-xs font-medium px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition cursor-pointer">👁️ Ver visualizações</button>
                     </div>
 
-                    {/* ✅ MODAL DE VISUALIZAÇÕES */}
-                    {vendoVisu === aviso.id && (
-                      <div className="mt-3 p-4 bg-white border-2 border-blue-100 rounded-xl">
-                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center justify-between">
-                          <span>Quem visualizou este aviso</span>
-                          <button onClick={() => setVendoVisu(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer text-lg leading-none">&times;</button>
-                        </h4>
-                        {carregandoVisu ? (
-                          <div className="flex justify-center py-4"><div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
-                        ) : listaVisu.length === 0 ? (
-                          <p className="text-sm text-gray-400 text-center py-4">Nenhum morador visualizou ainda.</p>
-                        ) : (
-                          <div className="max-h-40 overflow-y-auto space-y-2">
-                            <p className="text-xs font-bold text-gray-500 mb-2">Total: {listaVisu.length} morador(es)</p>
-                            {listaVisu.map((v, i) => (
-                              <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg">
-                                <div>
-                                  <p className="font-medium text-gray-800">{v.perfil.nome_completo}</p>
-                                  <p className="text-xs text-gray-500">Quadra: {v.perfil.quadra || 'N/A'} • Lote: {v.perfil.lote || 'N/A'}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {vendoVisu === aviso.id && <ModalVisualizacoes />}
                   </div>
                 ))}
               </div>
@@ -297,6 +353,8 @@ const AdmBVPage = () => {
                     
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-400">
                       <span>🛑 Expirou em: {aviso.data_fim ? formatarData(aviso.data_fim) : 'Desativado manualmente'}</span>
+                      {/* ✅ mostra quando foi reativado pela última vez */}
+                      {aviso.reativado_em && <span>🔄 Última reativação: {formatarData(aviso.reativado_em)}</span>}
                     </div>
                     
                     {reativandoId === aviso.id ? (
@@ -315,33 +373,8 @@ const AdmBVPage = () => {
                         <button onClick={() => deletarAviso(aviso.id)} className="text-xs font-medium px-3 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition cursor-pointer">Excluir Definitivamente</button>
                       </div>
                     )}
-
-                    {/* MODAL DE VISUALIZAÇÕES NO HISTÓRICO TAMBÉM */}
-                    {vendoVisu === aviso.id && (
-                      <div className="mt-3 p-4 bg-white border-2 border-blue-100 rounded-xl">
-                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center justify-between">
-                          <span>Quem visualizou este aviso</span>
-                          <button onClick={() => setVendoVisu(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer text-lg leading-none">&times;</button>
-                        </h4>
-                        {carregandoVisu ? (
-                          <div className="flex justify-center py-4"><div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
-                        ) : listaVisu.length === 0 ? (
-                          <p className="text-sm text-gray-400 text-center py-4">Nenhum morador visualizou.</p>
-                        ) : (
-                          <div className="max-h-40 overflow-y-auto space-y-2">
-                            <p className="text-xs font-bold text-gray-500 mb-2">Total: {listaVisu.length} morador(es)</p>
-                            {listaVisu.map((v, i) => (
-                              <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg">
-                                <div>
-                                  <p className="font-medium text-gray-800">{v.perfil.nome_completo}</p>
-                                  <p className="text-xs text-gray-500">Quadra: {v.perfil.quadra || 'N/A'} • Lote: {v.perfil.lote || 'N/A'}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    
+                    {vendoVisu === aviso.id && <ModalVisualizacoes />}
                   </div>
                 ))}
               </div>

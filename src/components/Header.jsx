@@ -149,7 +149,7 @@ const Header = () => {
     user?.email?.charAt(0)?.toUpperCase() ||
     'U'
 
-  useEffect(() => {
+ useEffect(() => {
     if (!user) return
     
     const fetchNotificacoes = async () => {
@@ -157,7 +157,7 @@ const Header = () => {
       
       const { data } = await supabase
         .from('avisos_admin')
-        .select('id, titulo, mensagem, created_at, data_fim')
+        .select('id, titulo, mensagem, created_at, data_fim, reativado_em')
         .eq('ativo', true)
         .or(`data_fim.is.null,data_fim.gte.${agora}`)
         .order('created_at', { ascending: false })
@@ -170,11 +170,22 @@ const Header = () => {
 
       const { data: lidos } = await supabase
         .from('avisos_lidos')
-        .select('aviso_id')
+        .select('aviso_id, lido_em, created_at')
         .eq('user_id', user.id)
 
-      const idsLidos = new Set((lidos || []).map(l => l.aviso_id))
-      const pendentes = data.filter(d => !idsLidos.has(d.id))
+      // Mapa: aviso_id -> data da ÚLTIMA leitura deste morador
+      const mapaLidos = new Map((lidos || []).map(l => [l.aviso_id, l.lido_em || l.created_at]))
+
+      // ✅ CORREÇÃO REATIVAÇÃO: aviso é "não lido" quando:
+      //   a) não há registro de leitura, OU
+      //   b) a última leitura é ANTERIOR ao início do ciclo atual (reativado_em),
+      //      ou seja, o morador leu no ciclo passado e o aviso foi reativado.
+      const pendentes = data.filter(d => {
+        const quandoLeu = mapaLidos.get(d.id)
+        if (!quandoLeu) return true
+        const inicioCiclo = d.reativado_em || d.data_inicio || d.created_at
+        return new Date(quandoLeu) < new Date(inicioCiclo)
+      })
       setNaoLidas(pendentes)
     }
 
@@ -190,14 +201,20 @@ const Header = () => {
 
   const marcarComoLido = async (avisoId) => {
     if (!user) return
-    await supabase.from('avisos_lidos').upsert({ aviso_id: avisoId, user_id: user.id }, { onConflict: 'aviso_id,user_id' })
+    // ✅ lido_em = agora: registra QUANDO viu (atualiza a cada leitura/ciclo)
+    await supabase
+      .from('avisos_lidos')
+      .upsert(
+        { aviso_id: avisoId, user_id: user.id, lido_em: new Date().toISOString() },
+        { onConflict: 'aviso_id,user_id' }
+      )
     setNaoLidas(prev => prev.filter(n => n.id !== avisoId))
   }
 
-  // ✅ FUNÇÃO CORRIGIDA: aviso_id recebe diretamente aviso.id
   const marcarTodasComoLidas = async () => {
     if (!user || naoLidas.length === 0) return
-    const registros = naoLidas.map(aviso => ({ aviso_id: aviso.id, user_id: user.id }))
+    const agoraIso = new Date().toISOString()
+    const registros = naoLidas.map(aviso => ({ aviso_id: aviso.id, user_id: user.id, lido_em: agoraIso }))
     const { error } = await supabase.from('avisos_lidos').upsert(registros, { onConflict: 'aviso_id,user_id' })
     if (!error) setNaoLidas([])
   }
