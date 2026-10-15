@@ -1,8 +1,9 @@
 // ============================================================================
-// src/pages/EditarServicoPage.jsx (v2)
-// - NOVO: painel lateral "📚 Legenda de nichos" no desktop (fixo, ao lado do form)
-//         e botão + modal no mobile — orienta ANTES de escolher o nicho
-// - Mantém CategoriaPicker com descrição do nicho selecionado
+// src/pages/EditarServicoPage.jsx (v3)
+// - ✅ Aviso SUAVE (confirm, não bloqueia) se o morador já tem card no MESMO nicho
+// - ✅ Dica em "Serviços Oferecidos": liste variações do mesmo nicho ali;
+//   novo cadastro só para nicho DIFERENTE
+// - Mantém painel lateral de legenda (desktop) + modal (mobile)
 // ============================================================================
 
 import React, { useState, useEffect } from 'react'
@@ -137,10 +138,27 @@ const EditarServicoPage = () => {
       return
     }
 
+    const catSelecionada = categorias.find(c => c.id === form.categoria_id)
+
+    // ✅ v3: aviso suave de nicho duplicado (mesmo morador + mesmo nicho)
+    const idAtual = ehNovo ? null : id
+    const { data: duplicados } = await supabase
+      .from('prestadores_servico')
+      .select('id, nome')
+      .eq('usuario_id', user.id)
+      .eq('categoria_id', form.categoria_id)
+
+    if ((duplicados || []).some(d => d.id !== idAtual)) {
+      const continuar = window.confirm(
+        `Você já possui um serviço no nicho "${catSelecionada?.nome}".\n\n` +
+        `Recomendado: editar o serviço existente e acrescentar os novos termos no campo "Serviços Oferecidos", em vez de criar outro card no mesmo nicho.\n\n` +
+        `Deseja continuar mesmo assim?`
+      )
+      if (!continuar) { setSalvando(false); return }
+    }
+
     const todasImagens = [...imagensExistentes, ...novasImagens]
     const servicosArray = form.servicos_oferecidos.split(',').map(s => s.trim()).filter(Boolean)
-
-    const catSelecionada = categorias.find(c => c.id === form.categoria_id)
 
     const dadosServico = {
       nome: form.nome.trim(),
@@ -175,7 +193,6 @@ const EditarServicoPage = () => {
     setTimeout(() => navigate('/perfil', { replace: true }), 3000)
   }
 
-  // ==================== TELA DE SUCESSO ====================
   if (sucesso) {
     return (
       <div className="max-w-lg mx-auto px-4 sm:px-0">
@@ -239,12 +256,9 @@ const EditarServicoPage = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-0">
-      {/* ✅ Layout: formulário + painel lateral de legenda no desktop */}
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
 
-        {/* COLUNA DO FORMULÁRIO */}
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
-          
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 border-b pb-4">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{ehNovo ? 'Cadastrar Meu Serviço' : 'Editar Meu Serviço'}</h1>
@@ -277,14 +291,12 @@ const EditarServicoPage = () => {
               <input name="casa_numero" value={form.casa_numero} onChange={handleForm} required placeholder="Ex: Rua das Palmeiras, Casa 15" className={inputClass} />
             </div>
 
-            {/* ✅ Categoria com botão de legenda no mobile */}
             <div>
               <CategoriaPicker
                 value={form.categoria_id}
                 onChange={(id) => setForm((f) => ({ ...f, categoria_id: id }))}
                 categorias={categorias}
               />
-              {/* Botão de legenda visível só no mobile (no desktop o painel lateral já mostra) */}
               <button
                 type="button"
                 onClick={() => setLegendaAberta(true)}
@@ -302,7 +314,11 @@ const EditarServicoPage = () => {
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Serviços Oferecidos</label>
               <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleForm} placeholder="Separe por vírgula: Reparo hidráulico, Instalação" className={inputClass} />
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-1">💡 Estes termos também aparecem na busca do mapa (ex.: "terapeuta").</p>
+              {/* ✅ v3: orientação de cadastro único por nicho */}
+              <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
+                💡 Liste aqui <strong>todas as variações deste mesmo nicho</strong> (ex.: Psicoterapeuta, Tarô, Reiki).
+                Estes termos entram na busca do mapa. Crie um <strong>novo serviço apenas para um nicho diferente</strong>.
+              </p>
             </div>
 
             <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 rounded-xl">
@@ -322,7 +338,6 @@ const EditarServicoPage = () => {
               </div>
             </div>
 
-            {/* UPLOAD DE IMAGENS */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700">Fotos / Divulgação</label>
@@ -367,13 +382,11 @@ const EditarServicoPage = () => {
               )}
             </div>
 
-            {/* VISIBILIDADE */}
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl">
               <input type="checkbox" id="opt_in" name="opt_in" checked={form.opt_in} onChange={handleForm} className="w-4 h-4 accent-emerald-600" />
               <label htmlFor="opt_in" className="text-xs sm:text-sm text-gray-700">Visível para os moradores no mapa de serviços</label>
             </div>
 
-            {/* BOTÕES */}
             <div className="flex gap-3 sm:gap-4 pt-4">
               <button type="button" onClick={() => navigate('/perfil')} className="flex-1 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition cursor-pointer text-sm">
                 Cancelar
@@ -387,38 +400,21 @@ const EditarServicoPage = () => {
         </div>
 
         {/* ✅ PAINEL LATERAL DE LEGENDA (desktop) */}
-        <aside className="hidden lg:block sticky top-8 bg-white rounded-2xl border border-gray-200 p-5 max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <aside className="hidden lg:block sticky top-8 bg-white rounded-2xl border border-gray-200 p-5 max-h-[80vh] overflow-y-auto">
           <h2 className="text-sm font-bold text-gray-900 mb-1">📚 Legenda de nichos</h2>
-          <p className="text-[11px] text-gray-500 mb-4">
-            Consulte antes de escolher a categoria do seu serviço:
-          </p>
+          <p className="text-[11px] text-gray-500 mb-4">Consulte antes de escolher a categoria do seu serviço.</p>
           <div className="space-y-3">
             {categorias.map((c, i) => (
-              <div
-                key={c.id}
-                className={`p-3 rounded-xl border transition cursor-pointer ${
-                  form.categoria_id === c.id
-                    ? 'bg-emerald-50 border-emerald-300'
-                    : 'bg-gray-50 border-gray-100 hover:border-emerald-200'
-                }`}
-                onClick={() => setForm((f) => ({ ...f, categoria_id: c.id }))}
-              >
+              <div key={c.id} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p className="text-xs font-bold text-gray-800">{i + 1}. {c.nome}</p>
-                <p className="text-[11px] text-gray-600 mt-0.5">{c.descricao}</p>
-                {c.exemplos && (
-                  <p className="text-[10px] text-gray-400 mt-0.5">Ex.: {c.exemplos}</p>
-                )}
+                <p className="text-[11px] text-gray-600 mt-1">{c.descricao}</p>
+                {c.exemplos && <p className="text-[10px] text-gray-400 mt-1">Ex.: {c.exemplos}</p>}
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-gray-400 mt-4">
-            Clicar em um nicho aqui já seleciona ele no formulário. Não encontrou o seu? Use
-            "Serviços Diversos" ou solicite uma nova categoria.
-          </p>
         </aside>
       </div>
 
-      {/* Modal de legenda (mobile) */}
       <LegendaCategorias
         aberto={legendaAberta}
         onFechar={() => setLegendaAberta(false)}

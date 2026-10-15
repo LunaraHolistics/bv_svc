@@ -1,27 +1,27 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../lib/auth'
-import FormIndicacao from '../components/FormIndicacao'
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/auth";
+import FormIndicacao from "../components/FormIndicacao";
 
-const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
+const MASTER_USER_ID = "aaddc383-2f72-45ff-bb01-cec19c695a86";
 
 const formatarWhatsapp = (numero) => {
-  if (!numero) return null
-  const limpo = String(numero).replace(/\D/g, '')
-  return limpo.length >= 10 ? limpo : null
-}
+  if (!numero) return null;
+  const limpo = String(numero).replace(/\D/g, "");
+  return limpo.length >= 10 ? limpo : null;
+};
 
 const CardIndicacao = ({ indicacao, podeGerenciar, onDelete }) => {
-  const whatsapp = formatarWhatsapp(indicacao.contato_whatsapp)
+  const whatsapp = formatarWhatsapp(indicacao.contato_whatsapp);
 
   const handleDelete = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (window.confirm('Tem certeza que deseja EXCLUIR esta indicação?')) {
-      onDelete(indicacao.id)
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm("Tem certeza que deseja EXCLUIR esta indicação?")) {
+      onDelete(indicacao.id);
     }
-  }
+  };
 
   return (
     // ✅ CORREÇÃO: Arredondamento e padding menores no mobile
@@ -47,23 +47,26 @@ const CardIndicacao = ({ indicacao, podeGerenciar, onDelete }) => {
             </div>
           )}
         </div>
-        
+
         {indicacao.descricao && (
           <p className="text-gray-500 text-xs sm:text-sm leading-relaxed mt-3 sm:mt-4 line-clamp-3">
             {indicacao.descricao}
           </p>
         )}
-        
+
         {Array.isArray(indicacao.servicos) && indicacao.servicos.length > 0 && (
           <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
             {indicacao.servicos.map((servico, index) => (
-              <span key={index} className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] sm:text-xs">
+              <span
+                key={index}
+                className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] sm:text-xs"
+              >
                 {servico}
               </span>
             ))}
           </div>
         )}
-        
+
         {indicacao.condicoes_moradores && (
           <div className="mt-4 sm:mt-5 p-2.5 sm:p-3 bg-emerald-50 border border-emerald-100 rounded-xl sm:rounded-2xl">
             <p className="text-[10px] sm:text-sm text-emerald-700 font-medium line-clamp-2">
@@ -71,7 +74,7 @@ const CardIndicacao = ({ indicacao, podeGerenciar, onDelete }) => {
             </p>
           </div>
         )}
-        
+
         {indicacao.endereco && (
           <p className="text-[10px] sm:text-xs text-gray-400 mt-3 sm:mt-4 truncate">
             📍 {indicacao.endereco}
@@ -81,94 +84,140 @@ const CardIndicacao = ({ indicacao, podeGerenciar, onDelete }) => {
 
       <div className="border-t border-gray-100 p-3 sm:p-4 flex flex-wrap gap-2">
         {whatsapp && (
-          <a href={`https://wa.me/55${whatsapp}`} target="_blank" rel="noopener noreferrer" className="px-3 sm:px-4 py-2 bg-green-500 text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-green-600 transition no-underline">
+          <a
+            href={`https://wa.me/55${whatsapp}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 sm:px-4 py-2 bg-green-500 text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-green-600 transition no-underline"
+          >
             WhatsApp
           </a>
         )}
         {indicacao.instagram_url && (
-          <a href={indicacao.instagram_url.startsWith('http') ? indicacao.instagram_url : `https://instagram.com/${indicacao.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs sm:text-sm font-medium no-underline">
+          <a
+            href={
+              indicacao.instagram_url.startsWith("http")
+                ? indicacao.instagram_url
+                : `https://instagram.com/${indicacao.instagram_url.replace("@", "")}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs sm:text-sm font-medium no-underline"
+          >
             Instagram
           </a>
         )}
         {indicacao.site_url && (
-          <a href={indicacao.site_url} target="_blank" rel="noopener noreferrer" className="px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs sm:text-sm font-medium no-underline">
+          <a
+            href={indicacao.site_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs sm:text-sm font-medium no-underline"
+          >
             Site
           </a>
         )}
 
         {podeGerenciar && (
-          <button onClick={handleDelete} className="ml-auto px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] sm:text-xs font-bold hover:bg-red-100 transition cursor-pointer border border-red-100">
+          <button
+            onClick={handleDelete}
+            className="ml-auto px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] sm:text-xs font-bold hover:bg-red-100 transition cursor-pointer border border-red-100"
+          >
             🗑️ Excluir
           </button>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const IndicacoesPage = () => {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const isMaster = user?.id === MASTER_USER_ID
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isMaster = user?.id === MASTER_USER_ID;
 
-  const [indicacoes, setIndicacoes] = useState([])
-  const [categorias, setCategorias] = useState([])
-  const [filtroCategoria, setFiltroCategoria] = useState('Todas')
-  const [busca, setBusca] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [mostrarForm, setMostrarForm] = useState(false)
+  const [indicacoes, setIndicacoes] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [filtroCategoria, setFiltroCategoria] = useState("Todas");
+  const [busca, setBusca] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
 
-  useEffect(() => { buscarDados() }, [])
+  useEffect(() => {
+    buscarDados();
+  }, []);
 
   const handleDeleteIndicacao = async (id) => {
-    const { error } = await supabase.from('indicacoes').delete().eq('id', id)
-    if (!error) setIndicacoes((prev) => prev.filter((ind) => ind.id !== id))
-    else alert('Erro ao excluir: ' + error.message)
-  }
+    const { error } = await supabase.from("indicacoes").delete().eq("id", id);
+    if (!error) setIndicacoes((prev) => prev.filter((ind) => ind.id !== id));
+    else alert("Erro ao excluir: " + error.message);
+  };
 
   const buscarDados = async () => {
-    setLoading(true); setError(null)
+    setLoading(true);
+    setError(null);
     try {
       const [resIndicacoes, resCategorias] = await Promise.all([
-        supabase.from('indicacoes').select('*').eq('status', 'ativo').order('avaliacao_media', { ascending: false, nullsFirst: false }),
-        supabase.from('categorias').select('*').in('tipo', ['indicacao', 'ambos']).order('ordem')
-      ])
-      if (resIndicacoes.error) throw resIndicacoes.error
-      if (resCategorias.error) throw resCategorias.error
-      setIndicacoes(resIndicacoes.data || [])
-      setCategorias(resCategorias.data || [])
+        supabase
+          .from("indicacoes")
+          .select("*")
+          .eq("status", "ativo")
+          .order("avaliacao_media", { ascending: false, nullsFirst: false }),
+        supabase
+          .from("categorias")
+          .select("*")
+          .in("tipo", ["indicacao", "ambos"])
+          .order("ordem"),
+      ]);
+      if (resIndicacoes.error) throw resIndicacoes.error;
+      if (resCategorias.error) throw resCategorias.error;
+      setIndicacoes(resIndicacoes.data || []);
+      setCategorias(resCategorias.data || []);
     } catch (err) {
-      console.error(err); setError('Não foi possível carregar as indicações.')
-    } finally { setLoading(false) }
-  }
+      console.error(err);
+      setError("Não foi possível carregar as indicações.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categoriasFiltro = useMemo(() => {
-    const banco = categorias.map((c) => c.nome)
-    const dados = indicacoes.map((i) => i.categoria).filter(Boolean)
-    return ['Todas', ...new Set([...banco, ...dados])]
-  }, [categorias, indicacoes])
+    const banco = categorias.map((c) => c.nome);
+    const dados = indicacoes.map((i) => i.categoria).filter(Boolean);
+    return ["Todas", ...new Set([...banco, ...dados])];
+  }, [categorias, indicacoes]);
 
   const filtradas = useMemo(() => {
     return indicacoes.filter((item) => {
-      const matchCategoria = filtroCategoria === 'Todas' || item.categoria === filtroCategoria
-      const termo = busca.toLowerCase()
-      const matchBusca = item.nome_profissional?.toLowerCase().includes(termo) || item.descricao?.toLowerCase().includes(termo) || item.categoria?.toLowerCase().includes(termo)
-      return matchCategoria && matchBusca
-    })
-  }, [indicacoes, filtroCategoria, busca])
+      const matchCategoria =
+        filtroCategoria === "Todas" || item.categoria === filtroCategoria;
+      const termo = busca.toLowerCase();
+      const matchBusca =
+        item.nome_profissional?.toLowerCase().includes(termo) ||
+        item.descricao?.toLowerCase().includes(termo) ||
+        item.categoria?.toLowerCase().includes(termo);
+      return matchCategoria && matchBusca;
+    });
+  }, [indicacoes, filtroCategoria, busca]);
 
   const mediaGeral = useMemo(() => {
-    const avaliadas = indicacoes.filter((i) => Number(i.avaliacao_media) > 0)
-    if (!avaliadas.length) return '--'
-    const total = avaliadas.reduce((acc, item) => acc + Number(item.avaliacao_media), 0)
-    return (total / avaliadas.length).toFixed(1)
-  }, [indicacoes])
+    const avaliadas = indicacoes.filter((i) => Number(i.avaliacao_media) > 0);
+    if (!avaliadas.length) return "--";
+    const total = avaliadas.reduce(
+      (acc, item) => acc + Number(item.avaliacao_media),
+      0,
+    );
+    return (total / avaliadas.length).toFixed(1);
+  }, [indicacoes]);
 
   const abrirForm = () => {
-    if (!user) { navigate('/login'); return }
-    setMostrarForm(true)
-  }
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    setMostrarForm(true);
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -176,13 +225,35 @@ const IndicacoesPage = () => {
       <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-6 sm:p-8 md:p-10">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl" />
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-flex px-4 py-2 rounded-full bg-white/10 text-xs font-medium backdrop-blur-md mb-4">Rede de confiança</span>
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight">Profissionais recomendados por vizinhos reais</h1>
-          <p className="mt-4 text-blue-100 max-w-xl text-sm sm:text-base">Encontre prestadores bem avaliados pela comunidade Bella Vittà.</p>
-          <button onClick={abrirForm} className="mt-6 px-6 py-3 bg-white text-blue-700 rounded-2xl font-semibold hover:scale-105 transition text-sm sm:text-base cursor-pointer">
-            + Fazer indicação
-          </button>
+
+        <div className="relative z-10 flex items-center gap-6 sm:gap-8 md:gap-10">
+          {/* Texto */}
+          <div className="flex-1 min-w-0 max-w-2xl">
+            <span className="inline-flex px-4 py-2 rounded-full bg-white/10 text-xs font-medium backdrop-blur-md mb-4">
+              Rede de confiança
+            </span>
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight">
+              Profissionais recomendados por vizinhos reais
+            </h1>
+            <p className="mt-4 text-blue-100 max-w-xl text-sm sm:text-base">
+              Encontre prestadores bem avaliados pela comunidade Bella Vittà.
+            </p>
+            <button
+              onClick={abrirForm}
+              className="mt-6 px-6 py-3 bg-white text-blue-700 rounded-2xl font-semibold hover:scale-105 transition text-sm sm:text-base cursor-pointer"
+            >
+              + Fazer indicação
+            </button>
+          </div>
+
+          {/* ✅ Imagem decorativa (sussurro / indicação) — object-cover corta as sobras */}
+          <div className="hidden sm:block shrink-0 w-36 md:w-48 lg:w-60 aspect-square">
+            <img
+              src="/indicacoes-hero.png"
+              alt="Vizinha recomendando, em confiança, um profissional para outra vizinha"
+              className="w-full h-full object-cover rounded-2xl sm:rounded-3xl shadow-xl shadow-black/25 ring-1 ring-white/15"
+            />
+          </div>
         </div>
       </section>
 
@@ -190,15 +261,23 @@ const IndicacoesPage = () => {
       <section className="grid grid-cols-3 gap-2 sm:gap-4">
         <div className="bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-5">
           <p className="text-[10px] sm:text-sm text-gray-500">Profissionais</p>
-          <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2">{indicacoes.length}</h3>
+          <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2">
+            {indicacoes.length}
+          </h3>
         </div>
         <div className="bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-5">
           <p className="text-[10px] sm:text-sm text-gray-500">Categorias</p>
-          <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2">{categoriasFiltro.length - 1}</h3>
+          <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2">
+            {categoriasFiltro.length - 1}
+          </h3>
         </div>
         <div className="bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-5">
-          <p className="text-[10px] sm:text-sm text-gray-500">Avaliação média</p>
-          <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2 text-amber-500">{mediaGeral}</h3>
+          <p className="text-[10px] sm:text-sm text-gray-500">
+            Avaliação média
+          </p>
+          <h3 className="text-xl sm:text-2xl font-bold mt-1 sm:mt-2 text-amber-500">
+            {mediaGeral}
+          </h3>
         </div>
       </section>
 
@@ -213,7 +292,11 @@ const IndicacoesPage = () => {
         />
         <div className="flex gap-2 overflow-x-auto mt-3 sm:mt-4 pb-1">
           {categoriasFiltro.map((cat) => (
-            <button key={cat} onClick={() => setFiltroCategoria(cat)} className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm whitespace-nowrap transition cursor-pointer ${filtroCategoria === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            <button
+              key={cat}
+              onClick={() => setFiltroCategoria(cat)}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm whitespace-nowrap transition cursor-pointer ${filtroCategoria === cat ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
               {cat}
             </button>
           ))}
@@ -223,29 +306,54 @@ const IndicacoesPage = () => {
       {/* LISTAGEM */}
       {loading ? (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-          {[...Array(6)].map((_, i) => <div key={i} className="h-64 bg-white rounded-2xl sm:rounded-3xl border animate-pulse" />)}
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="h-64 bg-white rounded-2xl sm:rounded-3xl border animate-pulse"
+            />
+          ))}
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center text-red-600 text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center text-red-600 text-sm">
+          {error}
+        </div>
       ) : filtradas.length === 0 ? (
         <div className="bg-white rounded-2xl sm:rounded-3xl border p-8 sm:p-12 text-center">
           <div className="text-5xl mb-4">🤝</div>
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900">Nenhuma indicação encontrada</h3>
-          <p className="text-gray-500 mt-2 text-sm">Tente outro filtro ou seja o primeiro a indicar alguém.</p>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+            Nenhuma indicação encontrada
+          </h3>
+          <p className="text-gray-500 mt-2 text-sm">
+            Tente outro filtro ou seja o primeiro a indicar alguém.
+          </p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
           {filtradas.map((item) => (
-            <CardIndicacao key={item.id} indicacao={item} podeGerenciar={user ? (item.indicado_por === user.id || isMaster) : false} onDelete={handleDeleteIndicacao} />
+            <CardIndicacao
+              key={item.id}
+              indicacao={item}
+              podeGerenciar={
+                user ? item.indicado_por === user.id || isMaster : false
+              }
+              onDelete={handleDeleteIndicacao}
+            />
           ))}
         </div>
       )}
 
       {/* CTA FINAL */}
       <section className="bg-gradient-to-r from-slate-900 to-blue-900 text-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center">
-        <h2 className="text-xl sm:text-2xl font-bold">Conhece um profissional excelente?</h2>
-        <p className="text-blue-100 mt-2 text-sm sm:text-base">Ajude a comunidade compartilhando boas experiências.</p>
-        <button onClick={abrirForm} className="mt-5 px-6 py-3 bg-white text-blue-700 rounded-2xl font-semibold cursor-pointer text-sm sm:text-base">
+        <h2 className="text-xl sm:text-2xl font-bold">
+          Conhece um profissional excelente?
+        </h2>
+        <p className="text-blue-100 mt-2 text-sm sm:text-base">
+          Ajude a comunidade compartilhando boas experiências.
+        </p>
+        <button
+          onClick={abrirForm}
+          className="mt-5 px-6 py-3 bg-white text-blue-700 rounded-2xl font-semibold cursor-pointer text-sm sm:text-base"
+        >
           Indicar agora
         </button>
       </section>
@@ -255,15 +363,28 @@ const IndicacoesPage = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Nova indicação</h2>
-              <button onClick={() => setMostrarForm(false)} className="text-gray-400 hover:text-gray-700 text-xl cursor-pointer">✕</button>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                Nova indicação
+              </h2>
+              <button
+                onClick={() => setMostrarForm(false)}
+                className="text-gray-400 hover:text-gray-700 text-xl cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
-            <FormIndicacao onSucesso={() => { setMostrarForm(false); buscarDados() }} onFechar={() => setMostrarForm(false)} />
+            <FormIndicacao
+              onSucesso={() => {
+                setMostrarForm(false);
+                buscarDados();
+              }}
+              onFechar={() => setMostrarForm(false)}
+            />
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default IndicacoesPage
+export default IndicacoesPage;
