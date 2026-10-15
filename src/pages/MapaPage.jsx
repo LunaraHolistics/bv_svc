@@ -1,9 +1,9 @@
 // ============================================================================
-// src/pages/MapaPage.jsx (v2)
-// - Busca agora inclui servicos_oferecidos (corrige "terapeuta" vazio)
-// - Contagem de nichos calculada LOCALMENTE dos prestadores carregados
-//   (imune a RLS/queries separadas) + fallback texto(categoria) → nicho
-// - Chips só aparecem com serviço no nicho; filtro usa categoria_id resolvido
+// src/pages/MapaPage.jsx (v3)
+// - Busca: compara SEM acento e inclui servicos_oferecidos + todos os textos
+// - Fallback texto→nicho ampliado (contém/contido, sem acento)
+// - Admin/Master vê aviso + chip "⚠️ Sem nicho (N)" para classificar pendentes
+// - Chips de nicho calculados localmente dos prestadores visíveis
 // ============================================================================
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -29,9 +29,9 @@ const normalizeAddr = (addr) => {
   return addr.toLowerCase().replace(/[.,]/g, '').replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '').replace(/\s+/g, '').trim()
 }
 
-// Normaliza texto para comparação (minúsculas, sem acentos)
+// Normaliza: minúsculas + sem acentos (busca e fallback)
 const normTexto = (s) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 
 /* ---------------- CARD INTERNO ---------------- */
 
@@ -74,7 +74,6 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
       )}
 
       <div className="p-4 sm:p-6 flex-1 flex flex-col min-h-0">
-        
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="relative shrink-0">
             {prestador.avatar_do_perfil ? (
@@ -107,14 +106,17 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
         )}
 
         <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
-          {prestador.categoria_nome && (
+          {prestador.categoria_nome ? (
             <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-medium">
               {prestador.categoria_nome}
             </span>
-          )}
-          {!prestador.categoria_nome && prestador.categoria && (
+          ) : prestador.categoria ? (
             <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] sm:text-xs font-medium">
               {prestador.categoria}
+            </span>
+          ) : (
+            <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] sm:text-xs font-medium">
+              ⚠️ Sem nicho
             </span>
           )}
           {prestador.imagens_url && (
@@ -179,8 +181,12 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   const [activeIdx, setActiveIdx] = useState(0)
 
   useEffect(() => {
-    if (filtroAtivo && filtroAtivo !== 'todas') {
+    if (filtroAtivo && filtroAtivo !== 'todas' && filtroAtivo !== 'sem') {
       const idx = grupo.findIndex(p => p.categoria_id === filtroAtivo)
+      if (idx !== -1 && idx !== activeIdx) setActiveIdx(idx)
+    }
+    if (filtroAtivo === 'sem') {
+      const idx = grupo.findIndex(p => !p.categoria_id)
       if (idx !== -1 && idx !== activeIdx) setActiveIdx(idx)
     }
   }, [filtroAtivo, grupo])
@@ -228,7 +234,7 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
 /* ---------------- PAGE ---------------- */
 
 const MapaPage = () => {
-  const { user } = useAuth()
+  const { user, perfil } = useAuth()
   const [prestadores, setPrestadores] = useState([])
   const { categorias, loading: loadingCats } = useCategorias({ comContagem: false })
   const [filtroCategoria, setFiltroCategoria] = useState('todas')
@@ -236,6 +242,9 @@ const MapaPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [legendaAberta, setLegendaAberta] = useState(false)
+
+  const isMaster = user?.id === MASTER_USER_ID
+  const isAdmin = isMaster || perfil?.is_admin_condominio === true
 
   useEffect(() => { buscarDados() }, [])
 
@@ -267,18 +276,21 @@ const MapaPage = () => {
     } finally { setLoading(false) }
   }
 
-  // ✅ Enriquece: resolve categoria_id/nome; se só houver TEXTO que bate com o
-  //    nome de um nicho, usa esse nicho (fallback para cadastros antigos)
+  // Enriquece: resolve categoria_id/nome; fallback texto→nicho AMPLIADO
   const prestadoresEnriquecidos = useMemo(() => {
     const mapaCats = new Map(categorias.map(c => [c.id, c]))
-    const mapaPorNome = new Map(categorias.map(c => [normTexto(c.nome), c]))
+    const listaNorm = categorias.map(c => ({ id: c.id, nome: c.nome, n: normTexto(c.nome) }))
 
     return prestadores.map(p => {
       let catId = p.categoria_id || null
       let catNome = catId ? (mapaCats.get(catId)?.nome || null) : null
 
       if (!catId && p.categoria) {
-        const hit = mapaPorNome.get(normTexto(p.categoria))
+        const texto = normTexto(p.categoria)
+        const hit =
+          listaNorm.find(c => c.n === texto) ||
+          listaNorm.find(c => texto.includes(c.n)) ||
+          listaNorm.find(c => c.n.includes(texto) && texto.length >= 5)
         if (hit) { catId = hit.id; catNome = hit.nome }
       }
 
@@ -286,7 +298,6 @@ const MapaPage = () => {
     })
   }, [prestadores, categorias])
 
-  // ✅ Contagem LOCAL (dos prestadores já carregados) — imune a RLS/queries extras
   const contagensLocais = useMemo(() => {
     const cont = {}
     prestadoresEnriquecidos.forEach(p => {
@@ -294,6 +305,8 @@ const MapaPage = () => {
     })
     return cont
   }, [prestadoresEnriquecidos])
+
+  const semNicho = useMemo(() => prestadoresEnriquecidos.filter(p => !p.categoria_id), [prestadoresEnriquecidos])
 
   const handleDeleteServico = async (id) => {
     const prestadorBackup = prestadores.find(p => p.id === id)
@@ -315,25 +328,26 @@ const MapaPage = () => {
 
   const gruposFiltrados = useMemo(() => {
     let resultado = agrupados
-    if (filtroCategoria !== 'todas') {
+    if (filtroCategoria === 'sem') {
+      resultado = resultado.filter(grupo => grupo.some(p => !p.categoria_id))
+    } else if (filtroCategoria !== 'todas') {
       resultado = resultado.filter(grupo => grupo.some(p => p.categoria_id === filtroCategoria))
     }
     if (busca.trim()) {
-      const termo = busca.toLowerCase()
+      // ✅ Busca SEM acento e em TODOS os campos de texto (incl. servicos_oferecidos)
+      const termo = normTexto(busca)
       resultado = resultado.filter(grupo =>
         grupo.some(p => {
-          // ✅ CORREÇÃO: inclui servicos_oferecidos (array) na busca
           const servicosTexto = Array.isArray(p.servicos_oferecidos) ? p.servicos_oferecidos.join(' ') : ''
           return [p.nome, p.nome_fantasia, p.categoria_nome, p.categoria, p.descricao_comercial, p.descricao, servicosTexto, String(p.casa_numero || '')]
             .filter(Boolean)
-            .some((item) => String(item).toLowerCase().includes(termo))
+            .some((item) => normTexto(item).includes(termo))
         })
       )
     }
     return resultado
   }, [agrupados, filtroCategoria, busca])
 
-  // ✅ Chips apenas para nichos com pelo menos 1 serviço visível
   const chipsFiltro = useMemo(() => {
     return categorias.filter(c => (contagensLocais[c.id] || 0) > 0)
   }, [categorias, contagensLocais])
@@ -387,6 +401,18 @@ const MapaPage = () => {
         </div>
       </div>
 
+      {/* ✅ AVISO PARA ADMIN: serviços visíveis sem nicho classificado */}
+      {isAdmin && semNicho.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
+          <p className="text-sm font-semibold text-amber-800">
+            ⚠️ {semNicho.length} serviço(s) visível(is) ainda sem nicho classificado:
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            {semNicho.map(p => p.nome).join(' • ')} — edite cada serviço e escolha a categoria para que os filtros apareçam.
+          </p>
+        </div>
+      )}
+
       {/* FILTROS */}
       <section className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-5 space-y-4">
         <div className="relative">
@@ -421,6 +447,19 @@ const MapaPage = () => {
             </button>
           ))}
 
+          {isAdmin && semNicho.length > 0 && (
+            <button
+              onClick={() => setFiltroCategoria('sem')}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition cursor-pointer ${
+                filtroCategoria === 'sem'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+              }`}
+            >
+              ⚠️ Sem nicho ({semNicho.length})
+            </button>
+          )}
+
           <button
             onClick={() => setLegendaAberta(true)}
             className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition cursor-pointer whitespace-nowrap"
@@ -454,7 +493,10 @@ const MapaPage = () => {
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-8 sm:p-12 text-center">
           <div className="text-4xl sm:text-5xl mb-4">🔍</div>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Nenhum serviço encontrado</h3>
-          <p className="text-gray-500 mt-2 text-sm">Tente ajustar sua busca ou filtros.</p>
+          <p className="text-gray-500 mt-2 text-sm">
+            Tente ajustar sua busca ou filtros. Se o serviço existe no mapa satélite mas não aparece aqui,
+            ele ainda não foi cadastrado no aplicativo — peça ao morador para cadastrá-lo em "Editar Meu Serviço".
+          </p>
         </div>
       ) : (
         <div>
