@@ -1,7 +1,16 @@
+// ============================================================================
+// src/pages/EditarServicoPage.jsx (atualizado)
+// - Adiciona CategoriaPicker (dropdown de nicho) no formulário
+// - Salva categoria_id no banco
+// - Mantém o campo "categoria" texto como fallback de leitura
+// ============================================================================
+
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
+import useCategorias from '../hooks/useCategorias'
+import CategoriaPicker from '../components/CategoriaPicker'
 
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
@@ -12,6 +21,7 @@ const EditarServicoPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { categorias, loading: loadingCats } = useCategorias({ comContagem: false })
 
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(false)
@@ -20,7 +30,7 @@ const EditarServicoPage = () => {
   const [sucesso, setSucesso] = useState(false)
 
   const [form, setForm] = useState({
-    nome: '', casa_numero: '', categoria: '', whatsapp: '', descricao_comercial: '',
+    nome: '', casa_numero: '', categoria: '', categoria_id: null, whatsapp: '', descricao_comercial: '',
     nome_fantasia: '', servicos_oferecidos: '', condicoes_moradores: '',
     instagram_url: '', site_url: '', opt_in: true
   })
@@ -50,12 +60,18 @@ const EditarServicoPage = () => {
     if (!isMaster && !isOwner) { navigate('/perfil', { replace: true }); return }
 
     setForm({
-      nome: data.nome || '', casa_numero: data.casa_numero || '', categoria: data.categoria || '',
-      whatsapp: data.whatsapp || '', descricao_comercial: data.descricao_comercial || data.descricao || '',
+      nome: data.nome || '',
+      casa_numero: data.casa_numero || '',
+      categoria: data.categoria || '',
+      categoria_id: data.categoria_id || null,
+      whatsapp: data.whatsapp || '',
+      descricao_comercial: data.descricao_comercial || data.descricao || '',
       nome_fantasia: data.nome_fantasia || '',
       servicos_oferecidos: Array.isArray(data.servicos_oferecidos) ? data.servicos_oferecidos.join(', ') : '',
-      condicoes_moradores: data.condicoes_moradores || '', instagram_url: data.instagram_url || '',
-      site_url: data.site_url || '', opt_in: data.opt_in !== false
+      condicoes_moradores: data.condicoes_moradores || '',
+      instagram_url: data.instagram_url || '',
+      site_url: data.site_url || '',
+      opt_in: data.opt_in !== false
     })
 
     try { setImagensExistentes(JSON.parse(data.imagens_url || '[]')) } catch { setImagensExistentes([]) }
@@ -113,21 +129,43 @@ const EditarServicoPage = () => {
     e.preventDefault()
     setSalvando(true)
 
+    if (!form.categoria_id) {
+      alert('Selecione a categoria (nicho) do serviço.')
+      setSalvando(false)
+      return
+    }
+
     const todasImagens = [...imagensExistentes, ...novasImagens]
     const servicosArray = form.servicos_oferecidos.split(',').map(s => s.trim()).filter(Boolean)
 
+    // Busca o nome do nicho selecionado para manter a coluna "categoria" texto sincronizada
+    const catSelecionada = categorias.find(c => c.id === form.categoria_id)
+
     const dadosServico = {
-      nome: form.nome.trim(), casa_numero: form.casa_numero.trim(), categoria: form.categoria.trim(),
-      whatsapp: form.whatsapp.replace(/\D/g, ''), descricao_comercial: form.descricao_comercial.trim() || null,
-      nome_fantasia: form.nome_fantasia.trim() || null, servicos_oferecidos: servicosArray.length > 0 ? servicosArray : null,
-      condicoes_moradores: form.condicoes_moradores.trim() || null, instagram_url: form.instagram_url.trim() || null,
-      site_url: form.site_url.trim() || null, opt_in: form.opt_in,
-      imagens_url: todasImagens.length > 0 ? JSON.stringify(todasImagens) : null, usuario_id: user.id
+      nome: form.nome.trim(),
+      casa_numero: form.casa_numero.trim(),
+      categoria: catSelecionada?.nome || form.categoria.trim() || null, // sincroniza com o nome do nicho
+      categoria_id: form.categoria_id,
+      whatsapp: form.whatsapp.replace(/\D/g, ''),
+      descricao_comercial: form.descricao_comercial.trim() || null,
+      nome_fantasia: form.nome_fantasia.trim() || null,
+      servicos_oferecidos: servicosArray.length > 0 ? servicosArray : null,
+      condicoes_moradores: form.condicoes_moradores.trim() || null,
+      instagram_url: form.instagram_url.trim() || null,
+      site_url: form.site_url.trim() || null,
+      opt_in: form.opt_in,
+      imagens_url: todasImagens.length > 0 ? JSON.stringify(todasImagens) : null,
+      usuario_id: user.id
     }
 
     let error
-    if (ehNovo) { const result = await supabase.from('prestadores_servico').insert(dadosServico).select('id').single(); error = result.error }
-    else { const result = await supabase.from('prestadores_servico').update(dadosServico).eq('id', id); error = result.error }
+    if (ehNovo) {
+      const result = await supabase.from('prestadores_servico').insert(dadosServico).select('id').single()
+      error = result.error
+    } else {
+      const result = await supabase.from('prestadores_servico').update(dadosServico).eq('id', id)
+      error = result.error
+    }
 
     setSalvando(false)
 
@@ -140,7 +178,6 @@ const EditarServicoPage = () => {
   if (sucesso) {
     return (
       <div className="max-w-lg mx-auto px-4 sm:px-0">
-        {/* ✅ CORREÇÃO: Padding menor no mobile */}
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 p-6 sm:p-10 text-center space-y-5 sm:space-y-6 animate-[fadeIn_0.4s_ease-out]">
           <div className="relative inline-block">
             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
@@ -181,7 +218,7 @@ const EditarServicoPage = () => {
     )
   }
 
-  if (loading) return (
+  if (loading || loadingCats) return (
     <div className="flex items-center justify-center min-h-[60vh] text-gray-500 gap-3 text-sm">
       <div className="w-7 h-7 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
       Carregando dados do serviço...
@@ -196,12 +233,10 @@ const EditarServicoPage = () => {
     </div>
   )
 
-  // ✅ CORREÇÃO: Inputs seguem o mesmo padrão do PerfilPage (menores no mobile)
   const inputClass = 'w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm sm:text-base'
   const totalImagens = imagensExistentes.length + novasImagens.length
 
   return (
-    // ✅ CORREÇÃO: Container com padding externo no mobile para não grudar na borda da tela
     <div className="max-w-3xl mx-auto px-4 sm:px-0">
       <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
         
@@ -227,20 +262,23 @@ const EditarServicoPage = () => {
               <input name="nome_fantasia" value={form.nome_fantasia} onChange={handleForm} placeholder="Opcional" className={inputClass} />
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Categoria *</label>
-              <input name="categoria" value={form.categoria} onChange={handleForm} required placeholder="Ex: Encanador, Eletricista" className={inputClass} />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
-            <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">WhatsApp *</label>
               <input name="whatsapp" value={form.whatsapp} onChange={handleForm} required placeholder="11999999999" className={inputClass} />
             </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Rua/Av + Número da Casa *</label>
-              <input name="casa_numero" value={form.casa_numero} onChange={handleForm} required placeholder="Ex: Rua das Palmeiras, Casa 15" className={inputClass} />
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Rua/Av + Número da Casa *</label>
+            <input name="casa_numero" value={form.casa_numero} onChange={handleForm} required placeholder="Ex: Rua das Palmeiras, Casa 15" className={inputClass} />
+          </div>
+
+          {/* ✅ NOVO: Categoria (nicho) via CategoriaPicker */}
+          <div>
+            <CategoriaPicker
+              value={form.categoria_id}
+              onChange={(id) => setForm((f) => ({ ...f, categoria_id: id }))}
+              categorias={categorias}
+            />
           </div>
 
           <div>

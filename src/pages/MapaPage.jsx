@@ -1,7 +1,16 @@
+// ============================================================================
+// src/pages/MapaPage.jsx (atualizado)
+// - Filtros por nicho com contagem (dinâmicos, só mostra nichos com serviço)
+// - Legenda dos nichos
+// - Compatível com o card agrupado existente
+// ============================================================================
+
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import useCategorias from '../hooks/useCategorias'
+import LegendaCategorias from '../components/LegendaCategorias'
 
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
@@ -33,10 +42,10 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
 
   const whatsappLink = useMemo(() => {
     if (!whatsapp) return null
-    const servico = prestador.categoria || 'serviço disponível'
+    const servico = prestador.categoria_nome || prestador.categoria || 'serviço disponível'
     const mensagem = `Olá, também sou morador do Bella Vittà e quero conversar com você sobre seu serviço de ${servico}`
     return `https://wa.me/55${whatsapp}?text=${encodeURIComponent(mensagem)}`
-  }, [whatsapp, prestador.categoria])
+  }, [whatsapp, prestador])
 
   const handleDelete = async (e) => {
     e.stopPropagation()
@@ -59,10 +68,8 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
         <div className="w-full h-1.5 bg-gradient-to-r from-emerald-400 to-teal-400 shrink-0" />
       )}
 
-      {/* ✅ CORREÇÃO: Padding menor no mobile, avatar menor no mobile */}
       <div className="p-4 sm:p-6 flex-1 flex flex-col min-h-0">
         
-        {/* Cabeçalho: Nome e Avatar */}
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="relative shrink-0">
             {prestador.avatar_do_perfil ? (
@@ -78,7 +85,6 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
             {prestador.nome_fantasia && (
               <p className="text-xs sm:text-sm text-emerald-600 truncate">{prestador.nome_fantasia}</p>
             )}
-            {/* ✅ CORREÇÃO: Endereço foi jogado pra baixo do nome no mobile para não esmagar o layout */}
             {prestador.casa_numero && (
               <p className="text-[10px] sm:text-xs text-gray-500 truncate mt-0.5 sm:mt-1 hidden sm:block">
                 📍 {prestador.casa_numero}
@@ -87,7 +93,6 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           </div>
         </div>
 
-        {/* ✅ NOVO: Endereço dedicado no mobile (abaixo do nome) */}
         {prestador.casa_numero && (
           <div className="mt-2 sm:hidden">
             <span className="inline-flex items-center px-2 py-0.5 bg-gray-50 rounded-lg text-[10px] text-gray-500 font-medium truncate max-w-full">
@@ -97,8 +102,15 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
         )}
 
         <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
-          {prestador.categoria && (
+          {/* ✅ NOVO: mostra nome do NICHOfiltrado pelo categoria_id */}
+          {prestador.categoria_nome && (
             <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-medium">
+              {prestador.categoria_nome}
+            </span>
+          )}
+          {/* Fallback: categoria texto antiga (para serviços ainda não migrados) */}
+          {!prestador.categoria_nome && prestador.categoria && (
+            <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] sm:text-xs font-medium">
               {prestador.categoria}
             </span>
           )}
@@ -164,8 +176,8 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   const [activeIdx, setActiveIdx] = useState(0)
 
   useEffect(() => {
-    if (filtroAtivo && filtroAtivo !== 'Todas') {
-      const idx = grupo.findIndex(p => p.categoria === filtroAtivo)
+    if (filtroAtivo && filtroAtivo !== 'todas') {
+      const idx = grupo.findIndex(p => p.categoria_id === filtroAtivo || p.categoria === filtroAtivo)
       if (idx !== -1 && idx !== activeIdx) setActiveIdx(idx)
     }
   }, [filtroAtivo, grupo])
@@ -175,12 +187,10 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
   }, [grupo.length, activeIdx])
 
   return (
-    // ✅ CORREÇÃO: Altura maior no mobile (360px) para nunca cortar os botões de ação
     <div className="relative h-[360px] sm:h-[420px] w-full">
       {grupo.map((prestador, i) => {
         const diff = activeIdx - i
         const isFront = diff === 0
-        // ✅ CORREÇÃO: Reduzir deslocamento no mobile para não sair da caixa
         const translateX = diff > 0 ? (window.innerWidth < 640 ? diff * 6 : diff * 12) : 0
         const translateY = diff > 0 ? (window.innerWidth < 640 ? diff * 4 : diff * 8) : 0
         const scale = 1 - (Math.abs(diff) * 0.03)
@@ -189,7 +199,6 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
         const blur = Math.abs(diff) > 2 ? 'blur(2px)' : 'none'
 
         return (
-          // ✅ CORREÇÃO: overflow-hidden garante que nada vaze do card empilhado
           <div key={prestador.id} className="absolute inset-0 transition-all duration-300 ease-out overflow-hidden rounded-2xl" style={{ transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`, opacity, zIndex, filter: blur }}>
             <CardConteudo prestador={prestador} onDelete={onDelete} isFront={isFront} onBringToFront={() => setActiveIdx(i)} />
           </div>
@@ -218,38 +227,52 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
 const MapaPage = () => {
   const { user } = useAuth()
   const [prestadores, setPrestadores] = useState([])
-  const [categorias, setCategorias] = useState([])
-  const [filtroCategoria, setFiltroCategoria] = useState('Todas')
+  const { categorias, contagens, loading: loadingCats } = useCategorias()
+  const [filtroCategoria, setFiltroCategoria] = useState('todas')
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [legendaAberta, setLegendaAberta] = useState(false)
 
   useEffect(() => { buscarDados() }, [])
 
   const buscarDados = async () => {
     setLoading(true); setError(null)
     try {
-      const [resPrestadores, resCategorias] = await Promise.all([
-        supabase.from('prestadores_servico').select('*').eq('opt_in', true).order('nome'),
-        supabase.from('categorias').select('*').eq('tipo', 'condominio').order('ordem')
-      ])
-      if (resPrestadores.error) throw resPrestadores.error
-      const listaCategorias = resCategorias.error ? [] : (resCategorias.data || [])
-      const listaPrestadores = resPrestadores.data || []
+      const { data: listaPrestadores, error: resPrestadores } = await supabase
+        .from('prestadores_servico')
+        .select('*')
+        .eq('opt_in', true)
+        .order('nome')
 
-      const listaIdsUnicos = [...new Set(listaPrestadores.map(p => p.usuario_id).filter(Boolean))]
+      if (resPrestadores) throw resPrestadores
+      const lista = listaPrestadores || []
+
+      const listaIdsUnicos = [...new Set(lista.map(p => p.usuario_id).filter(Boolean))]
       let mapaAvatares = {}
       if (listaIdsUnicos.length > 0) {
         const { data: perfis } = await supabase.from('perfis').select('id, avatar_url').in('id', listaIdsUnicos)
         if (perfis) perfis.forEach(p => { if (p.avatar_url) mapaAvatares[p.id] = p.avatar_url })
       }
 
-      setPrestadores(listaPrestadores.map(p => ({ ...p, avatar_do_perfil: p.avatar_url || mapaAvatares[p.usuario_id] || null })))
-      setCategorias(listaCategorias)
+      // Enriquece com nome do nicho
+      setPrestadores(lista.map(p => ({
+        ...p,
+        avatar_do_perfil: p.avatar_url || mapaAvatares[p.usuario_id] || null
+      })))
     } catch (err) {
       console.error(err); setError('Não foi possível carregar os serviços.')
     } finally { setLoading(false) }
   }
+
+  // ✅ Enriquece prestadores com nome do nicho (vindo do hook useCategorias)
+  const prestadoresEnriquecidos = useMemo(() => {
+    const mapaCats = new Map(categorias.map(c => [c.id, c]))
+    return prestadores.map(p => ({
+      ...p,
+      categoria_nome: p.categoria_id ? (mapaCats.get(p.categoria_id)?.nome || null) : null
+    }))
+  }, [prestadores, categorias])
 
   const handleDeleteServico = async (id) => {
     const prestadorBackup = prestadores.find(p => p.id === id)
@@ -260,36 +283,36 @@ const MapaPage = () => {
 
   const agrupados = useMemo(() => {
     const grupos = new Map(); const soltos = []
-    prestadores.forEach(p => {
+    prestadoresEnriquecidos.forEach(p => {
       const key = normalizeAddr(p.casa_numero)
       if (!key) { soltos.push([p]); return }
       if (!grupos.has(key)) grupos.set(key, [])
       grupos.get(key).push(p)
     })
     return [...soltos, ...Array.from(grupos.values())]
-  }, [prestadores])
+  }, [prestadoresEnriquecidos])
 
   const gruposFiltrados = useMemo(() => {
     let resultado = agrupados
-    if (filtroCategoria !== 'Todas') resultado = resultado.filter(grupo => grupo.some(p => p.categoria === filtroCategoria))
+    if (filtroCategoria !== 'todas') {
+      resultado = resultado.filter(grupo => grupo.some(p => p.categoria_id === filtroCategoria))
+    }
     if (busca.trim()) {
       const termo = busca.toLowerCase()
-      resultado = resultado.filter(grupo => grupo.some(p => [p.nome, p.nome_fantasia, p.categoria, p.descricao_comercial, p.descricao, String(p.casa_numero || '')].filter(Boolean).some((item) => item.toLowerCase().includes(termo))))
+      resultado = resultado.filter(grupo => grupo.some(p => [p.nome, p.nome_fantasia, p.categoria_nome, p.categoria, p.descricao_comercial, p.descricao, String(p.casa_numero || '')].filter(Boolean).some((item) => item.toLowerCase().includes(termo))))
     }
     return resultado
   }, [agrupados, filtroCategoria, busca])
 
-  const categoriasFiltro = useMemo(() => {
-    const doBanco = categorias.map((c) => c.nome)
-    const doDados = [...new Set(prestadores.map((p) => p.categoria).filter(Boolean))]
-    return ['Todas', ...new Set([...doBanco, ...doDados])]
-  }, [categorias, prestadores])
+  // ✅ Chips só aparecem para nichos com serviço (contagem > 0)
+  const chipsFiltro = useMemo(() => {
+    return categorias.filter(c => (contagens[c.id] || 0) > 0)
+  }, [categorias, contagens])
 
   const totalCasas = useMemo(() => new Set(prestadores.map((p) => p.casa_numero).filter(Boolean)).size, [prestadores])
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* ✅ CORREÇÃO: Padding menor no mobile */}
       <section className="rounded-2xl sm:rounded-[32px] bg-gradient-to-br from-emerald-700 to-teal-700 text-white p-6 sm:p-8 md:p-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full blur-3xl" />
         <div className="relative z-10">
@@ -302,7 +325,7 @@ const MapaPage = () => {
               <p className="text-[10px] sm:text-sm text-emerald-100">Prestadores</p>
             </div>
             <div className="bg-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4">
-              <p className="text-xl sm:text-2xl font-bold">{categoriasFiltro.length - 1}</p>
+              <p className="text-xl sm:text-2xl font-bold">{chipsFiltro.length}</p>
               <p className="text-[10px] sm:text-sm text-emerald-100">Categorias</p>
             </div>
             <div className="bg-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4">
@@ -313,7 +336,6 @@ const MapaPage = () => {
         </div>
       </section>
 
-      {/* ✅ CORREÇÃO CRÍTICA: Iframe agora respeita o tamanho do mobile */}
       <div className="bg-white rounded-2xl sm:rounded-3xl border-2 border-emerald-400 overflow-hidden shadow-xl relative">
         <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 z-10 flex items-center gap-2 sm:gap-3 shadow-md">
           <span className="text-xl sm:text-2xl">🛰️</span>
@@ -323,7 +345,6 @@ const MapaPage = () => {
           </div>
         </div>
         <div className="pt-12 sm:pt-14">
-          {/* Altura dinâmica: 250px no mobile, 450px no desktop */}
           <iframe 
             src={GOOGLE_MAPS_EMBED_URL} 
             width="100%" 
@@ -343,24 +364,64 @@ const MapaPage = () => {
           <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           <input type="text" placeholder="Buscar por nome, serviço ou casa..." value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm sm:text-base" />
         </div>
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-none">
-          {categoriasFiltro.map((cat) => (
-            <button key={cat} onClick={() => setFiltroCategoria(cat)} className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition cursor-pointer ${filtroCategoria === cat ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {cat}
+
+        {/* ✅ Chips de nicho com contagem */}
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-none items-center">
+          <button
+            onClick={() => setFiltroCategoria('todas')}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition cursor-pointer ${
+              filtroCategoria === 'todas'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Todas
+          </button>
+
+          {chipsFiltro.map((c) => (
+            <button
+              key={c.id}
+              title={c.descricao}
+              onClick={() => setFiltroCategoria(c.id)}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition cursor-pointer ${
+                filtroCategoria === c.id
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {c.nome} ({contagens[c.id] || 0})
             </button>
           ))}
-          {(filtroCategoria !== 'Todas' || busca) && (
-            <button onClick={() => { setFiltroCategoria('Todas'); setBusca('') }} className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">Limpar</button>
+
+          <button
+            onClick={() => setLegendaAberta(true)}
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition cursor-pointer whitespace-nowrap"
+          >
+            📚 Legenda
+          </button>
+
+          {(filtroCategoria !== 'todas' || busca) && (
+            <button
+              onClick={() => { setFiltroCategoria('todas'); setBusca('') }}
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+            >
+              Limpar
+            </button>
           )}
         </div>
       </section>
 
       {/* GRID COM AGRUPAMENTO */}
-      {loading ? (
-        // ✅ CORREÇÃO: Skeletons com altura igual a dos cards reais no mobile
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">{[...Array(6)].map((_, i) => <div key={i} className="h-[360px] sm:h-[420px] bg-white rounded-2xl sm:rounded-3xl border border-gray-100 animate-pulse" />)}</div>
+      {loading || loadingCats ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-[360px] sm:h-[420px] bg-white rounded-2xl sm:rounded-3xl border border-gray-100 animate-pulse" />
+          ))}
+        </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-100 rounded-2xl sm:rounded-3xl p-8 sm:p-10 text-center"><p className="text-red-600 text-sm sm:text-base">{error}</p></div>
+        <div className="bg-red-50 border border-red-100 rounded-2xl sm:rounded-3xl p-8 sm:p-10 text-center">
+          <p className="text-red-600 text-sm sm:text-base">{error}</p>
+        </div>
       ) : gruposFiltrados.length === 0 ? (
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-8 sm:p-12 text-center">
           <div className="text-4xl sm:text-5xl mb-4">🔍</div>
@@ -371,16 +432,29 @@ const MapaPage = () => {
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-2">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Prestadores disponíveis</h2>
-            <span className="text-xs sm:text-sm text-gray-500">{gruposFiltrados.length} endereço(s) • {prestadores.length} serviço(s)</span>
+            <span className="text-xs sm:text-sm text-gray-500">
+              {gruposFiltrados.length} endereço(s) • {prestadoresEnriquecidos.length} serviço(s)
+            </span>
           </div>
-          {/* ✅ CORREÇÃO: Gap muito menor no mobile (gap-4) para caber mais cards na vertical */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-x-6 sm:gap-y-10">
             {gruposFiltrados.map((grupo, index) => (
-              <CardAgrupado key={`${normalizeAddr(grupo[0]?.casa_numero)}-${index}`} grupo={grupo} filtroAtivo={filtroCategoria} onDelete={handleDeleteServico} />
+              <CardAgrupado
+                key={`${normalizeAddr(grupo[0]?.casa_numero)}-${index}`}
+                grupo={grupo}
+                filtroAtivo={filtroCategoria}
+                onDelete={handleDeleteServico}
+              />
             ))}
           </div>
         </div>
       )}
+
+      {/* Modal de legenda */}
+      <LegendaCategorias
+        aberto={legendaAberta}
+        onFechar={() => setLegendaAberta(false)}
+        categorias={categorias}
+      />
     </div>
   )
 }
