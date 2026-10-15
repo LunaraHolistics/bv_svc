@@ -1,20 +1,24 @@
 // src/pages/AnunciosPage.jsx
-import React from 'react'
-import { Link } from 'react-router-dom'
-import ListagemAnuncios from '../components/ListagemAnuncios'
+import React from "react";
+import { Link } from "react-router-dom";
+import ListagemAnuncios from "../components/ListagemAnuncios";
 
 const BenefitCard = ({ title, description, icon, color }) => {
   return (
     // ✅ CORREÇÃO: Padding e arredondamento menores no mobile
     <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 ${color}`}>
+      <div
+        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 ${color}`}
+      >
         {icon}
       </div>
       <h3 className="text-base sm:text-lg font-bold text-gray-900">{title}</h3>
-      <p className="text-xs sm:text-sm text-gray-500 mt-1.5 sm:mt-2 leading-relaxed">{description}</p>
+      <p className="text-xs sm:text-sm text-gray-500 mt-1.5 sm:mt-2 leading-relaxed">
+        {description}
+      </p>
     </div>
-  )
-}
+  );
+};
 
 const CTASection = () => {
   return (
@@ -31,62 +35,109 @@ const CTASection = () => {
             Transforme itens esquecidos em oportunidades
           </h2>
           <p className="mt-3 text-emerald-50 text-sm md:text-base">
-            Venda móveis, eletrônicos, objetos e muito mais para pessoas próximas, com mais praticidade e segurança.
+            Venda móveis, eletrônicos, objetos e muito mais para pessoas
+            próximas, com mais praticidade e segurança.
           </p>
         </div>
-        <Link to="/novo-anuncio" className="inline-flex items-center justify-center px-7 py-4 bg-white text-emerald-700 rounded-2xl font-bold no-underline hover:scale-105 transition text-sm sm:text-base">
+        <Link
+          to="/novo-anuncio"
+          className="inline-flex items-center justify-center px-7 py-4 bg-white text-emerald-700 rounded-2xl font-bold no-underline hover:scale-105 transition text-sm sm:text-base"
+        >
           Publicar agora
         </Link>
       </div>
     </section>
-  )
-}
+  );
+};
 
 const AnunciosPage = () => {
   return (
     <div className="space-y-6 sm:space-y-10">
-
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-[36px] bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 text-white p-6 sm:p-8 md:p-12">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl" />
-        <div className="relative z-10 max-w-3xl">
-          <span className="inline-flex px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-xs font-medium mb-5 !text-white">
-            Marketplace Bella Vittà
-          </span>
-          {/* ✅ CORREÇÃO: Texto menor no mobile */}
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight !text-white">
-            Compre e venda entre vizinhos com muito mais confiança
-          </h1>
-          <p className="mt-5 text-emerald-100 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed">
-            Um marketplace privado para moradores anunciarem produtos, encontrarem oportunidades e negociarem com pessoas da própria comunidade.
-          </p>
-          <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
-            <Link to="/novo-anuncio" className="px-6 py-3 bg-white text-slate-900 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base">
-              Criar anúncio
-            </Link>
-            <Link to="/servicos" className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl !text-white no-underline hover:bg-white/25 transition text-sm sm:text-base">
-              Explorar serviços
-            </Link>
+
+        {/* ✅ Layout flex: texto cresce e empurra a imagem p/ direita (igual Mapa/Indicações) */}
+        <div className="relative z-10 flex items-center gap-6 sm:gap-8 md:gap-10">
+          {/* Texto — wrapper SEM max-w; limites vão para dentro do h1/p */}
+          <div className="flex-1 min-w-0">
+            <span className="inline-flex px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-xs font-medium mb-5 !text-white">
+              Marketplace Bella Vittà
+            </span>
+            {/* ✅ CORREÇÃO: Texto menor no mobile */}
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight !text-white max-w-3xl">
+              Compre e venda entre vizinhos com muito mais confiança
+            </h1>
+            <p className="mt-5 text-emerald-100 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed">
+              Um marketplace privado para moradores anunciarem produtos,
+              encontrarem oportunidades e negociarem com pessoas da própria
+              comunidade.
+            </p>
+            <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
+              <Link
+                to="/novo-anuncio"
+                className="px-6 py-3 bg-white text-slate-900 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base"
+              >
+                Criar anúncio
+              </Link>
+              <Link
+                to="/servicos"
+                className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl !text-white no-underline hover:bg-white/25 transition text-sm sm:text-base"
+              >
+                Explorar serviços
+              </Link>
+            </div>
+          </div>
+
+          {/* ✅ Imagem decorativa do marketplace — mesma posição/tamanho das demais páginas */}
+          <div className="hidden sm:block shrink-0 w-36 md:w-48 lg:w-60 aspect-square">
+            <img
+              src="/anuncios-hero.png"
+              alt="Ícones em contorno representando compras e vendas entre vizinhos"
+              className="w-full h-full object-cover rounded-2xl sm:rounded-3xl shadow-xl shadow-black/25 ring-1 ring-white/15"
+            />
           </div>
         </div>
       </section>
 
       {/* BENEFÍCIOS */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-        <BenefitCard icon="🛡️" title="Mais segurança" description="Negocie com pessoas próximas dentro da própria comunidade." color="bg-emerald-50" />
-        <BenefitCard icon="⚡" title="Mais rapidez" description="Venda produtos sem depender de marketplaces externos." color="bg-blue-50" />
-        <BenefitCard icon="🤝" title="Comunidade forte" description="Fortaleça relações locais e valorize a rede de vizinhos." color="bg-purple-50" />
+        <BenefitCard
+          icon="🛡️"
+          title="Mais segurança"
+          description="Negocie com pessoas próximas dentro da própria comunidade."
+          color="bg-emerald-50"
+        />
+        <BenefitCard
+          icon="⚡"
+          title="Mais rapidez"
+          description="Venda produtos sem depender de marketplaces externos."
+          color="bg-blue-50"
+        />
+        <BenefitCard
+          icon="🤝"
+          title="Comunidade forte"
+          description="Fortaleça relações locais e valorize a rede de vizinhos."
+          color="bg-purple-50"
+        />
       </section>
 
       {/* LISTAGEM */}
       <section className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm p-4 sm:p-5 md:p-7">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Últimos anúncios publicados</h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">Veja os produtos disponíveis dentro da comunidade.</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Últimos anúncios publicados
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
+              Veja os produtos disponíveis dentro da comunidade.
+            </p>
           </div>
-          <Link to="/novo-anuncio" className="inline-flex items-center justify-center px-5 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition no-underline text-sm sm:text-base">
+          <Link
+            to="/novo-anuncio"
+            className="inline-flex items-center justify-center px-5 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition no-underline text-sm sm:text-base"
+          >
             + Novo anúncio
           </Link>
         </div>
@@ -95,7 +146,7 @@ const AnunciosPage = () => {
 
       <CTASection />
     </div>
-  )
-}
+  );
+};
 
-export default AnunciosPage
+export default AnunciosPage;
