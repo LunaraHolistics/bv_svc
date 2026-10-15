@@ -222,40 +222,32 @@ const IndicacoesPage = () => {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* HERO */}
-      <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-6 sm:p-8 md:p-10">
-        <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl" />
+<section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-6 sm:p-8 md:p-10">
+  <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+  <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl" />
 
-        <div className="relative z-10 flex items-center gap-6 sm:gap-8 md:gap-10">
-          {/* Texto */}
-          <div className="flex-1 min-w-0 max-w-2xl">
-            <span className="inline-flex px-4 py-2 rounded-full bg-white/10 text-xs font-medium backdrop-blur-md mb-4">
-              Rede de confiança
-            </span>
-            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight">
-              Profissionais recomendados por vizinhos reais
-            </h1>
-            <p className="mt-4 text-blue-100 max-w-xl text-sm sm:text-base">
-              Encontre prestadores bem avaliados pela comunidade Bella Vittà.
-            </p>
-            <button
-              onClick={abrirForm}
-              className="mt-6 px-6 py-3 bg-white text-blue-700 rounded-2xl font-semibold hover:scale-105 transition text-sm sm:text-base cursor-pointer"
-            >
-              + Fazer indicação
-            </button>
-          </div>
+  <div className="relative z-10 flex items-center gap-6 sm:gap-8 md:gap-10">
+    {/* ✅ Texto: wrapper SEM max-w (cresce e empurra a imagem p/ direita, igual ao Mapa);
+        o max-w-2xl foi para dentro do h1 só para a quebra de linha continuar bonita */}
+    <div className="flex-1 min-w-0">
+      <span className="inline-flex px-4 py-2 rounded-full bg-white/10 text-xs font-medium backdrop-blur-md mb-4">Rede de confiança</span>
+      <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight max-w-2xl">Profissionais recomendados por vizinhos reais</h1>
+      <p className="mt-4 text-blue-100 max-w-xl text-sm sm:text-base">Encontre prestadores bem avaliados pela comunidade Bella Vittà.</p>
+      <button onClick={abrirForm} className="mt-6 px-6 py-3 bg-white text-blue-700 rounded-2xl font-semibold hover:scale-105 transition text-sm sm:text-base cursor-pointer">
+        + Fazer indicação
+      </button>
+    </div>
 
-          {/* ✅ Imagem decorativa (sussurro / indicação) — object-cover corta as sobras */}
-          <div className="hidden sm:block shrink-0 w-36 md:w-48 lg:w-60 aspect-square">
-            <img
-              src="/indicacoes-hero.png"
-              alt="Vizinha recomendando, em confiança, um profissional para outra vizinha"
-              className="w-full h-full object-cover rounded-2xl sm:rounded-3xl shadow-xl shadow-black/25 ring-1 ring-white/15"
-            />
-          </div>
-        </div>
-      </section>
+    {/* ✅ Imagem decorativa — MESMA posição, tamanho e comportamento do hero do Mapa */}
+    <div className="hidden sm:block shrink-0 w-36 md:w-48 lg:w-60 aspect-square">
+      <img
+        src="/indicacoes-hero.png"
+        alt="Vizinha recomendando, em confiança, um profissional para outra vizinha"
+        className="w-full h-full object-cover rounded-2xl sm:rounded-3xl shadow-xl shadow-black/25 ring-1 ring-white/15"
+      />
+    </div>
+  </div>
+</section>
 
       {/* STATS */}
       <section className="grid grid-cols-3 gap-2 sm:gap-4">
