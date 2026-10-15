@@ -1,11 +1,21 @@
+// ============================================================================
 // src/pages/AnuncioDetailPage.jsx
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+// - Galeria principal com ImagemFluida (retrato/paisagem sem corte seco)
+// - Miniaturas quadradas fixas (padrão de mercado) + troca suave
+// - Dados do vendedor via perfis; contato WhatsApp; gestão dono/master
+// ============================================================================
+
+import React, { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import ImagemFluida from '../components/ImagemFluida'
+import { ShoppingBag, ArrowLeft } from 'lucide-react'
+
+const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
 const formatarPreco = (valor) => {
-  if (!valor) return 'R$ 0,00'
+  if (valor === null || valor === undefined || valor === '') return 'Sob consulta'
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
@@ -15,7 +25,15 @@ const getImagens = (imagemUrl) => {
     const parsed = JSON.parse(imagemUrl)
     if (Array.isArray(parsed)) return parsed
     return [imagemUrl]
-  } catch { return [imagemUrl] }
+  } catch {
+    return [imagemUrl]
+  }
+}
+
+const formatarWhatsapp = (numero) => {
+  if (!numero) return null
+  const limpo = String(numero).replace(/\D/g, '')
+  return limpo.length >= 10 ? limpo : null
 }
 
 const AnuncioDetailPage = () => {
@@ -25,119 +43,152 @@ const AnuncioDetailPage = () => {
 
   const [anuncio, setAnuncio] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [naoEncontrado, setNaoEncontrado] = useState(false)
+  const [idx, setIdx] = useState(0)
 
   useEffect(() => { buscarAnuncio() }, [id])
 
   const buscarAnuncio = async () => {
-    setLoading(true); setError(null)
-    try {
-      const { data, error } = await supabase.from('anuncios_vendas').select('*').eq('id', id).single()
-      if (error) throw error
-      if (!data) throw new Error('Anúncio não encontrado.')
-      setAnuncio(data)
-    } catch (err) {
-      console.error(err); setError(err.message || 'Erro ao carregar anúncio.')
-    } finally { setLoading(false) }
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('anuncios_vendas')
+      .select('*, vendedor:perfis(id, nome_completo, avatar_url, whatsapp)')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error || !data) { setNaoEncontrado(true); setLoading(false); return }
+    setAnuncio(data)
+    setLoading(false)
   }
 
-  const imagens = anuncio ? getImagens(anuncio.imagem_url) : []
-  const ehDono = user && anuncio ? anuncio.usuario_id === user.id : false
+  const imagens = useMemo(() => getImagens(anuncio?.imagem_url), [anuncio])
 
-  const statusNormalizado = anuncio?.status ? anuncio.status.charAt(0).toUpperCase() + anuncio.status.slice(1).toLowerCase() : ''
-  const statusCor = statusNormalizado === 'Ativo' ? 'bg-emerald-100 text-emerald-700' : statusNormalizado === 'Vendido' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+  const handleDelete = async () => {
+    if (!window.confirm('Excluir este anúncio permanentemente?')) return
+    const { error } = await supabase.from('anuncios_vendas').delete().eq('id', id)
+    if (error) return alert('Erro ao excluir: ' + error.message)
+    navigate('/anuncios')
+  }
 
   if (loading) return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+    <div className="flex items-center justify-center min-h-[60vh] text-gray-500 gap-3 text-sm">
+      <div className="w-7 h-7 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+      Carregando anúncio...
     </div>
   )
 
-  if (error) return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
+  if (naoEncontrado) return (
+    <div className="max-w-3xl mx-auto py-20 text-center px-4">
       <div className="text-5xl mb-4">😕</div>
-      <h2 className="text-xl font-bold text-gray-900 mb-2">Ops!</h2>
-      <p className="text-gray-500 mb-6 max-w-md text-sm sm:text-base">{error}</p>
-      <Link to="/anuncios" className="px-6 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition no-underline text-sm">Ver todos os anúncios</Link>
+      <h2 className="text-xl font-bold text-gray-900">Anúncio não encontrado ou removido</h2>
+      <Link to="/anuncios" className="inline-block mt-6 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition no-underline text-sm">Ver outros anúncios</Link>
     </div>
   )
 
-  if (!anuncio) return null
+  const isMaster = user?.id === MASTER_USER_ID
+  const isOwner = user?.id === anuncio.usuario_id
+  const canManage = isMaster || isOwner
+  const whatsapp = formatarWhatsapp(anuncio.vendedor?.whatsapp)
+  const whatsappLink = whatsapp
+    ? `https://wa.me/55${whatsapp}?text=${encodeURIComponent(`Olá! Vi seu anúncio "${anuncio.titulo}" no Bella Vittà e tenho interesse.`)}`
+    : null
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition">
-        ← Voltar aos anúncios
+    <div className="max-w-5xl mx-auto px-4 sm:px-0 space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition cursor-pointer">
+        <ArrowLeft size={16} /> Voltar
       </button>
 
-      <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        {imagens.length > 0 && (
-          <div className="relative">
-            <div className="flex gap-1 overflow-x-auto p-2 bg-gray-50 snap-x snap-mandatory">
-              {imagens.map((img, index) => (
-                <img key={index} src={img} alt={`${anuncio.titulo} - Foto ${index + 1}`} className="h-56 sm:h-64 md:h-80 flex-shrink-0 w-auto object-contain rounded-xl snap-start" />
-              ))}
+      <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
+        {/* ===== GALERIA ===== */}
+        <div className="space-y-3">
+          {imagens.length > 0 ? (
+            <>
+              {/* ✅ Janela principal fluida */}
+              <ImagemFluida
+                src={imagens[idx]}
+                alt={anuncio.titulo}
+                arredondado="rounded-2xl sm:rounded-3xl"
+                className="shadow-lg"
+              />
+
+              {imagens.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {imagens.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setIdx(i)}
+                      className={`shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                        i === idx ? 'border-emerald-500' : 'border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="aspect-[4/3] bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl sm:rounded-3xl flex items-center justify-center">
+              <ShoppingBag className="w-12 h-12 text-emerald-300" />
             </div>
-            <div className="absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-white/80 to-transparent pointer-events-none" />
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* ✅ CORREÇÃO: Padding interno menor no mobile */}
-        <div className="p-4 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <span className={`px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded-full ${statusCor}`}>
-              {statusNormalizado}
-            </span>
+        {/* ===== INFO ===== */}
+        <div className="space-y-5">
+          <div>
             {anuncio.destaque && (
-              <span className="px-2.5 sm:px-3 py-1 bg-amber-50 text-amber-700 text-[10px] sm:text-xs font-medium rounded-full">
-                ★ Destaque
-              </span>
+              <span className="inline-block px-2.5 py-1 mb-2 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold">⭐ Destaque</span>
             )}
-            <p className="text-xl sm:text-2xl font-bold text-emerald-700">
-              {formatarPreco(anuncio.preco)}
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{anuncio.titulo}</h1>
+            <p className="text-emerald-600 font-bold text-xl sm:text-2xl mt-2">{formatarPreco(anuncio.preco)}</p>
           </div>
 
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
-            {anuncio.titulo}
-          </h1>
+          {anuncio.descricao && (
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line">{anuncio.descricao}</p>
+          )}
 
-          <p className="text-gray-500 leading-relaxed whitespace-pre-line mb-4 sm:mb-6 text-sm sm:text-base">
-            {anuncio.descricao}
-          </p>
-
-          <div className="border-t border-gray-100 pt-3 sm:pt-4 mb-3 sm:mb-4 space-y-2 text-xs sm:text-sm text-gray-500">
-            <p>
-              Publicado em{' '}
-              <span className="font-medium text-gray-700">
-                {new Date(anuncio.created_at).toLocaleDateString('pt-BR')} às{' '}
-                {new Date(anuncio.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </p>
+          <div className="text-xs text-gray-400 space-y-1">
+            <p>📅 Publicado em {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}</p>
             {anuncio.data_expiracao && (
-              <p>
-                Expira em{' '}
-                <span className="font-medium text-gray-700">
-                  {new Date(anuncio.data_expiracao).toLocaleDateString('pt-BR')}
-                </span>
-              </p>
+              <p>⏳ Expira em {new Date(anuncio.data_expiracao).toLocaleDateString('pt-BR')}</p>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-3 border-t border-gray-100">
-            <a
-              href={`https://wa.me/?text=Olá, vi seu anúncio no BV Service: ${encodeURIComponent(anuncio.titulo)} ${encodeURIComponent(formatarPreco(anuncio.preco))}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-green-500 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium hover:bg-green-600 transition no-underline"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.871-1.964-.621-3.983-3.062-3.584-3.062-6.251 0-2.687.925-5.378.787-7.778-2.297-.08-4.686.19-6.492 1.137-1.844-2.884-2.06-4.037.175-5.683-2.995-4.795-7.586-4.795-4.795 0-1.768 1.337-3.584 4.795 5.228 4.795 4.795 0 2.178-.405 4.686-1.337 7.166-5.39 12.06z" /></svg>
-              WhatsApp
-            </a>
-            {ehDono && (
-              <button onClick={() => navigate(`/editar-anuncio/${anuncio.id}`)} className="px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium hover:bg-gray-200 transition no-underline cursor-pointer">
-                ✏️ Editar
-              </button>
+          {/* Vendedor */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
+            {anuncio.vendedor?.avatar_url ? (
+              <img src={anuncio.vendedor.avatar_url} alt="" className="w-11 h-11 rounded-xl object-cover" />
+            ) : (
+              <div className="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                {anuncio.vendedor?.nome_completo?.charAt(0)?.toUpperCase() || '🏡'}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">{anuncio.vendedor?.nome_completo || 'Morador'}</p>
+              <p className="text-[11px] text-gray-400">Vendedor verificado da comunidade</p>
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {whatsappLink ? (
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex-1 text-center px-5 py-3 bg-green-500 text-white rounded-xl font-semibold no-underline hover:bg-green-600 transition text-sm sm:text-base">
+                💬 Chamar no WhatsApp
+              </a>
+            ) : (
+              <div className="flex-1 text-center px-5 py-3 bg-gray-100 text-gray-400 rounded-xl text-sm">Sem contato cadastrado</div>
+            )}
+            {canManage && (
+              <>
+                <button onClick={() => navigate(`/editar-anuncio/${anuncio.id}`)} className="px-5 py-3 bg-emerald-50 text-emerald-700 rounded-xl font-semibold hover:bg-emerald-100 transition cursor-pointer text-sm">
+                  ✏️ Editar
+                </button>
+                <button onClick={handleDelete} className="px-5 py-3 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition cursor-pointer text-sm">
+                  🗑️ Excluir
+                </button>
+              </>
             )}
           </div>
         </div>

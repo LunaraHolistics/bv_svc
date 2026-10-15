@@ -1,7 +1,17 @@
+// ============================================================================
+// src/pages/ServicoDetalhePage.jsx (Atualizado com Imagem Fluida + Destaque)
+// ----------------------------------------------------------------------------
+// - Galeria principal usa ImagemFluida: retrato fica retrato, paisagem fica paisagem
+// - Miniaturas quadradas fixas para navegação suave
+// - Enriquece categoria_nome a partir do categoria_id
+// - Exibe selo "⭐ Destaque" se o serviço estiver marcado
+// ============================================================================
+
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import ImagemFluida from '../components/ImagemFluida'
 
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
@@ -41,11 +51,25 @@ const ServicoDetalhePage = () => {
     if (error || !data) { setError('Serviço não encontrado.'); setLoading(false); return }
 
     let avatarUrl = data.avatar_url || null
+    let categoriaNome = null
+
+    // Busca avatar do perfil se não houver no serviço
     if (!avatarUrl && data.usuario_id) {
       const { data: perfil } = await supabase.from('perfis').select('avatar_url').eq('id', data.usuario_id).single()
       if (perfil?.avatar_url) avatarUrl = perfil.avatar_url
     }
-    setServico({ ...data, avatar_do_perfil: avatarUrl })
+
+    // Busca nome da categoria para exibir de forma padronizada
+    if (data.categoria_id) {
+      const { data: cat } = await supabase.from('categorias_servico').select('nome').eq('id', data.categoria_id).single()
+      if (cat) categoriaNome = cat.nome
+    }
+
+    setServico({ 
+      ...data, 
+      avatar_do_perfil: avatarUrl,
+      categoria_nome: categoriaNome 
+    })
     setLoading(false)
   }
 
@@ -73,7 +97,7 @@ const ServicoDetalhePage = () => {
   const canManage = isMaster || isOwner
 
   const whatsappLink = whatsapp
-    ? `https://wa.me/55${whatsapp}?text=${encodeURIComponent(`Olá, também sou morador do Bella Vittà e quero conversar sobre seu serviço de ${servico.categoria || 'serviço'}`)}`
+    ? `https://wa.me/55${whatsapp}?text=${encodeURIComponent(`Olá, também sou morador do Bella Vittà e quero conversar sobre seu serviço de ${servico.categoria_nome || servico.categoria || 'serviço'}`)}`
     : null
 
   const handleDelete = async () => {
@@ -89,28 +113,39 @@ const ServicoDetalhePage = () => {
   }
 
   return (
-    // ✅ CORREÇÃO: Padding externo para não grudar na tela
-    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-0">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-0 pb-10">
 
       <button onClick={() => navigate('/mapa')} className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition cursor-pointer">
         ← Voltar aos serviços
       </button>
 
-      {/* GALERIA DE IMAGENS */}
+      {/* GALERIA DE IMAGENS COM JANELA FLUIDA */}
       {imagens.length > 0 && (
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
-          {/* ✅ CORREÇÃO: Alturas escalonadas para nao tomar tela demais no mobile */}
-          <div className="relative w-full h-56 sm:h-72 md:h-80 lg:h-[420px] bg-gray-100">
-            <img src={imagens[imagemAtiva]} alt="" className="w-full h-full object-cover" />
+          <div className="relative">
+            {/* ✅ ImagemFluida: adapta-se a retrato/paisagem sem cortar as bordas */}
+            <ImagemFluida
+              src={imagens[imagemAtiva]}
+              alt={servico.nome_fantasia || servico.nome}
+              arredondado="rounded-t-2xl sm:rounded-t-3xl"
+              semCentralizar
+            />
+            
             {imagens.length > 1 && (
               <>
-                <button onClick={() => irParaImagem('anterior')} className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition cursor-pointer text-lg sm:text-xl">
+                <button 
+                  onClick={() => irParaImagem('anterior')} 
+                  className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition cursor-pointer text-lg sm:text-xl backdrop-blur-sm"
+                >
                   ‹
                 </button>
-                <button onClick={() => irParaImagem('proximo')} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition cursor-pointer text-lg sm:text-xl">
+                <button 
+                  onClick={() => irParaImagem('proximo')} 
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition cursor-pointer text-lg sm:text-xl backdrop-blur-sm"
+                >
                   ›
                 </button>
-                <span className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-black/50 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 rounded-lg font-medium">
+                <span className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-black/50 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 rounded-lg font-medium backdrop-blur-sm">
                   {imagemAtiva + 1} / {imagens.length}
                 </span>
               </>
@@ -120,7 +155,13 @@ const ServicoDetalhePage = () => {
           {imagens.length > 1 && (
             <div className="flex gap-2 p-2 sm:p-3 overflow-x-auto bg-gray-50">
               {imagens.map((img, i) => (
-                <button key={i} onClick={() => setImagemAtiva(i)} className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl overflow-hidden border-2 transition cursor-pointer ${i === imagemAtiva ? 'border-emerald-500 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}>
+                <button 
+                  key={i} 
+                  onClick={() => setImagemAtiva(i)} 
+                  className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                    i === imagemAtiva ? 'border-emerald-500 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
@@ -148,12 +189,24 @@ const ServicoDetalhePage = () => {
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-tight truncate">
                 {servico.nome || 'Prestador'}
               </h1>
+              
+              {/* ✅ Selo de Destaque */}
+              {servico.destaque && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-amber-50 text-amber-700 rounded-full text-[10px] sm:text-xs font-bold w-fit">
+                  ⭐ Destaque
+                </span>
+              )}
+
               {servico.nome_fantasia && (
                 <p className="text-sm sm:text-lg text-emerald-600 mt-1 font-medium truncate">{servico.nome_fantasia}</p>
               )}
+              
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
-                {servico.categoria && (
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-sm font-medium">{servico.categoria}</span>
+                {/* ✅ Usa categoria_nome (enriquecida) ou fallback para o texto antigo */}
+                {(servico.categoria_nome || servico.categoria) && (
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-sm font-medium">
+                    {servico.categoria_nome || servico.categoria}
+                  </span>
                 )}
                 {servico.casa_numero && (
                   <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] sm:text-sm font-medium truncate max-w-full">📍 {servico.casa_numero}</span>

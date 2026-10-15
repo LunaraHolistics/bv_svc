@@ -1,96 +1,98 @@
+// ============================================================================
 // src/pages/AnunciosPage.jsx
-import React from "react";
-import { Link } from "react-router-dom";
-import ListagemAnuncios from "../components/ListagemAnuncios";
+// - Cards de anúncio com ImagemFluida: retrato/paisagem/quadrada sem corte seco
+// - Hero com imagem decorativa /anuncios-hero.png (mesmo padrão das outras)
+// - Busca por título/descrição + grid responsivo
+// ============================================================================
 
-const BenefitCard = ({ title, description, icon, color }) => {
-  return (
-    // ✅ CORREÇÃO: Padding e arredondamento menores no mobile
-    <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-      <div
-        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 ${color}`}
-      >
-        {icon}
-      </div>
-      <h3 className="text-base sm:text-lg font-bold text-gray-900">{title}</h3>
-      <p className="text-xs sm:text-sm text-gray-500 mt-1.5 sm:mt-2 leading-relaxed">
-        {description}
-      </p>
-    </div>
-  );
-};
+import React, { useState, useEffect, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
+import ImagemFluida from '../components/ImagemFluida'
+import { ShoppingBag } from 'lucide-react'
 
-const CTASection = () => {
-  return (
-    // ✅ CORREÇÃO: Padding menor no mobile
-    <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white p-6 sm:p-8 md:p-10">
-      <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl" />
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-        <div className="max-w-xl">
-          <span className="inline-flex px-4 py-2 bg-white/10 rounded-full text-xs font-medium backdrop-blur-md mb-4">
-            Tem algo parado em casa?
-          </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight !text-white">
-            Transforme itens esquecidos em oportunidades
-          </h2>
-          <p className="mt-3 text-emerald-50 text-sm md:text-base">
-            Venda móveis, eletrônicos, objetos e muito mais para pessoas
-            próximas, com mais praticidade e segurança.
-          </p>
-        </div>
-        <Link
-          to="/novo-anuncio"
-          className="inline-flex items-center justify-center px-7 py-4 bg-white text-emerald-700 rounded-2xl font-bold no-underline hover:scale-105 transition text-sm sm:text-base"
-        >
-          Publicar agora
-        </Link>
-      </div>
-    </section>
-  );
-};
+const formatarPreco = (valor) => {
+  if (valor === null || valor === undefined || valor === '') return 'Sob consulta'
+  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+const getImagens = (imagemUrl) => {
+  if (!imagemUrl) return []
+  try {
+    const parsed = JSON.parse(imagemUrl)
+    if (Array.isArray(parsed)) return parsed
+    return [imagemUrl]
+  } catch {
+    return [imagemUrl]
+  }
+}
 
 const AnunciosPage = () => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [anuncios, setAnuncios] = useState([])
+  const [busca, setBusca] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => { buscarAnuncios() }, [])
+
+  const buscarAnuncios = async () => {
+    setLoading(true); setError(null)
+    try {
+      const agora = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('anuncios_vendas')
+        .select('*')
+        .ilike('status', 'ativo')
+        .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setAnuncios(data || [])
+    } catch (err) {
+      console.error(err)
+      setError('Não foi possível carregar os anúncios.')
+    } finally { setLoading(false) }
+  }
+
+  const anunciosFiltrados = useMemo(() => {
+    if (!busca.trim()) return anuncios
+    const termo = busca.toLowerCase()
+    return anuncios.filter(a =>
+      [a.titulo, a.descricao].filter(Boolean).some(c => String(c).toLowerCase().includes(termo))
+    )
+  }, [anuncios, busca])
+
   return (
-    <div className="space-y-6 sm:space-y-10">
+    <div className="space-y-6 sm:space-y-8">
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-[36px] bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 text-white p-6 sm:p-8 md:p-12">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl" />
 
-        {/* ✅ Layout flex: texto cresce e empurra a imagem p/ direita (igual Mapa/Indicações) */}
         <div className="relative z-10 flex items-center gap-6 sm:gap-8 md:gap-10">
-          {/* Texto — wrapper SEM max-w; limites vão para dentro do h1/p */}
           <div className="flex-1 min-w-0">
             <span className="inline-flex px-4 py-2 rounded-full bg-white/15 backdrop-blur-md text-xs font-medium mb-5 !text-white">
               Marketplace Bella Vittà
             </span>
-            {/* ✅ CORREÇÃO: Texto menor no mobile */}
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight !text-white max-w-3xl">
               Compre e venda entre vizinhos com muito mais confiança
             </h1>
             <p className="mt-5 text-emerald-100 text-sm sm:text-base md:text-lg max-w-2xl leading-relaxed">
-              Um marketplace privado para moradores anunciarem produtos,
-              encontrarem oportunidades e negociarem com pessoas da própria
-              comunidade.
+              Um marketplace privado para moradores anunciarem produtos, encontrarem oportunidades e negociarem com pessoas da própria comunidade.
             </p>
             <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
-              <Link
-                to="/novo-anuncio"
-                className="px-6 py-3 bg-white text-slate-900 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base"
-              >
+              <Link to="/novo-anuncio" className="px-6 py-3 bg-white text-slate-900 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base">
                 Criar anúncio
               </Link>
-              <Link
-                to="/servicos"
-                className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl !text-white no-underline hover:bg-white/25 transition text-sm sm:text-base"
-              >
+              <Link to="/servicos" className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl !text-white no-underline hover:bg-white/25 transition text-sm sm:text-base">
                 Explorar serviços
               </Link>
             </div>
           </div>
 
-          {/* ✅ Imagem decorativa do marketplace — mesma posição/tamanho das demais páginas */}
           <div className="hidden sm:block shrink-0 w-36 md:w-48 lg:w-60 aspect-square">
             <img
               src="/anuncios-hero.png"
@@ -101,52 +103,88 @@ const AnunciosPage = () => {
         </div>
       </section>
 
-      {/* BENEFÍCIOS */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-        <BenefitCard
-          icon="🛡️"
-          title="Mais segurança"
-          description="Negocie com pessoas próximas dentro da própria comunidade."
-          color="bg-emerald-50"
-        />
-        <BenefitCard
-          icon="⚡"
-          title="Mais rapidez"
-          description="Venda produtos sem depender de marketplaces externos."
-          color="bg-blue-50"
-        />
-        <BenefitCard
-          icon="🤝"
-          title="Comunidade forte"
-          description="Fortaleça relações locais e valorize a rede de vizinhos."
-          color="bg-purple-50"
-        />
-      </section>
-
-      {/* LISTAGEM */}
-      <section className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm p-4 sm:p-5 md:p-7">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Últimos anúncios publicados
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">
-              Veja os produtos disponíveis dentro da comunidade.
-            </p>
-          </div>
-          <Link
-            to="/novo-anuncio"
-            className="inline-flex items-center justify-center px-5 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition no-underline text-sm sm:text-base"
-          >
-            + Novo anúncio
-          </Link>
+      {/* BUSCA */}
+      <section className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-5">
+        <div className="relative">
+          <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar produto ou descrição..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm sm:text-base"
+          />
         </div>
-        <ListagemAnuncios />
       </section>
 
-      <CTASection />
-    </div>
-  );
-};
+      {/* GRID */}
+      {loading ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-72 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-100 rounded-2xl sm:rounded-3xl p-8 text-center">
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      ) : anunciosFiltrados.length === 0 ? (
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-8 sm:p-12 text-center">
+          <div className="text-4xl sm:text-5xl mb-4">🛒</div>
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Nenhum anúncio encontrado</h3>
+          <p className="text-gray-500 mt-2 text-sm">Seja o primeiro a anunciar para seus vizinhos.</p>
+          {user && (
+            <button onClick={() => navigate('/novo-anuncio')} className="mt-5 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition cursor-pointer">
+              Criar anúncio agora
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {anunciosFiltrados.map((a) => {
+            const imagens = getImagens(a.imagem_url)
+            const imagem = imagens[0] || null
+            return (
+              <Link
+                key={a.id}
+                to={`/anuncio/${a.id}`}
+                className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all no-underline flex flex-col"
+              >
+                {/* ✅ Janela fluida: retrato fica retrato, paisagem fica paisagem */}
+                {imagem ? (
+                  <ImagemFluida
+                    src={imagem}
+                    alt={a.titulo}
+                    semCentralizar
+                    arredondado="rounded-t-2xl sm:rounded-t-3xl"
+                    imgClassName="group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="aspect-[4/3] w-full bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
+                    <ShoppingBag className="w-10 h-10 text-emerald-400" />
+                  </div>
+                )}
 
-export default AnunciosPage;
+                <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                  {a.destaque && (
+                    <span className="self-start px-2 py-0.5 mb-2 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold">⭐ Destaque</span>
+                  )}
+                  <p className="text-emerald-600 font-bold text-sm sm:text-base">{formatarPreco(a.preco)}</p>
+                  <h3 className="font-semibold text-gray-900 mt-1 line-clamp-2 text-sm sm:text-base">{a.titulo}</h3>
+                  {a.descricao && (
+                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">{a.descricao}</p>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-3">
+                    Publicado em {new Date(a.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default AnunciosPage
