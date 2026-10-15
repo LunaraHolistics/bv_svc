@@ -1,8 +1,9 @@
 // ============================================================================
-// src/pages/MapaPage.jsx (atualizado)
-// - Filtros por nicho com contagem (dinâmicos, só mostra nichos com serviço)
-// - Legenda dos nichos
-// - Compatível com o card agrupado existente
+// src/pages/MapaPage.jsx (v2)
+// - Busca agora inclui servicos_oferecidos (corrige "terapeuta" vazio)
+// - Contagem de nichos calculada LOCALMENTE dos prestadores carregados
+//   (imune a RLS/queries separadas) + fallback texto(categoria) → nicho
+// - Chips só aparecem com serviço no nicho; filtro usa categoria_id resolvido
 // ============================================================================
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -27,6 +28,10 @@ const normalizeAddr = (addr) => {
   if (!addr) return ''
   return addr.toLowerCase().replace(/[.,]/g, '').replace(/(rua|av|avenida|nº|numero|casa|lote|quadra|bloco)\s*/gi, '').replace(/\s+/g, '').trim()
 }
+
+// Normaliza texto para comparação (minúsculas, sem acentos)
+const normTexto = (s) =>
+  (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 
 /* ---------------- CARD INTERNO ---------------- */
 
@@ -102,13 +107,11 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
         )}
 
         <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
-          {/* ✅ NOVO: mostra nome do NICHOfiltrado pelo categoria_id */}
           {prestador.categoria_nome && (
             <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-medium">
               {prestador.categoria_nome}
             </span>
           )}
-          {/* Fallback: categoria texto antiga (para serviços ainda não migrados) */}
           {!prestador.categoria_nome && prestador.categoria && (
             <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] sm:text-xs font-medium">
               {prestador.categoria}
@@ -177,7 +180,7 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
 
   useEffect(() => {
     if (filtroAtivo && filtroAtivo !== 'todas') {
-      const idx = grupo.findIndex(p => p.categoria_id === filtroAtivo || p.categoria === filtroAtivo)
+      const idx = grupo.findIndex(p => p.categoria_id === filtroAtivo)
       if (idx !== -1 && idx !== activeIdx) setActiveIdx(idx)
     }
   }, [filtroAtivo, grupo])
@@ -227,7 +230,7 @@ const CardAgrupado = ({ grupo, filtroAtivo, onDelete }) => {
 const MapaPage = () => {
   const { user } = useAuth()
   const [prestadores, setPrestadores] = useState([])
-  const { categorias, contagens, loading: loadingCats } = useCategorias()
+  const { categorias, loading: loadingCats } = useCategorias({ comContagem: false })
   const [filtroCategoria, setFiltroCategoria] = useState('todas')
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
@@ -255,7 +258,6 @@ const MapaPage = () => {
         if (perfis) perfis.forEach(p => { if (p.avatar_url) mapaAvatares[p.id] = p.avatar_url })
       }
 
-      // Enriquece com nome do nicho
       setPrestadores(lista.map(p => ({
         ...p,
         avatar_do_perfil: p.avatar_url || mapaAvatares[p.usuario_id] || null
@@ -265,14 +267,33 @@ const MapaPage = () => {
     } finally { setLoading(false) }
   }
 
-  // ✅ Enriquece prestadores com nome do nicho (vindo do hook useCategorias)
+  // ✅ Enriquece: resolve categoria_id/nome; se só houver TEXTO que bate com o
+  //    nome de um nicho, usa esse nicho (fallback para cadastros antigos)
   const prestadoresEnriquecidos = useMemo(() => {
     const mapaCats = new Map(categorias.map(c => [c.id, c]))
-    return prestadores.map(p => ({
-      ...p,
-      categoria_nome: p.categoria_id ? (mapaCats.get(p.categoria_id)?.nome || null) : null
-    }))
+    const mapaPorNome = new Map(categorias.map(c => [normTexto(c.nome), c]))
+
+    return prestadores.map(p => {
+      let catId = p.categoria_id || null
+      let catNome = catId ? (mapaCats.get(catId)?.nome || null) : null
+
+      if (!catId && p.categoria) {
+        const hit = mapaPorNome.get(normTexto(p.categoria))
+        if (hit) { catId = hit.id; catNome = hit.nome }
+      }
+
+      return { ...p, categoria_id: catId, categoria_nome: catNome }
+    })
   }, [prestadores, categorias])
+
+  // ✅ Contagem LOCAL (dos prestadores já carregados) — imune a RLS/queries extras
+  const contagensLocais = useMemo(() => {
+    const cont = {}
+    prestadoresEnriquecidos.forEach(p => {
+      if (p.categoria_id) cont[p.categoria_id] = (cont[p.categoria_id] || 0) + 1
+    })
+    return cont
+  }, [prestadoresEnriquecidos])
 
   const handleDeleteServico = async (id) => {
     const prestadorBackup = prestadores.find(p => p.id === id)
@@ -299,15 +320,23 @@ const MapaPage = () => {
     }
     if (busca.trim()) {
       const termo = busca.toLowerCase()
-      resultado = resultado.filter(grupo => grupo.some(p => [p.nome, p.nome_fantasia, p.categoria_nome, p.categoria, p.descricao_comercial, p.descricao, String(p.casa_numero || '')].filter(Boolean).some((item) => item.toLowerCase().includes(termo))))
+      resultado = resultado.filter(grupo =>
+        grupo.some(p => {
+          // ✅ CORREÇÃO: inclui servicos_oferecidos (array) na busca
+          const servicosTexto = Array.isArray(p.servicos_oferecidos) ? p.servicos_oferecidos.join(' ') : ''
+          return [p.nome, p.nome_fantasia, p.categoria_nome, p.categoria, p.descricao_comercial, p.descricao, servicosTexto, String(p.casa_numero || '')]
+            .filter(Boolean)
+            .some((item) => String(item).toLowerCase().includes(termo))
+        })
+      )
     }
     return resultado
   }, [agrupados, filtroCategoria, busca])
 
-  // ✅ Chips só aparecem para nichos com serviço (contagem > 0)
+  // ✅ Chips apenas para nichos com pelo menos 1 serviço visível
   const chipsFiltro = useMemo(() => {
-    return categorias.filter(c => (contagens[c.id] || 0) > 0)
-  }, [categorias, contagens])
+    return categorias.filter(c => (contagensLocais[c.id] || 0) > 0)
+  }, [categorias, contagensLocais])
 
   const totalCasas = useMemo(() => new Set(prestadores.map((p) => p.casa_numero).filter(Boolean)).size, [prestadores])
 
@@ -365,7 +394,6 @@ const MapaPage = () => {
           <input type="text" placeholder="Buscar por nome, serviço ou casa..." value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm sm:text-base" />
         </div>
 
-        {/* ✅ Chips de nicho com contagem */}
         <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-none items-center">
           <button
             onClick={() => setFiltroCategoria('todas')}
@@ -389,7 +417,7 @@ const MapaPage = () => {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {c.nome} ({contagens[c.id] || 0})
+              {c.nome} ({contagensLocais[c.id] || 0})
             </button>
           ))}
 
@@ -449,7 +477,6 @@ const MapaPage = () => {
         </div>
       )}
 
-      {/* Modal de legenda */}
       <LegendaCategorias
         aberto={legendaAberta}
         onFechar={() => setLegendaAberta(false)}

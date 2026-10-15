@@ -1,8 +1,8 @@
 // ============================================================================
-// src/pages/EditarServicoPage.jsx (atualizado)
-// - Adiciona CategoriaPicker (dropdown de nicho) no formulário
-// - Salva categoria_id no banco
-// - Mantém o campo "categoria" texto como fallback de leitura
+// src/pages/EditarServicoPage.jsx (v2)
+// - NOVO: painel lateral "📚 Legenda de nichos" no desktop (fixo, ao lado do form)
+//         e botão + modal no mobile — orienta ANTES de escolher o nicho
+// - Mantém CategoriaPicker com descrição do nicho selecionado
 // ============================================================================
 
 import React, { useState, useEffect } from 'react'
@@ -11,6 +11,7 @@ import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import useCategorias from '../hooks/useCategorias'
 import CategoriaPicker from '../components/CategoriaPicker'
+import LegendaCategorias from '../components/LegendaCategorias'
 
 const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
@@ -28,6 +29,7 @@ const EditarServicoPage = () => {
   const [error, setError] = useState(null)
   const [ehNovo, setEhNovo] = useState(false)
   const [sucesso, setSucesso] = useState(false)
+  const [legendaAberta, setLegendaAberta] = useState(false)
 
   const [form, setForm] = useState({
     nome: '', casa_numero: '', categoria: '', categoria_id: null, whatsapp: '', descricao_comercial: '',
@@ -130,7 +132,7 @@ const EditarServicoPage = () => {
     setSalvando(true)
 
     if (!form.categoria_id) {
-      alert('Selecione a categoria (nicho) do serviço.')
+      alert('Selecione a categoria (nicho) do serviço. Consulte a legenda ao lado se tiver dúvida.')
       setSalvando(false)
       return
     }
@@ -138,13 +140,12 @@ const EditarServicoPage = () => {
     const todasImagens = [...imagensExistentes, ...novasImagens]
     const servicosArray = form.servicos_oferecidos.split(',').map(s => s.trim()).filter(Boolean)
 
-    // Busca o nome do nicho selecionado para manter a coluna "categoria" texto sincronizada
     const catSelecionada = categorias.find(c => c.id === form.categoria_id)
 
     const dadosServico = {
       nome: form.nome.trim(),
       casa_numero: form.casa_numero.trim(),
-      categoria: catSelecionada?.nome || form.categoria.trim() || null, // sincroniza com o nome do nicho
+      categoria: catSelecionada?.nome || form.categoria.trim() || null,
       categoria_id: form.categoria_id,
       whatsapp: form.whatsapp.replace(/\D/g, ''),
       descricao_comercial: form.descricao_comercial.trim() || null,
@@ -237,140 +238,192 @@ const EditarServicoPage = () => {
   const totalImagens = imagensExistentes.length + novasImagens.length
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-0">
-      <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
-        
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 border-b pb-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{ehNovo ? 'Cadastrar Meu Serviço' : 'Editar Meu Serviço'}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">{ehNovo ? 'Preencha as informações para aparecer no mapa' : 'Atualize as informações do seu serviço'}</p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-0">
+      {/* ✅ Layout: formulário + painel lateral de legenda no desktop */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+
+        {/* COLUNA DO FORMULÁRIO */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
+          
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 border-b pb-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{ehNovo ? 'Cadastrar Meu Serviço' : 'Editar Meu Serviço'}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">{ehNovo ? 'Preencha as informações para aparecer no mapa' : 'Atualize as informações do seu serviço'}</p>
+            </div>
+            {!ehNovo && (
+              <button onClick={handleDelete} className="self-start sm:self-auto px-4 py-2 text-xs sm:text-sm text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition cursor-pointer font-medium">🗑️ Excluir Serviço</button>
+            )}
           </div>
-          {!ehNovo && (
-            <button onClick={handleDelete} className="self-start sm:self-auto px-4 py-2 text-xs sm:text-sm text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition cursor-pointer font-medium">🗑️ Excluir Serviço</button>
-          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
+              <input name="nome" value={form.nome} onChange={handleForm} required className={inputClass} />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nome Fantasia</label>
+                <input name="nome_fantasia" value={form.nome_fantasia} onChange={handleForm} placeholder="Opcional" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">WhatsApp *</label>
+                <input name="whatsapp" value={form.whatsapp} onChange={handleForm} required placeholder="11999999999" className={inputClass} />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Rua/Av + Número da Casa *</label>
+              <input name="casa_numero" value={form.casa_numero} onChange={handleForm} required placeholder="Ex: Rua das Palmeiras, Casa 15" className={inputClass} />
+            </div>
+
+            {/* ✅ Categoria com botão de legenda no mobile */}
+            <div>
+              <CategoriaPicker
+                value={form.categoria_id}
+                onChange={(id) => setForm((f) => ({ ...f, categoria_id: id }))}
+                categorias={categorias}
+              />
+              {/* Botão de legenda visível só no mobile (no desktop o painel lateral já mostra) */}
+              <button
+                type="button"
+                onClick={() => setLegendaAberta(true)}
+                className="mt-2 lg:hidden w-full py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-emerald-100 transition cursor-pointer"
+              >
+                📚 Ver legenda completa de nichos
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Descrição Comercial</label>
+              <textarea name="descricao_comercial" value={form.descricao_comercial} onChange={handleForm} rows={3} placeholder="Descreva seu serviço em detalhes..." className={`${inputClass} resize-none`} />
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Serviços Oferecidos</label>
+              <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleForm} placeholder="Separe por vírgula: Reparo hidráulico, Instalação" className={inputClass} />
+              <p className="text-[10px] sm:text-xs text-gray-400 mt-1">💡 Estes termos também aparecem na busca do mapa (ex.: "terapeuta").</p>
+            </div>
+
+            <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 rounded-xl">
+              <label className="block text-xs sm:text-sm font-semibold text-amber-800 mb-1">⭐ Benefícios para moradores</label>
+              <input name="condicoes_moradores" value={form.condicoes_moradores} onChange={handleForm} placeholder="Ex: 10% de desconto" className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none text-sm sm:text-base" />
+              <p className="text-[10px] sm:text-xs text-amber-600 mt-1">Destaque condições especiais para atrair mais clientes</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Instagram</label>
+                <input name="instagram_url" value={form.instagram_url} onChange={handleForm} placeholder="@seuperfil" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Site</label>
+                <input name="site_url" value={form.site_url} onChange={handleForm} placeholder="https://seusite.com" className={inputClass} />
+              </div>
+            </div>
+
+            {/* UPLOAD DE IMAGENS */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700">Fotos / Divulgação</label>
+                <span className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-full ${totalImagens >= MAX_IMAGENS ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                  {totalImagens} / {MAX_IMAGENS}
+                </span>
+              </div>
+              
+              <div className="mb-3 p-2.5 sm:p-3 bg-blue-50 border border-blue-100 rounded-xl text-[10px] sm:text-xs text-blue-700">
+                📌 <strong>Regras:</strong> Máximo de <strong>{MAX_IMAGENS} fotos</strong>. Cada uma com até <strong>{TAMANHO_MAX_MB}MB</strong>.
+              </div>
+
+              {imagensExistentes.length > 0 && (
+                <div className="flex gap-2 flex-wrap mb-3">
+                  {imagensExistentes.map((img, i) => (
+                    <div key={`exist-${i}`} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border group">
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => removeImagemExistente(i)} className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs cursor-pointer">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {novasImagens.length > 0 && (
+                <div className="flex gap-2 flex-wrap mb-3">
+                  {novasImagens.map((img, i) => (
+                    <div key={`nova-${i}`} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-emerald-300 group">
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => removeImagemNova(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] opacity-0 group-hover:opacity-100 transition cursor-pointer">✕</button>
+                      <span className="absolute bottom-0 left-0 right-0 bg-emerald-500 text-white text-[8px] sm:text-[9px] text-center py-0.5">nova</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {totalImagens < MAX_IMAGENS ? (
+                <input type="file" accept="image/*" multiple onChange={handleUpload} className="w-full text-xs sm:text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs sm:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+              ) : (
+                <div className="w-full py-3 bg-gray-50 border border-gray-200 rounded-xl text-center text-xs sm:text-sm text-gray-400 font-medium">
+                  Você atingiu o limite de {MAX_IMAGENS} fotos. Remova alguma para enviar uma nova.
+                </div>
+              )}
+            </div>
+
+            {/* VISIBILIDADE */}
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl">
+              <input type="checkbox" id="opt_in" name="opt_in" checked={form.opt_in} onChange={handleForm} className="w-4 h-4 accent-emerald-600" />
+              <label htmlFor="opt_in" className="text-xs sm:text-sm text-gray-700">Visível para os moradores no mapa de serviços</label>
+            </div>
+
+            {/* BOTÕES */}
+            <div className="flex gap-3 sm:gap-4 pt-4">
+              <button type="button" onClick={() => navigate('/perfil')} className="flex-1 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition cursor-pointer text-sm">
+                Cancelar
+              </button>
+              <button type="submit" disabled={salvando} className="flex-1 py-2.5 sm:py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 text-sm sm:text-base">
+                {salvando && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {salvando ? 'Salvando...' : ehNovo ? 'Cadastrar Serviço' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </form>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
-            <input name="nome" value={form.nome} onChange={handleForm} required className={inputClass} />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nome Fantasia</label>
-              <input name="nome_fantasia" value={form.nome_fantasia} onChange={handleForm} placeholder="Opcional" className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">WhatsApp *</label>
-              <input name="whatsapp" value={form.whatsapp} onChange={handleForm} required placeholder="11999999999" className={inputClass} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Rua/Av + Número da Casa *</label>
-            <input name="casa_numero" value={form.casa_numero} onChange={handleForm} required placeholder="Ex: Rua das Palmeiras, Casa 15" className={inputClass} />
-          </div>
-
-          {/* ✅ NOVO: Categoria (nicho) via CategoriaPicker */}
-          <div>
-            <CategoriaPicker
-              value={form.categoria_id}
-              onChange={(id) => setForm((f) => ({ ...f, categoria_id: id }))}
-              categorias={categorias}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Descrição Comercial</label>
-            <textarea name="descricao_comercial" value={form.descricao_comercial} onChange={handleForm} rows={3} placeholder="Descreva seu serviço em detalhes..." className={`${inputClass} resize-none`} />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Serviços Oferecidos</label>
-            <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleForm} placeholder="Separe por vírgula: Reparo hidráulico, Instalação" className={inputClass} />
-          </div>
-
-          <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 rounded-xl">
-            <label className="block text-xs sm:text-sm font-semibold text-amber-800 mb-1">⭐ Benefícios para moradores</label>
-            <input name="condicoes_moradores" value={form.condicoes_moradores} onChange={handleForm} placeholder="Ex: 10% de desconto" className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none text-sm sm:text-base" />
-            <p className="text-[10px] sm:text-xs text-amber-600 mt-1">Destaque condições especiais para atrair mais clientes</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Instagram</label>
-              <input name="instagram_url" value={form.instagram_url} onChange={handleForm} placeholder="@seuperfil" className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Site</label>
-              <input name="site_url" value={form.site_url} onChange={handleForm} placeholder="https://seusite.com" className={inputClass} />
-            </div>
-          </div>
-
-          {/* UPLOAD DE IMAGENS */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">Fotos / Divulgação</label>
-              <span className={`text-[10px] sm:text-xs font-medium px-2 py-1 rounded-full ${totalImagens >= MAX_IMAGENS ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                {totalImagens} / {MAX_IMAGENS}
-              </span>
-            </div>
-            
-            <div className="mb-3 p-2.5 sm:p-3 bg-blue-50 border border-blue-100 rounded-xl text-[10px] sm:text-xs text-blue-700">
-              📌 <strong>Regras:</strong> Máximo de <strong>{MAX_IMAGENS} fotos</strong>. Cada uma com até <strong>{TAMANHO_MAX_MB}MB</strong>.
-            </div>
-
-            {imagensExistentes.length > 0 && (
-              <div className="flex gap-2 flex-wrap mb-3">
-                {imagensExistentes.map((img, i) => (
-                  <div key={`exist-${i}`} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border group">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeImagemExistente(i)} className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs cursor-pointer">✕</button>
-                  </div>
-                ))}
+        {/* ✅ PAINEL LATERAL DE LEGENDA (desktop) */}
+        <aside className="hidden lg:block sticky top-8 bg-white rounded-2xl border border-gray-200 p-5 max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <h2 className="text-sm font-bold text-gray-900 mb-1">📚 Legenda de nichos</h2>
+          <p className="text-[11px] text-gray-500 mb-4">
+            Consulte antes de escolher a categoria do seu serviço:
+          </p>
+          <div className="space-y-3">
+            {categorias.map((c, i) => (
+              <div
+                key={c.id}
+                className={`p-3 rounded-xl border transition cursor-pointer ${
+                  form.categoria_id === c.id
+                    ? 'bg-emerald-50 border-emerald-300'
+                    : 'bg-gray-50 border-gray-100 hover:border-emerald-200'
+                }`}
+                onClick={() => setForm((f) => ({ ...f, categoria_id: c.id }))}
+              >
+                <p className="text-xs font-bold text-gray-800">{i + 1}. {c.nome}</p>
+                <p className="text-[11px] text-gray-600 mt-0.5">{c.descricao}</p>
+                {c.exemplos && (
+                  <p className="text-[10px] text-gray-400 mt-0.5">Ex.: {c.exemplos}</p>
+                )}
               </div>
-            )}
-
-            {novasImagens.length > 0 && (
-              <div className="flex gap-2 flex-wrap mb-3">
-                {novasImagens.map((img, i) => (
-                  <div key={`nova-${i}`} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-emerald-300 group">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeImagemNova(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] opacity-0 group-hover:opacity-100 transition cursor-pointer">✕</button>
-                    <span className="absolute bottom-0 left-0 right-0 bg-emerald-500 text-white text-[8px] sm:text-[9px] text-center py-0.5">nova</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {totalImagens < MAX_IMAGENS ? (
-              <input type="file" accept="image/*" multiple onChange={handleUpload} className="w-full text-xs sm:text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs sm:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-            ) : (
-              <div className="w-full py-3 bg-gray-50 border border-gray-200 rounded-xl text-center text-xs sm:text-sm text-gray-400 font-medium">
-                Você atingiu o limite de {MAX_IMAGENS} fotos. Remova alguma para enviar uma nova.
-              </div>
-            )}
+            ))}
           </div>
-
-          {/* VISIBILIDADE */}
-          <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl">
-            <input type="checkbox" id="opt_in" name="opt_in" checked={form.opt_in} onChange={handleForm} className="w-4 h-4 accent-emerald-600" />
-            <label htmlFor="opt_in" className="text-xs sm:text-sm text-gray-700">Visível para os moradores no mapa de serviços</label>
-          </div>
-
-          {/* BOTÕES */}
-          <div className="flex gap-3 sm:gap-4 pt-4">
-            <button type="button" onClick={() => navigate('/perfil')} className="flex-1 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition cursor-pointer text-sm">
-              Cancelar
-            </button>
-            <button type="submit" disabled={salvando} className="flex-1 py-2.5 sm:py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 text-sm sm:text-base">
-              {salvando && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {salvando ? 'Salvando...' : ehNovo ? 'Cadastrar Serviço' : 'Salvar Alterações'}
-            </button>
-          </div>
-        </form>
+          <p className="text-[10px] text-gray-400 mt-4">
+            Clicar em um nicho aqui já seleciona ele no formulário. Não encontrou o seu? Use
+            "Serviços Diversos" ou solicite uma nova categoria.
+          </p>
+        </aside>
       </div>
+
+      {/* Modal de legenda (mobile) */}
+      <LegendaCategorias
+        aberto={legendaAberta}
+        onFechar={() => setLegendaAberta(false)}
+        categorias={categorias}
+      />
     </div>
   )
 }
