@@ -1,9 +1,7 @@
 // ============================================================================
-// src/pages/EditarServicoPage.jsx (v3)
-// - ✅ Aviso SUAVE (confirm, não bloqueia) se o morador já tem card no MESMO nicho
-// - ✅ Dica em "Serviços Oferecidos": liste variações do mesmo nicho ali;
-//   novo cadastro só para nicho DIFERENTE
-// - Mantém painel lateral de legenda (desktop) + modal (mobile)
+// src/pages/EditarServicoPage.jsx (v4)
+// - ✅ NOVO: toggle "⭐ Destacar na galeria" (1 por morador; desmarca os demais)
+// - Mantém: aviso de nicho duplicado, legenda lateral/modal, CategoriaPicker
 // ============================================================================
 
 import React, { useState, useEffect } from 'react'
@@ -35,7 +33,7 @@ const EditarServicoPage = () => {
   const [form, setForm] = useState({
     nome: '', casa_numero: '', categoria: '', categoria_id: null, whatsapp: '', descricao_comercial: '',
     nome_fantasia: '', servicos_oferecidos: '', condicoes_moradores: '',
-    instagram_url: '', site_url: '', opt_in: true
+    instagram_url: '', site_url: '', opt_in: true, destaque: false
   })
 
   const [imagensExistentes, setImagensExistentes] = useState([])
@@ -74,7 +72,8 @@ const EditarServicoPage = () => {
       condicoes_moradores: data.condicoes_moradores || '',
       instagram_url: data.instagram_url || '',
       site_url: data.site_url || '',
-      opt_in: data.opt_in !== false
+      opt_in: data.opt_in !== false,
+      destaque: data.destaque === true
     })
 
     try { setImagensExistentes(JSON.parse(data.imagens_url || '[]')) } catch { setImagensExistentes([]) }
@@ -140,7 +139,7 @@ const EditarServicoPage = () => {
 
     const catSelecionada = categorias.find(c => c.id === form.categoria_id)
 
-    // ✅ v3: aviso suave de nicho duplicado (mesmo morador + mesmo nicho)
+    // Aviso suave: mesmo nicho já cadastrado pelo mesmo morador
     const idAtual = ehNovo ? null : id
     const { data: duplicados } = await supabase
       .from('prestadores_servico')
@@ -155,6 +154,16 @@ const EditarServicoPage = () => {
         `Deseja continuar mesmo assim?`
       )
       if (!continuar) { setSalvando(false); return }
+    }
+
+    // ✅ DESTAQUE ÚNICO: desmarca os demais serviços deste morador antes de salvar
+    if (form.destaque) {
+      let q = supabase
+        .from('prestadores_servico')
+        .update({ destaque: false })
+        .eq('usuario_id', user.id)
+      if (!ehNovo) q = q.neq('id', id)
+      await q
     }
 
     const todasImagens = [...imagensExistentes, ...novasImagens]
@@ -173,6 +182,7 @@ const EditarServicoPage = () => {
       instagram_url: form.instagram_url.trim() || null,
       site_url: form.site_url.trim() || null,
       opt_in: form.opt_in,
+      destaque: form.destaque === true,
       imagens_url: todasImagens.length > 0 ? JSON.stringify(todasImagens) : null,
       usuario_id: user.id
     }
@@ -294,7 +304,7 @@ const EditarServicoPage = () => {
             <div>
               <CategoriaPicker
                 value={form.categoria_id}
-                onChange={(id) => setForm((f) => ({ ...f, categoria_id: id }))}
+                onChange={(idCat) => setForm((f) => ({ ...f, categoria_id: idCat }))}
                 categorias={categorias}
               />
               <button
@@ -314,7 +324,6 @@ const EditarServicoPage = () => {
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Serviços Oferecidos</label>
               <input name="servicos_oferecidos" value={form.servicos_oferecidos} onChange={handleForm} placeholder="Separe por vírgula: Reparo hidráulico, Instalação" className={inputClass} />
-              {/* ✅ v3: orientação de cadastro único por nicho */}
               <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
                 💡 Liste aqui <strong>todas as variações deste mesmo nicho</strong> (ex.: Psicoterapeuta, Tarô, Reiki).
                 Estes termos entram na busca do mapa. Crie um <strong>novo serviço apenas para um nicho diferente</strong>.
@@ -338,6 +347,7 @@ const EditarServicoPage = () => {
               </div>
             </div>
 
+            {/* UPLOAD DE IMAGENS */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700">Fotos / Divulgação</label>
@@ -382,11 +392,24 @@ const EditarServicoPage = () => {
               )}
             </div>
 
+            {/* VISIBILIDADE */}
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl">
               <input type="checkbox" id="opt_in" name="opt_in" checked={form.opt_in} onChange={handleForm} className="w-4 h-4 accent-emerald-600" />
               <label htmlFor="opt_in" className="text-xs sm:text-sm text-gray-700">Visível para os moradores no mapa de serviços</label>
             </div>
 
+            {/* ✅ DESTAQUE NA GALERIA */}
+            <div className="flex items-start gap-3 p-3 sm:p-4 bg-amber-50 border border-amber-100 rounded-xl">
+              <input type="checkbox" id="destaque" name="destaque" checked={form.destaque} onChange={handleForm} className="w-4 h-4 mt-0.5 accent-amber-500" />
+              <label htmlFor="destaque" className="text-xs sm:text-sm text-gray-700">
+                ⭐ <strong>Destacar na galeria:</strong> este serviço aparece primeiro na pilha de cards do seu endereço (quando você tem mais de um cadastro).
+                <span className="block text-[10px] sm:text-xs text-amber-600 mt-0.5">
+                  Só um serviço por morador pode ficar em destaque — ao ativar aqui, os demais são desmarcados automaticamente.
+                </span>
+              </label>
+            </div>
+
+            {/* BOTÕES */}
             <div className="flex gap-3 sm:gap-4 pt-4">
               <button type="button" onClick={() => navigate('/perfil')} className="flex-1 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition cursor-pointer text-sm">
                 Cancelar
@@ -399,7 +422,7 @@ const EditarServicoPage = () => {
           </form>
         </div>
 
-        {/* ✅ PAINEL LATERAL DE LEGENDA (desktop) */}
+        {/* PAINEL LATERAL DE LEGENDA (desktop) */}
         <aside className="hidden lg:block sticky top-8 bg-white rounded-2xl border border-gray-200 p-5 max-h-[80vh] overflow-y-auto">
           <h2 className="text-sm font-bold text-gray-900 mb-1">📚 Legenda de nichos</h2>
           <p className="text-[11px] text-gray-500 mb-4">Consulte antes de escolher a categoria do seu serviço.</p>
@@ -415,11 +438,7 @@ const EditarServicoPage = () => {
         </aside>
       </div>
 
-      <LegendaCategorias
-        aberto={legendaAberta}
-        onFechar={() => setLegendaAberta(false)}
-        categorias={categorias}
-      />
+      <LegendaCategorias aberto={legendaAberta} onFechar={() => setLegendaAberta(false)} categorias={categorias} />
     </div>
   )
 }

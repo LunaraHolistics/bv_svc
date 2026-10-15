@@ -1,8 +1,10 @@
 // ============================================================================
-// src/pages/MapaPage.jsx — VERSÃO FINAL CONSOLIDADA
+// src/pages/MapaPage.jsx — VERSÃO FINAL CONSOLIDADA (+ DESTAQUE)
 // ----------------------------------------------------------------------------
 // Inclui:
 //  ✅ Pilha (card agrupado) contém SOMENTE os serviços do filtro/busca ativos
+//  ✅ ⭐ DESTAQUE: o serviço marcado como destaque vem PRIMEIRO na pilha do
+//     endereço e exibe selo "⭐ Destaque" no card
 //  ✅ Chips de nicho dinâmicos (só aparecem com serviço no nicho) + contagem
 //  ✅ Filtro "⚠️ Sem nicho" + aviso no topo (apenas admin/master)
 //  ✅ Busca sem acento em: nome, fantasia, nicho, categoria, descrições,
@@ -137,8 +139,14 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           </div>
         )}
 
-        {/* Chips: nicho + fotos */}
+        {/* Chips: destaque + nicho + fotos */}
         <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+          {/* ✅ Selo de destaque */}
+          {prestador.destaque && (
+            <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] sm:text-xs font-medium">
+              ⭐ Destaque
+            </span>
+          )}
           {prestador.categoria_nome && (
             <span className="inline-flex px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-medium">
               {prestador.categoria_nome}
@@ -406,6 +414,7 @@ const MapaPage = () => {
   }
 
   // Agrupa por endereço (mesma casa = pilha de cards)
+  // ✅ DESTAQUE: dentro de cada pilha, o serviço destacado vem primeiro
   const agrupados = useMemo(() => {
     const grupos = new Map()
     const soltos = []
@@ -418,7 +427,9 @@ const MapaPage = () => {
       if (!grupos.has(key)) grupos.set(key, [])
       grupos.get(key).push(p)
     })
-    return [...soltos, ...Array.from(grupos.values())]
+    return [...soltos, ...Array.from(grupos.values())].map((g) =>
+      [...g].sort((a, b) => (b.destaque ? 1 : 0) - (a.destaque ? 1 : 0))
+    )
   }, [prestadoresEnriquecidos])
 
   // ✅ Filtro REDUZ o conteúdo de cada pilha (não só seleciona a pilha)
