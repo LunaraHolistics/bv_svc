@@ -1,21 +1,10 @@
 // ============================================================================
 // ARQUIVO A ATUALIZAR (2 de 2): src/pages/HomePage.jsx
 // ----------------------------------------------------------------------------
-// ALTERAÇÃO: a caixa verde grande (HERO) agora tem o lado direito ocupado
-// pela foto fachada1.jpeg, com a logo icone.png sobreposta no canto superior
-// direito da foto (badge branco).
-//
-// PRÉ-REQUISITO (passo único):
-//   1. Copie os arquivos para a pasta  public/  do repositório:
-//        public/icone.png
-//        public/fachada1.jpeg
-//
-//   Alternativa (se preferir deixar em src/assets/):
-//      import iconeLogo from '../assets/icone.png'
-//      import fachadaImg from '../assets/fachada1.jpeg'
-//      e use  src={iconeLogo} / src={fachadaImg}  nos <img> abaixo.
-//
-// Nenhuma outra linha foi removida ou alterada.
+// ALTERAÇÕES:
+//   1. Stats agora mostram: Prestadores (x), Serviços (y), Anúncios (z), Indicações (n)
+//   2. Adicionado botão "📋 Mural" no hero
+//   3. Contagem de prestadores únicos (não serviços)
 // ============================================================================
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -30,13 +19,13 @@ import {
   ChevronRight,
   Shield,
   Users,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react'
 import MuralComunidade from '../components/MuralComunidade'
 
 const formatarPreco = (valor) => {
   if (!valor) return 'Sob consulta'
-
   return Number(valor).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
@@ -236,8 +225,9 @@ const HomePage = () => {
   const [destaques, setDestaques] = useState([])
   const [ultimos, setUltimos] = useState([])
   const [stats, setStats] = useState({
-    anuncios: 0,
+    prestadores: 0,
     servicos: 0,
+    anuncios: 0,
     indicacoes: 0
   })
   const [loading, setLoading] = useState(true)
@@ -254,7 +244,7 @@ const HomePage = () => {
         destaqueRes,
         ultimosRes,
         anunciosCount,
-        servicosCount,
+        servicosRes,
         indicacoesCount
       ] = await Promise.all([
         supabase
@@ -281,10 +271,9 @@ const HomePage = () => {
 
         supabase
           .from('prestadores_servico')
-          .select('*', { count: 'exact', head: true })
+          .select('usuario_id, id', { count: 'exact' })
           .eq('opt_in', true),
 
-        // Tenta buscar indicações silenciosamente (pode não existir)
         supabase
           .from('indicacoes')
           .select('*', { count: 'exact', head: true })
@@ -294,9 +283,14 @@ const HomePage = () => {
       setDestaques(destaqueRes.data || [])
       setUltimos(ultimosRes.data || [])
 
+      // Contar prestadores únicos (usuários distintos)
+      const prestadoresUnicos = new Set(servicosRes.data?.map(s => s.usuario_id) || []).size
+      const totalServicos = servicosRes.data?.length || 0
+
       setStats({
+        prestadores: prestadoresUnicos,
+        servicos: totalServicos,
         anuncios: anunciosCount.count || 0,
-        servicos: servicosCount.count || 0,
         indicacoes: indicacoesCount.count || 0
       })
     } catch (error) {
@@ -314,10 +308,9 @@ const HomePage = () => {
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
 
-        {/* ✅ ALTERAÇÃO: grid de 2 colunas — texto à esquerda, imagem à direita */}
         <div className="relative z-10 grid md:grid-cols-5 gap-8 md:gap-10 items-center">
 
-          {/* COLUNA ESQUERDA: TEXTO (conteúdo original preservado) */}
+          {/* COLUNA ESQUERDA: TEXTO */}
           <div className="md:col-span-3 max-w-3xl">
             <span className="inline-flex px-4 py-2 bg-white/10 rounded-full text-xs sm:text-sm backdrop-blur-md mb-5">
               Bella Vittà Community Hub
@@ -337,33 +330,46 @@ const HomePage = () => {
 
             <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
               <Link
+                to="/mural"
+                className="px-6 py-3 bg-white text-emerald-700 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base flex items-center gap-2"
+              >
+                📋 Mural
+              </Link>
+
+              <Link
                 to="/novo-anuncio"
-                className="px-6 py-3 bg-white text-emerald-700 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base"
+                className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline text-sm sm:text-base hover:bg-white/20 transition"
               >
                 Criar anúncio
               </Link>
 
               <Link
                 to="/mapa"
-                className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline text-sm sm:text-base"
+                className="px-6 py-3 bg-white/10 border border-white/20 rounded-2xl no-underline text-sm sm:text-base hover:bg-white/20 transition"
               >
                 Explorar serviços
               </Link>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-8 sm:mt-10 max-w-lg">
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.anuncios}+</h3>
-                <p className="text-xs sm:text-sm text-emerald-100">Anúncios</p>
-              </div>
-
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.servicos}+</h3>
+            {/* ✅ NOVO: 4 estatísticas */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-8 sm:mt-10">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.prestadores}</h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Prestadores</p>
               </div>
 
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.indicacoes}+</h3>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.servicos}</h3>
+                <p className="text-xs sm:text-sm text-emerald-100">Serviços</p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.anuncios}</h3>
+                <p className="text-xs sm:text-sm text-emerald-100">Anúncios</p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+                <h3 className="text-xl sm:text-2xl font-bold">{stats.indicacoes}</h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Indicações</p>
               </div>
             </div>
@@ -378,10 +384,8 @@ const HomePage = () => {
                 className="w-full h-56 sm:h-72 lg:h-96 object-cover"
               />
 
-              {/* Sombra suave para legibilidade do texto sobre a foto */}
               <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/70 via-transparent to-transparent" />
 
-              {/* Logo icone.png no canto superior direito da foto */}
               <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/95 backdrop-blur-md rounded-2xl p-1.5 sm:p-2 shadow-lg">
                 <img
                   src="/icone.png"
@@ -390,7 +394,6 @@ const HomePage = () => {
                 />
               </div>
 
-              {/* Legenda da foto */}
               <div className="absolute bottom-3 sm:bottom-4 left-4 right-4">
                 <p className="text-sm font-semibold drop-shadow">Residencial Bella Vittà</p>
                 <p className="text-xs text-emerald-100">Araraquara – SP</p>
