@@ -1,10 +1,9 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import PreviewAnuncio from '../components/PreviewAnuncio'
 
 const BeneficioCard = ({ icon, title, description }) => (
-  // ✅ CORREÇÃO: Padding e ícones menores no mobile
   <div className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all">
     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-50 flex items-center justify-center text-lg sm:text-xl mb-3 sm:mb-4">
       {icon}
@@ -19,7 +18,7 @@ const NovoAnuncioPage = () => {
   const { user } = useAuth()
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 pb-10">
 
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white p-6 sm:p-8 md:p-12">
@@ -35,7 +34,6 @@ const NovoAnuncioPage = () => {
             Marketplace Bella Vittà
           </span>
 
-          {/* ✅ CORREÇÃO: Texto menor no mobile */}
           <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight">
             Publique algo para sua comunidade
           </h1>
@@ -48,9 +46,9 @@ const NovoAnuncioPage = () => {
 
       {/* BENEFÍCIOS */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-        <BeneficioCard icon="⚡" title="Publicação rápida" description="Cadastre seu anúncio em poucos minutos." />
-        <BeneficioCard icon="🏡" title="Público local" description="Seus anúncios aparecem apenas para moradores." />
-        <BeneficioCard icon="🔒" title="Mais segurança" description="Negocie com pessoas próximas e confiáveis." />
+        <BeneficioCard icon="⚡" title="Publicação rápida" description="Cadastre seu anúncio em poucos minutos com fotos e descrição." />
+        <BeneficioCard icon="🏡" title="Público local" description="Seus anúncios aparecem apenas para moradores verificados." />
+        <BeneficioCard icon="🔒" title="Mais segurança" description="Negocie com pessoas próximas e confiáveis do condomínio." />
       </section>
 
       {/* NÃO LOGADO */}
@@ -80,9 +78,19 @@ const NovoAnuncioPage = () => {
               <Link to="/login" className="mt-6 inline-flex justify-center items-center px-6 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition no-underline text-sm">
                 Entrar agora
               </Link>
-              <button onClick={() => navigate('/anuncios')} className="mt-4 text-xs sm:text-sm text-gray-500 hover:text-gray-800 cursor-pointer">
-                Ver anúncios disponíveis →
-              </button>
+              
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <p className="text-xs sm:text-sm text-gray-500 mb-3">Não quer vender nada agora?</p>
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={() => navigate('/mural')} className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer">
+                    📋 Fazer uma pergunta no Mural
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button onClick={() => navigate('/anuncios')} className="text-xs sm:text-sm text-gray-500 hover:text-gray-800 cursor-pointer">
+                    Ver anúncios disponíveis →
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -99,12 +107,11 @@ const NovoAnuncioPage = () => {
               </div>
               <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-medium w-fit">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Publicação disponível
+                Pronto para publicar
               </div>
             </div>
           </div>
 
-          {/* ✅ CORREÇÃO: Container do formulário com padding externo no mobile */}
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-5 md:p-6">
             <PreviewAnuncio
               onAnuncioCriado={() => navigate('/anuncios')}
@@ -113,7 +120,9 @@ const NovoAnuncioPage = () => {
           </div>
 
           <div className="bg-amber-50 border border-amber-100 rounded-xl sm:rounded-2xl p-4 sm:p-5">
-            <h3 className="font-semibold text-amber-900 text-sm sm:text-base">Dica para vender mais rápido</h3>
+            <h3 className="font-semibold text-amber-900 text-sm sm:text-base flex items-center gap-2">
+              💡 Dica para vender mais rápido
+            </h3>
             <p className="text-xs sm:text-sm text-amber-700 mt-2 leading-relaxed">
               Use fotos claras, descreva bem o produto e informe um preço justo. Parece conselho de avó... porque funciona desde antes da internet existir.
             </p>

@@ -7,9 +7,9 @@
 //   3. Contagem de prestadores únicos (não serviços)
 // ============================================================================
 
-import React, { useEffect, useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import React, { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import {
   Wrench,
   MapPin,
@@ -20,34 +20,34 @@ import {
   Shield,
   Users,
   Sparkles,
-  MessageSquare
-} from 'lucide-react'
-import MuralComunidade from '../components/MuralComunidade'
+  MessageSquare,
+} from "lucide-react";
+import MuralComunidade from "../components/MuralComunidade";
 
 const formatarPreco = (valor) => {
-  if (!valor) return 'Sob consulta'
-  return Number(valor).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  })
-}
+  if (!valor) return "Sob consulta";
+  return Number(valor).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+};
 
 /* ---------------- CARD DESTAQUE ---------------- */
 
 const CardDestaque = ({ anuncio }) => {
   const getImagens = (imagemUrl) => {
-    if (!imagemUrl) return []
+    if (!imagemUrl) return [];
     try {
-      const parsed = JSON.parse(imagemUrl)
-      if (Array.isArray(parsed)) return parsed
-      return [imagemUrl]
+      const parsed = JSON.parse(imagemUrl);
+      if (Array.isArray(parsed)) return parsed;
+      return [imagemUrl];
     } catch {
-      return [imagemUrl]
+      return [imagemUrl];
     }
-  }
+  };
 
-  const imagens = getImagens(anuncio.imagem_url)
-  const imagem = imagens.length > 0 ? imagens[0] : null
+  const imagens = getImagens(anuncio.imagem_url);
+  const imagem = imagens.length > 0 ? imagens[0] : null;
 
   return (
     <Link
@@ -88,25 +88,25 @@ const CardDestaque = ({ anuncio }) => {
         )}
       </div>
     </Link>
-  )
-}
+  );
+};
 
 /* ---------------- CARD LISTAGEM ---------------- */
 
 const CardUltimo = ({ anuncio }) => {
   const getImagens = (imagemUrl) => {
-    if (!imagemUrl) return []
+    if (!imagemUrl) return [];
     try {
-      const parsed = JSON.parse(imagemUrl)
-      if (Array.isArray(parsed)) return parsed
-      return [imagemUrl]
+      const parsed = JSON.parse(imagemUrl);
+      if (Array.isArray(parsed)) return parsed;
+      return [imagemUrl];
     } catch {
-      return [imagemUrl]
+      return [imagemUrl];
     }
-  }
+  };
 
-  const imagens = getImagens(anuncio.imagem_url)
-  const imagem = imagens.length > 0 ? imagens[0] : null
+  const imagens = getImagens(anuncio.imagem_url);
+  const imagem = imagens.length > 0 ? imagens[0] : null;
 
   return (
     <Link
@@ -136,13 +136,14 @@ const CardUltimo = ({ anuncio }) => {
           </p>
 
           <p className="text-[10px] sm:text-xs text-gray-400 mt-2">
-            Publicado em {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}
+            Publicado em{" "}
+            {new Date(anuncio.created_at).toLocaleDateString("pt-BR")}
           </p>
         </div>
       </div>
     </Link>
-  )
-}
+  );
+};
 
 /* ---------------- QUICK CARD ---------------- */
 
@@ -159,34 +160,30 @@ const QuickCard = ({ to, title, subtitle, icon }) => (
       {title}
     </h3>
 
-    <p className="text-xs sm:text-sm text-gray-500 mt-1">
-      {subtitle}
-    </p>
+    <p className="text-xs sm:text-sm text-gray-500 mt-1">{subtitle}</p>
   </Link>
-)
+);
 
 /* ---------------- CAROUSEL ---------------- */
 
 const Carousel = ({ title, items, children }) => {
-  const scrollRef = useRef(null)
+  const scrollRef = useRef(null);
 
   const move = (direction) => {
-    if (!scrollRef.current) return
+    if (!scrollRef.current) return;
 
     scrollRef.current.scrollBy({
       left: direction * (window.innerWidth < 640 ? 280 : 350),
-      behavior: 'smooth'
-    })
-  }
+      behavior: "smooth",
+    });
+  };
 
-  if (!items?.length) return null
+  if (!items?.length) return null;
 
   return (
     <section className="space-y-4 sm:space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-          {title}
-        </h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h2>
 
         <div className="hidden md:flex gap-2">
           <button
@@ -209,107 +206,107 @@ const Carousel = ({ title, items, children }) => {
         ref={scrollRef}
         className="flex gap-4 sm:gap-5 overflow-x-auto pb-2"
         style={{
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
       >
         {children}
       </div>
     </section>
-  )
-}
+  );
+};
 
 /* ---------------- PAGE ---------------- */
 
 const HomePage = () => {
-  const [destaques, setDestaques] = useState([])
-  const [ultimos, setUltimos] = useState([])
+  const [destaques, setDestaques] = useState([]);
+  const [ultimos, setUltimos] = useState([]);
   const [stats, setStats] = useState({
     prestadores: 0,
     servicos: 0,
     anuncios: 0,
-    indicacoes: 0
-  })
-  const [loading, setLoading] = useState(true)
+    indicacoes: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    buscarDados()
-  }, [])
+    buscarDados();
+  }, []);
 
   const buscarDados = async () => {
     try {
-      const agora = new Date().toISOString()
+      const agora = new Date().toISOString();
 
       const [
         destaqueRes,
         ultimosRes,
         anunciosCount,
         servicosRes,
-        indicacoesCount
+        indicacoesCount,
       ] = await Promise.all([
         supabase
-          .from('anuncios_vendas')
-          .select('*')
-          .eq('destaque', true)
-          .ilike('status', 'ativo')
+          .from("anuncios_vendas")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "Ativo")
           .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
-          .order('created_at', { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(10),
 
         supabase
-          .from('anuncios_vendas')
-          .select('*')
-          .ilike('status', 'ativo')
+          .from("anuncios_vendas")
+          .select("*")
+          .ilike("status", "ativo")
           .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
-          .order('created_at', { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(6),
 
         supabase
-          .from('anuncios_vendas')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'Ativo'),
+          .from("anuncios_vendas")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "Ativo")
+          .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`), // ✅ CORRIGIDO
 
         supabase
-          .from('prestadores_servico')
-          .select('usuario_id, id', { count: 'exact' })
-          .eq('opt_in', true),
+          .from("prestadores_servico")
+          .select("usuario_id, id", { count: "exact" })
+          .eq("opt_in", true),
 
         supabase
-          .from('indicacoes')
-          .select('*', { count: 'exact', head: true })
-          .then(res => res.error ? { count: 0 } : res)
-      ])
+          .from("indicacoes")
+          .select("*", { count: "exact", head: true })
+          .then((res) => (res.error ? { count: 0 } : res)),
+      ]);
 
-      setDestaques(destaqueRes.data || [])
-      setUltimos(ultimosRes.data || [])
+      setDestaques(destaqueRes.data || []);
+      setUltimos(ultimosRes.data || []);
 
       // Contar prestadores únicos (usuários distintos)
-      const prestadoresUnicos = new Set(servicosRes.data?.map(s => s.usuario_id) || []).size
-      const totalServicos = servicosRes.data?.length || 0
+      const prestadoresUnicos = new Set(
+        servicosRes.data?.map((s) => s.usuario_id) || [],
+      ).size;
+      const totalServicos = servicosRes.data?.length || 0;
 
       setStats({
         prestadores: prestadoresUnicos,
         servicos: totalServicos,
         anuncios: anunciosCount.count || 0,
-        indicacoes: indicacoesCount.count || 0
-      })
+        indicacoes: indicacoesCount.count || 0,
+      });
     } catch (error) {
-      console.error('Erro HomePage:', error)
+      console.error("Erro HomePage:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-8 sm:space-y-10">
-
       {/* HERO */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 text-white p-6 sm:p-8 md:p-12">
         <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
 
         <div className="relative z-10 grid md:grid-cols-5 gap-8 md:gap-10 items-center">
-
           {/* COLUNA ESQUERDA: TEXTO */}
           <div className="md:col-span-3 max-w-3xl">
             <span className="inline-flex px-4 py-2 bg-white/10 rounded-full text-xs sm:text-sm backdrop-blur-md mb-5">
@@ -318,14 +315,12 @@ const HomePage = () => {
 
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight tracking-tight">
               Tudo que seu condomínio precisa,
-              <span className="block text-emerald-100">
-                em um só lugar.
-              </span>
+              <span className="block text-emerald-100">em um só lugar.</span>
             </h1>
 
             <p className="mt-5 text-emerald-50 text-sm sm:text-lg max-w-2xl leading-relaxed">
-              Encontre prestadores recomendados, anuncie produtos,
-              visualize o mapa do residencial e conecte-se com moradores.
+              Encontre prestadores recomendados, anuncie produtos, visualize o
+              mapa do residencial e conecte-se com moradores.
             </p>
 
             <div className="flex flex-wrap gap-3 sm:gap-4 mt-8">
@@ -354,23 +349,35 @@ const HomePage = () => {
             {/* ✅ NOVO: 4 estatísticas */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-8 sm:mt-10">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.prestadores}</h3>
-                <p className="text-xs sm:text-sm text-emerald-100">Prestadores</p>
+                <h3 className="text-xl sm:text-2xl font-bold">
+                  {stats.prestadores}
+                </h3>
+                <p className="text-xs sm:text-sm text-emerald-100">
+                  Prestadores
+                </p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.servicos}</h3>
+                <h3 className="text-xl sm:text-2xl font-bold">
+                  {stats.servicos}
+                </h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Serviços</p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.anuncios}</h3>
+                <h3 className="text-xl sm:text-2xl font-bold">
+                  {stats.anuncios}
+                </h3>
                 <p className="text-xs sm:text-sm text-emerald-100">Anúncios</p>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                <h3 className="text-xl sm:text-2xl font-bold">{stats.indicacoes}</h3>
-                <p className="text-xs sm:text-sm text-emerald-100">Indicações</p>
+                <h3 className="text-xl sm:text-2xl font-bold">
+                  {stats.indicacoes}
+                </h3>
+                <p className="text-xs sm:text-sm text-emerald-100">
+                  Indicações
+                </p>
               </div>
             </div>
           </div>
@@ -395,7 +402,9 @@ const HomePage = () => {
               </div>
 
               <div className="absolute bottom-3 sm:bottom-4 left-4 right-4">
-                <p className="text-sm font-semibold drop-shadow">Residencial Bella Vittà</p>
+                <p className="text-sm font-semibold drop-shadow">
+                  Residencial Bella Vittà
+                </p>
                 <p className="text-xs text-emerald-100">Araraquara – SP</p>
               </div>
             </div>
@@ -489,9 +498,7 @@ const HomePage = () => {
       )}
 
       {/* MURAL COMUNITÁRIO */}
-      {!loading && (
-        <MuralComunidade />
-      )}
+      {!loading && <MuralComunidade />}
 
       {/* BLOCO DE CONFIANÇA */}
       <section className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-100">
@@ -499,19 +506,25 @@ const HomePage = () => {
           <div>
             <Shield className="mx-auto text-emerald-600 mb-3" />
             <h3 className="text-lg sm:text-xl font-bold">Segurança</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">Exclusivo para moradores</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
+              Exclusivo para moradores
+            </p>
           </div>
 
           <div>
             <Users className="mx-auto text-emerald-600 mb-3" />
             <h3 className="text-lg sm:text-xl font-bold">Comunidade</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">Fortaleça conexões locais</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
+              Fortaleça conexões locais
+            </p>
           </div>
 
           <div>
             <Sparkles className="mx-auto text-emerald-600 mb-3" />
             <h3 className="text-lg sm:text-xl font-bold">Praticidade</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">Tudo centralizado</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
+              Tudo centralizado
+            </p>
           </div>
         </div>
       </section>
@@ -523,8 +536,8 @@ const HomePage = () => {
         </h2>
 
         <p className="text-sm sm:text-base text-gray-300 mt-3 max-w-xl mx-auto">
-          Venda para quem mora perto com mais praticidade,
-          confiança e sem aquela novela de marketplace externo.
+          Venda para quem mora perto com mais praticidade, confiança e sem
+          aquela novela de marketplace externo.
         </p>
 
         <Link
@@ -534,9 +547,8 @@ const HomePage = () => {
           Criar anúncio agora
         </Link>
       </section>
-
     </div>
-  )
-}
+  );
+};
 
-export default HomePage
+export default HomePage;

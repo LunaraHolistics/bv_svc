@@ -76,7 +76,13 @@ const PerfilPage = () => {
     }
     const fetchAnunciosAtivos = async () => {
       try {
-        const res = await supabase.from('anuncios_vendas').select('*', { count: 'exact', head: true }).eq('usuario_id', user.id).eq('status', 'Ativo')
+        const agora = new Date().toISOString()
+        const res = await supabase
+          .from('anuncios_vendas')
+          .select('*', { count: 'exact', head: true })
+          .eq('usuario_id', user.id)
+          .eq('status', 'Ativo')
+          .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
         return res.error ? 0 : (res.count || 0)
       } catch (err) { return 0 }
     }
