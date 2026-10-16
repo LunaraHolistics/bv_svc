@@ -1,16 +1,20 @@
 // ============================================================================
-// src/pages/AnunciosPage.jsx
-// - Cards de anúncio com ImagemFluida: retrato/paisagem/quadrada sem corte seco
-// - Hero com imagem decorativa /anuncios-hero.png (mesmo padrão das outras)
-// - Busca por título/descrição + grid responsivo
+// src/pages/AnunciosPage.jsx — VERSÃO FINAL COM CARDS NO MODELO MAPA
+// ----------------------------------------------------------------------------
+// - Hero com imagem decorativa /anuncios-hero.png
+// - Cards com layout revista (imagem flutuante + texto ao redor)
+// - Carrossel automático (4s) com dots apenas para visitantes
+// - Botões harmonizados: WhatsApp + Site (visitantes) / 5 botões (dono)
+// - Busca por título/descrição
 // ============================================================================
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import ImagemFluida from '../components/ImagemFluida'
 import { ShoppingBag } from 'lucide-react'
+
+const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
 
 const formatarPreco = (valor) => {
   if (valor === null || valor === undefined || valor === '') return 'Sob consulta'
@@ -28,6 +32,172 @@ const getImagens = (imagemUrl) => {
   }
 }
 
+const formatarWhatsapp = (numero) => {
+  if (!numero) return null
+  const limpo = String(numero).replace(/\D/g, '')
+  return limpo.length >= 10 ? limpo : null
+}
+
+/* ---------------- CARD DE ANÚNCIO (Modelo Revista) ---------------- */
+
+const CardAnuncio = ({ anuncio }) => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const whatsapp = formatarWhatsapp(anuncio.whatsapp)
+  const [expanded, setExpanded] = useState(false)
+  const [imgIndex, setImgIndex] = useState(0)
+
+  const imagens = useMemo(() => getImagens(anuncio.imagem_url), [anuncio.imagem_url])
+
+  const isMaster = user?.id === MASTER_USER_ID
+  const isOwner = user?.id === anuncio.usuario_id
+  const canManage = isMaster || isOwner
+
+  const whatsappLink = useMemo(() => {
+    if (!whatsapp) return null
+    return `https://wa.me/55${whatsapp}?text=${encodeURIComponent(`Olá! Vi seu anúncio "${anuncio.titulo}" no Bella Vittà e tenho interesse.`)}`
+  }, [whatsapp, anuncio.titulo])
+
+  // Carrossel automático
+  useEffect(() => {
+    if (imagens.length <= 1) return
+    const timer = setInterval(() => setImgIndex((prev) => (prev + 1) % imagens.length), 4000)
+    return () => clearInterval(timer)
+  }, [imagens.length])
+
+  const handleVerMais = (e) => {
+    e.stopPropagation()
+    setExpanded(!expanded)
+  }
+
+  const handleCardClick = () => {
+    navigate(`/anuncio/${anuncio.id}`)
+  }
+
+  const handleDelete = async (e) => {
+    e.stopPropagation()
+    if (window.confirm(`Deseja realmente excluir o anúncio "${anuncio.titulo}"?`)) {
+      const { error } = await supabase.from('anuncios_vendas').delete().eq('id', anuncio.id)
+      if (error) alert('Erro ao excluir: ' + error.message)
+      else window.location.reload()
+    }
+  }
+
+  return (
+    <div onClick={handleCardClick} className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer">
+      
+      {/* ===== CABEÇALHO: Avatar + Nome + Chips ===== */}
+      <div className="p-3 sm:p-4 pb-2">
+        <div className="flex items-start gap-2">
+          <div className="relative shrink-0">
+            {anuncio.vendedor?.avatar_url ? (
+              <img src={anuncio.vendedor.avatar_url} alt={anuncio.vendedor.nome_completo} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border-2 border-white shadow-sm" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex' }} />
+            ) : null}
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${anuncio.vendedor?.avatar_url ? 'hidden' : 'flex'}`}>
+              <span className="text-emerald-700 font-bold text-xs sm:text-sm">{anuncio.vendedor?.nome_completo?.charAt(0)?.toUpperCase() || '🏡'}</span>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-gray-900 truncate text-xs sm:text-sm">{anuncio.vendedor?.nome_completo || 'Vendedor'}</h3>
+            {anuncio.titulo && <p className="text-[10px] sm:text-xs text-emerald-600 truncate">{anuncio.titulo}</p>}
+            <p className="text-[9px] sm:text-[10px] text-gray-500 font-semibold mt-0.5">{formatarPreco(anuncio.preco)}</p>
+          </div>
+        </div>
+
+        {/* Chips */}
+        <div className="flex flex-wrap gap-1 mt-2">
+          {anuncio.destaque && <span className="inline-flex px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[8px] sm:text-[10px] font-medium">⭐ Destaque</span>}
+          {imagens.length > 0 && <span className="inline-flex px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[8px] sm:text-[10px] font-medium"> {imagens.length}</span>}
+          <span className="inline-flex px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[8px] sm:text-[10px] font-medium"> {new Date(anuncio.created_at).toLocaleDateString('pt-BR')}</span>
+        </div>
+      </div>
+
+      {/* ===== CONTEÚDO: Imagem + Texto no MESMO bloco ===== */}
+      <div className="px-3 sm:px-4 pb-3 flex-1 flex flex-col">
+        
+        {/* Bloco único com imagem flutuante + texto fluindo ao redor */}
+        <div className="mb-2">
+          {imagens.length > 0 && (
+            <div className="float-left mr-3 mb-1 w-[35%] sm:w-[40%] relative">
+              <div className="w-full aspect-square overflow-hidden rounded-lg bg-gray-100">
+                <img src={imagens[imgIndex]} alt={anuncio.titulo} className="w-full h-full object-cover transition-opacity duration-500" />
+              </div>
+              {/* Dots do carrossel: SÓ aparecem quando NÃO é o dono */}
+              {imagens.length > 1 && !canManage && (
+                <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
+                  {imagens.map((_, i) => (
+                    <button key={i} onClick={(e) => { e.stopPropagation(); setImgIndex(i) }} className={`h-1 rounded-full transition-all ${i === imgIndex ? 'bg-white w-2' : 'bg-white/60 w-1'}`} aria-label={`Ver imagem ${i + 1}`} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Texto flui ao redor da imagem flutuante */}
+          {anuncio.descricao && (
+            <p className={`text-[10px] sm:text-xs text-gray-600 leading-snug ${expanded ? '' : 'line-clamp-5'}`}>
+              {anuncio.descricao}
+            </p>
+          )}
+
+          {/* Limpa o float */}
+          <div className="clear-both"></div>
+
+          {/* Link "leia mais" / "ver menos" */}
+          {anuncio.descricao?.length > 100 && (
+            <button onClick={handleVerMais} className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-1">
+              {expanded ? 'ver menos' : 'leia mais'}
+            </button>
+          )}
+        </div>
+
+        {/* ===== BOTÕES DE AÇÃO ===== */}
+        <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-2">
+          {canManage ? (
+            /* DONO/MASTER: 4 botões na mesma linha */
+            <div className="flex gap-1.5 items-center">
+              {whatsappLink && (
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center px-2 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition flex-1">
+                  💬
+                </a>
+              )}
+              {anuncio.site_url && (
+                <a href={anuncio.site_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition">
+                  🌐
+                </a>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); navigate(`/editar-anuncio/${anuncio.id}`) }} className="flex items-center justify-center px-2 py-1.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] sm:text-xs font-medium hover:bg-emerald-100 transition cursor-pointer flex-1">
+                ✏️
+              </button>
+              <button onClick={handleDelete} className="flex items-center justify-center px-2 py-1.5 bg-red-50 text-red-600 rounded-md text-[10px] sm:text-xs font-medium hover:bg-red-100 transition cursor-pointer">
+                🗑️
+              </button>
+            </div>
+          ) : (
+            /* VISITANTE: Só 2 botões (WhatsApp + Site) com ícones */
+            <div className="flex gap-1.5">
+              {whatsappLink ? (
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition flex-1">
+                  💬 WhatsApp
+                </a>
+              ) : (
+                <div className="px-3 py-1.5 bg-gray-100 text-gray-400 rounded-md text-[10px] text-center flex-1">Sem contato</div>
+              )}
+              {anuncio.site_url && (
+                <a href={anuncio.site_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition">
+                  🌐 Site
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- PAGE PRINCIPAL ---------------- */
+
 const AnunciosPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -44,7 +214,7 @@ const AnunciosPage = () => {
       const agora = new Date().toISOString()
       const { data, error } = await supabase
         .from('anuncios_vendas')
-        .select('*')
+        .select('*, vendedor:perfis(id, nome_completo, avatar_url, whatsapp)')
         .ilike('status', 'ativo')
         .or(`data_expiracao.is.null,data_expiracao.gt.${agora}`)
         .order('created_at', { ascending: false })
@@ -67,7 +237,7 @@ const AnunciosPage = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* HERO */}
+      {/* ===== HERO ===== */}
       <section className="relative overflow-hidden rounded-2xl sm:rounded-[36px] bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 text-white p-6 sm:p-8 md:p-12">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl" />
@@ -87,7 +257,7 @@ const AnunciosPage = () => {
               <Link to="/novo-anuncio" className="px-6 py-3 bg-white text-slate-900 rounded-2xl font-semibold no-underline hover:scale-105 transition text-sm sm:text-base">
                 Criar anúncio
               </Link>
-              <Link to="/servicos" className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl !text-white no-underline hover:bg-white/25 transition text-sm sm:text-base">
+              <Link to="/mapa" className="px-6 py-3 bg-white/15 border border-white/25 rounded-2xl !text-white no-underline hover:bg-white/25 transition text-sm sm:text-base">
                 Explorar serviços
               </Link>
             </div>
@@ -103,7 +273,7 @@ const AnunciosPage = () => {
         </div>
       </section>
 
-      {/* BUSCA */}
+      {/* ===== BUSCA ===== */}
       <section className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-5">
         <div className="relative">
           <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
@@ -117,7 +287,7 @@ const AnunciosPage = () => {
         </div>
       </section>
 
-      {/* GRID */}
+      {/* ===== GRID DE ANÚNCIOS ===== */}
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[...Array(6)].map((_, i) => (
@@ -140,47 +310,16 @@ const AnunciosPage = () => {
           )}
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {anunciosFiltrados.map((a) => {
-            const imagens = getImagens(a.imagem_url)
-            const imagem = imagens[0] || null
-            return (
-              <Link
-                key={a.id}
-                to={`/anuncio/${a.id}`}
-                className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all no-underline flex flex-col"
-              >
-                {/* ✅ Janela fluida: retrato fica retrato, paisagem fica paisagem */}
-                {imagem ? (
-                  <ImagemFluida
-                    src={imagem}
-                    alt={a.titulo}
-                    semCentralizar
-                    arredondado="rounded-t-2xl sm:rounded-t-3xl"
-                    imgClassName="group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="aspect-[4/3] w-full bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
-                    <ShoppingBag className="w-10 h-10 text-emerald-400" />
-                  </div>
-                )}
-
-                <div className="p-4 sm:p-5 flex-1 flex flex-col">
-                  {a.destaque && (
-                    <span className="self-start px-2 py-0.5 mb-2 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold">⭐ Destaque</span>
-                  )}
-                  <p className="text-emerald-600 font-bold text-sm sm:text-base">{formatarPreco(a.preco)}</p>
-                  <h3 className="font-semibold text-gray-900 mt-1 line-clamp-2 text-sm sm:text-base">{a.titulo}</h3>
-                  {a.descricao && (
-                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">{a.descricao}</p>
-                  )}
-                  <p className="text-[10px] text-gray-400 mt-3">
-                    Publicado em {new Date(a.created_at).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              </Link>
-            )
-          })}
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Anúncios disponíveis</h2>
+            <span className="text-xs sm:text-sm text-gray-500">{anunciosFiltrados.length} anúncio(s)</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {anunciosFiltrados.map((a) => (
+              <CardAnuncio key={a.id} anuncio={a} />
+            ))}
+          </div>
         </div>
       )}
     </div>

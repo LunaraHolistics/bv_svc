@@ -268,19 +268,6 @@ const CardAgrupado = ({ grupo, onDelete }) => {
       })}
 
       {grupo.length > 1 && (
-        <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 flex justify-center gap-1.5 z-50">
-          {grupo.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setActiveIdx(i)}
-              className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer ${i === activeIdx ? "bg-emerald-500 scale-125" : "bg-white/90 shadow-sm"}`}
-            />
-          ))}
-        </div>
-      )}
-
-      {grupo.length > 1 && (
         <div
           onClick={(e) => {
             e.stopPropagation();

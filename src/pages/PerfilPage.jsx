@@ -22,8 +22,12 @@ const PerfilPage = () => {
   const [avatarFile, setAvatarFile] = useState(null)
 
   const [stats, setStats] = useState({ anuncios: 0, servicos: 0, indicacoes: 0 })
+  
   const [servicosDoUsuario, setServicosDoUsuario] = useState([])
-  const [excluindoId, setExcluindoId] = useState(null)
+  const [excluindoServicoId, setExcluindoServicoId] = useState(null)
+
+  const [anunciosDoUsuario, setAnunciosDoUsuario] = useState([])
+  const [processandoAnuncioId, setProcessandoAnuncioId] = useState(null)
 
   const [form, setForm] = useState({
     nome_completo: '', nome_exibicao: '', fase: '', quadra: '', lote: '',
@@ -37,7 +41,11 @@ const PerfilPage = () => {
   }, [authLoading, user, navigate])
 
   useEffect(() => {
-    if (user) buscarEstatisticas()
+    if (user) {
+      buscarEstatisticas()
+      buscarServicosDoUsuario()
+      buscarAnunciosDoUsuario()
+    }
   }, [user])
 
   const buscarServicosDoUsuario = async () => {
@@ -46,7 +54,15 @@ const PerfilPage = () => {
     if (!error) setServicosDoUsuario(data || [])
   }
 
-  useEffect(() => { buscarServicosDoUsuario() }, [user])
+  const buscarAnunciosDoUsuario = async () => {
+    if (!user) { setAnunciosDoUsuario([]); return }
+    const { data, error } = await supabase
+      .from('anuncios_vendas')
+      .select('id, titulo, preco, status, data_expiracao, created_at')
+      .eq('usuario_id', user.id)
+      .order('created_at', { ascending: false })
+    if (!error) setAnunciosDoUsuario(data || [])
+  }
 
   const buscarEstatisticas = async () => {
     const fetchCount = async (tabela) => {
@@ -104,12 +120,79 @@ const PerfilPage = () => {
 
   const handleExcluirServico = async (id) => {
     if (!window.confirm('Excluir este serviço permanentemente?')) return
-    setExcluindoId(id)
+    setExcluindoServicoId(id)
     const { error } = await supabase.from('prestadores_servico').delete().eq('id', id)
-    if (error) { alert('❌ Erro ao excluir: ' + error.message); setExcluindoId(null); return }
+    if (error) { alert('❌ Erro ao excluir: ' + error.message); setExcluindoServicoId(null); return }
     setServicosDoUsuario(prev => prev.filter(s => s.id !== id))
     setStats(prev => ({ ...prev, servicos: Math.max(0, prev.servicos - 1) }))
-    setExcluindoId(null)
+    setExcluindoServicoId(null)
+  }
+
+  // ===== AÇÕES DE ANÚNCIOS =====
+  const handleReativarAnuncio = async (id) => {
+    if (!window.confirm('Reativar este anúncio e estender a validade por +30 dias?')) return
+    setProcessandoAnuncioId(id)
+    
+    const novaData = new Date()
+    novaData.setDate(novaData.getDate() + 30)
+    
+    const { error } = await supabase
+      .from('anuncios_vendas')
+      .update({ status: 'Ativo', data_expiracao: novaData.toISOString() })
+      .eq('id', id)
+      
+    if (error) {
+      alert('Erro ao reativar: ' + error.message)
+    } else {
+      buscarAnunciosDoUsuario()
+      buscarEstatisticas()
+    }
+    setProcessandoAnuncioId(null)
+  }
+
+  const handleDuplicarAnuncio = async (anuncio) => {
+    if (!window.confirm(`Duplicar o anúncio "${anuncio.titulo}"? Uma cópia em rascunho será criada.`)) return
+    setProcessandoAnuncioId(anuncio.id)
+    
+    const { data: anuncioCompleto, error: fetchError } = await supabase
+      .from('anuncios_vendas')
+      .select('*')
+      .eq('id', anuncio.id)
+      .single()
+      
+    if (fetchError || !anuncioCompleto) {
+      alert('Erro ao buscar dados do anúncio.')
+      setProcessandoAnuncioId(null)
+      return
+    }
+    
+    const { id, created_at, updated_at, ...dadosParaCopiar } = anuncioCompleto
+    dadosParaCopiar.titulo = `${anuncioCompleto.titulo} (Cópia)`
+    dadosParaCopiar.status = 'Rascunho'
+    
+    const { error: insertError } = await supabase.from('anuncios_vendas').insert(dadosParaCopiar)
+    
+    if (insertError) {
+      alert('Erro ao duplicar: ' + insertError.message)
+    } else {
+      alert('Anúncio duplicado com sucesso! Você pode editá-lo antes de publicar.')
+      buscarAnunciosDoUsuario()
+      buscarEstatisticas()
+    }
+    setProcessandoAnuncioId(null)
+  }
+
+  const handleExcluirAnuncio = async (id) => {
+    if (!window.confirm('Excluir este anúncio permanentemente?')) return
+    setProcessandoAnuncioId(id)
+    const { error } = await supabase.from('anuncios_vendas').delete().eq('id', id)
+    if (error) {
+      alert('Erro ao excluir: ' + error.message)
+    } else {
+      buscarAnunciosDoUsuario()
+      buscarEstatisticas()
+    }
+    setProcessandoAnuncioId(null)
   }
 
   const handleSalvar = async (e) => {
@@ -150,7 +233,7 @@ const PerfilPage = () => {
         if (idsParaAtualizar.length > 0) await supabase.from('prestadores_servico').update({ casa_numero: novoEnderecoFormatado }).in('id', idsParaAtualizar)
       }
 
-      await recarregarPerfil(); buscarEstatisticas(); buscarServicosDoUsuario()
+      await recarregarPerfil(); buscarEstatisticas(); buscarServicosDoUsuario(); buscarAnunciosDoUsuario()
       setSucesso(true); setAvatarFile(null)
       setTimeout(() => setSucesso(false), 3000)
     } catch (err) {
@@ -158,7 +241,6 @@ const PerfilPage = () => {
     } finally { setSalvando(false) }
   }
 
-  // ✅ CORREÇÃO: Inputs menores no mobile (py-2.5) e arredondamento mais leve
   const inputClass = 'w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm sm:text-base'
 
   if (authLoading) return (
@@ -170,9 +252,9 @@ const PerfilPage = () => {
   if (!user) return null
 
   const mostrarCardServicos = ehPrestador || servicosDoUsuario.length > 0
+  const mostrarCardAnuncios = anunciosDoUsuario.length > 0 // Sempre mostra se tiver anúncios, ou podemos mostrar sempre para incentivar
 
   return (
-    // ✅ CORREÇÃO: Gap vertical menor no mobile
     <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
 
       {/* HERO */}
@@ -183,7 +265,7 @@ const PerfilPage = () => {
           <div>
             <span className="text-xs bg-white/10 px-3 py-1 rounded-full">Área do morador</span>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-4">Seu perfil no Bella Vittà</h1>
-            <p className="text-white/80 mt-2 max-w-xl text-sm sm:text-base">Atualize seus dados pessoais e personalize como você aparece.</p>
+            <p className="text-white/80 mt-2 max-w-xl text-sm sm:text-base">Atualize seus dados pessoais e gerencie seus anúncios e serviços.</p>
           </div>
           <button onClick={() => navigate('/')} className="px-5 py-3 bg-white text-emerald-700 rounded-2xl font-semibold hover:bg-emerald-50 transition cursor-pointer text-sm sm:text-base">
             Voltar ao início
@@ -191,7 +273,7 @@ const PerfilPage = () => {
         </div>
       </div>
 
-      {/* ✅ CORREÇÃO: Grid de estatísticas compacto no mobile para não estourar a largura */}
+      {/* Estatísticas */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <button type="button" onClick={() => navigate('/anuncios')} className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5 flex flex-col items-center justify-center text-center hover:shadow-md transition cursor-pointer">
           <span className="text-2xl sm:text-3xl mb-1 sm:mb-2">📢</span>
@@ -220,7 +302,6 @@ const PerfilPage = () => {
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 pb-6 border-b border-gray-100">
           <div onClick={() => fileInputRef.current?.click()} className="cursor-pointer">
             {avatarPreview ? (
-              // ✅ CORREÇÃO: Avatar menor no mobile (80px)
               <img src={avatarPreview} alt="avatar" className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl object-cover shadow-md" />
             ) : (
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-emerald-50 flex items-center justify-center text-3xl sm:text-4xl">👤</div>
@@ -283,7 +364,103 @@ const PerfilPage = () => {
           </select>
         </div>
 
-        {/* CARD DE SERVIÇOS */}
+        {/* ===== CARD DE ANÚNCIOS ===== */}
+        <div className="mt-6 p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0">📢</div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                {anunciosDoUsuario.length > 0 ? `Você tem ${anunciosDoUsuario.length} anúncio${anunciosDoUsuario.length > 1 ? 's' : ''}` : 'Cadastre seu primeiro anúncio'}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                {anunciosDoUsuario.length > 0 ? 'Gerencie seus produtos e vendas abaixo.' : 'Venda itens usados ou novos para a comunidade.'}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2 sm:gap-3">
+                <button type="button" onClick={() => navigate('/novo-anuncio')} className="px-4 py-2 sm:px-5 sm:py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20 cursor-pointer text-sm sm:text-base">
+                  ➕ Criar anúncio
+                </button>
+                {anunciosDoUsuario.length > 0 && (
+                  <button type="button" onClick={() => navigate('/anuncios')} className="px-4 py-2 sm:px-5 sm:py-2.5 bg-white text-blue-700 border-2 border-blue-200 rounded-xl font-semibold hover:bg-blue-50 transition cursor-pointer text-sm sm:text-base">
+                    👁️ Ver todos
+                  </button>
+                )}
+              </div>
+
+              {anunciosDoUsuario.length > 0 && (
+                <div className="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
+                  {anunciosDoUsuario.map((anuncio) => {
+                    const isExpired = anuncio.data_expiracao && new Date(anuncio.data_expiracao) < new Date()
+                    const isActive = anuncio.status === 'Ativo' && !isExpired
+                    const isProcessing = processandoAnuncioId === anuncio.id
+
+                    return (
+                      <div key={anuncio.id} className="p-3 sm:p-4 bg-white rounded-xl border border-gray-100 hover:shadow-sm transition">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900 truncate text-sm">{anuncio.titulo || 'Sem título'}</p>
+                              {isActive ? (
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">Ativo</span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">
+                                  {isExpired ? 'Expirado' : 'Inativo'}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {anuncio.preco ? `R$ ${Number(anuncio.preco).toLocaleString('pt-BR')}` : 'Preço não informado'} 
+                              {anuncio.data_expiracao && ` • Expira em ${new Date(anuncio.data_expiracao).toLocaleDateString('pt-BR')}`}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                            {!isActive && (
+                              <button 
+                                type="button" 
+                                onClick={() => handleReativarAnuncio(anuncio.id)} 
+                                disabled={isProcessing}
+                                className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer disabled:opacity-50"
+                              >
+                                {isProcessing ? '...' : '🔄 Reativar'}
+                              </button>
+                            )}
+                            <button 
+                              type="button" 
+                              onClick={() => navigate(`/editar-anuncio/${anuncio.id}`)} 
+                              disabled={isProcessing}
+                              className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => handleDuplicarAnuncio(anuncio)} 
+                              disabled={isProcessing}
+                              className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition cursor-pointer disabled:opacity-50"
+                            >
+                              📋 Duplicar
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => handleExcluirAnuncio(anuncio.id)} 
+                              disabled={isProcessing}
+                              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
+                            >
+                              {isProcessing ? <span className="w-3 h-3 border border-red-300 border-t-red-600 rounded-full animate-spin inline-block" /> : '🗑️'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ===== CARD DE SERVIÇOS ===== */}
         {mostrarCardServicos && (
           <div className="mt-6 p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl">
             <div className="flex items-start gap-3 sm:gap-4">
@@ -310,7 +487,7 @@ const PerfilPage = () => {
                 {servicosDoUsuario.length > 0 && (
                   <div className="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
                     {servicosDoUsuario.map((servico) => {
-                      const estaExcluindo = excluindoId === servico.id
+                      const estaExcluindo = excluindoServicoId === servico.id
                       return (
                         <div key={servico.id} className={`p-2.5 sm:p-3 bg-white rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 transition ${estaExcluindo ? 'border-red-300 opacity-60' : 'border-gray-100 hover:shadow-sm'}`}>
                           <div className="min-w-0">

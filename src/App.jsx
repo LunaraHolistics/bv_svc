@@ -1,45 +1,67 @@
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './lib/auth.jsx'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./lib/auth.jsx";
 
-import Header from './components/Header'
+import Header from "./components/Header";
 
-import HomePage from './pages/HomePage'
-import MapaPage from './pages/MapaPage'
-import ServicoDetalhePage from './pages/ServicoDetalhePage'
-import IndicacoesPage from './pages/IndicacoesPage'
-import AnunciosPage from './pages/AnunciosPage'
-import AnuncioDetailPage from './pages/AnuncioDetailPage'
-import NovoAnuncioPage from './pages/NovoAnuncioPage'
-import EditarAnuncioPage from './pages/EditarAnuncioPage'
-import EditarServicoPage from './pages/EditarServicoPage'
-import LoginPage from './pages/LoginPage'
-import PerfilPage from './pages/PerfilPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import PainelAdminPage from './pages/PainelAdminPage'
-import AdmBVPage from './pages/AdmBVPage'
-import NotFoundPage from './pages/NotFoundPage'
+import HomePage from "./pages/HomePage";
+import MapaPage from "./pages/MapaPage";
+import ServicoDetalhePage from "./pages/ServicoDetalhePage";
+import IndicacoesPage from "./pages/IndicacoesPage";
+import AnunciosPage from "./pages/AnunciosPage";
+import AnuncioDetailPage from "./pages/AnuncioDetailPage";
+import NovoAnuncioPage from "./pages/NovoAnuncioPage";
+import EditarAnuncioPage from "./pages/EditarAnuncioPage";
+import EditarServicoPage from "./pages/EditarServicoPage";
+import LoginPage from "./pages/LoginPage";
+import PerfilPage from "./pages/PerfilPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import PainelAdminPage from "./pages/PainelAdminPage";
+import AdmBVPage from "./pages/AdmBVPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
-const MASTER_USER_ID = 'aaddc383-2f72-45ff-bb01-cec19c695a86'
+const MASTER_USER_ID = "aaddc383-2f72-45ff-bb01-cec19c695a86";
 
 const MasterRoute = ({ children }) => {
-  const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
-  if (!user || user.id !== MASTER_USER_ID) return <Navigate to="/" replace />
-  return children
-}
+  const { user, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-500">
+        Verificando...
+      </div>
+    );
+  if (!user || user.id !== MASTER_USER_ID) return <Navigate to="/" replace />;
+  return children;
+};
 
 const AdmBVRoute = ({ children }) => {
-  const { user, perfil, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Verificando...</div>
-  const isMaster = user?.id === MASTER_USER_ID
-  const isAdmCondominio = perfil?.is_admin_condominio === true
-  if (!user || (!isMaster && !isAdmCondominio)) return <Navigate to="/" replace />
-  return children
-}
+  const { user, perfil, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-500">
+        Verificando...
+      </div>
+    );
+  const isMaster = user?.id === MASTER_USER_ID;
+  const isAdmCondominio = perfil?.is_admin_condominio === true;
+  if (!user || (!isMaster && !isAdmCondominio))
+    return <Navigate to="/" replace />;
+  return children;
+};
 
 function AppContent() {
-  const location = useLocation()
-  const hideChrome = ['/login', '/reset-password', '/admin', '/adm_bv'].includes(location.pathname)
+  const location = useLocation();
+  const hideChrome = [
+    "/login",
+    "/reset-password",
+    "/admin",
+    "/adm_bv",
+  ].includes(location.pathname);
 
   return (
     // ✅ CORREÇÃO: overflow-x-hidden (bloqueia scroll horizontal) em vez de overflow-hidden (que cortava tudo)
@@ -52,7 +74,13 @@ function AppContent() {
       {!hideChrome && <Header />}
 
       <main className="flex-1 relative z-10">
-        <div className={hideChrome ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10'}>
+        <div
+          className={
+            hideChrome
+              ? ""
+              : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10"
+          }
+        >
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/mapa" element={<MapaPage />} />
@@ -67,8 +95,22 @@ function AppContent() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/admin" element={<MasterRoute><PainelAdminPage /></MasterRoute>} />
-            <Route path="/adm_bv" element={<AdmBVRoute><AdmBVPage /></AdmBVRoute>} />
+            <Route
+              path="/admin"
+              element={
+                <MasterRoute>
+                  <PainelAdminPage />
+                </MasterRoute>
+              }
+            />
+            <Route
+              path="/adm_bv"
+              element={
+                <AdmBVRoute>
+                  <AdmBVPage />
+                </AdmBVRoute>
+              }
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
@@ -77,13 +119,28 @@ function AppContent() {
       {!hideChrome && (
         <footer className="relative z-10 mt-10 border-t border-white/50 bg-white/70 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-6 py-6 text-center">
-            <p className="text-sm text-gray-500">BV Service • Condomínio Bella Vittà</p>
-            <p className="text-xs text-gray-400 mt-1">Classificados, serviços e conexões entre moradores</p>
+            <p className="text-sm text-gray-500">
+              BV Service • Condomínio Bella Vittà
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Classificados, serviços e conexões entre moradores
+            </p>
+            <p className="text-[11px] text-gray-400 mt-3">
+              Plataforma{" "}
+              <a
+                href="/servico/f8545c0d-a2da-4d13-af72-cb67f9aee6fe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-600 font-medium hover:text-emerald-700 hover:underline transition"
+              >
+                WebSoluções CLB
+              </a>
+            </p>
           </div>
         </footer>
       )}
     </div>
-  )
+  );
 }
 
 function App() {
@@ -93,7 +150,7 @@ function App() {
         <AppContent />
       </BrowserRouter>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;
