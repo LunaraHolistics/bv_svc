@@ -41,7 +41,6 @@ const normTexto = (s) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
-/* ---------------- CARD INTERNO (Layout Compacto - Imagem Reduzida) ---------------- */
 /* ---------------- CARD INTERNO (Layout Revista - Texto ao Redor da Imagem) ---------------- */
 
 const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
@@ -126,7 +125,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
         </div>
       </div>
 
-      {/* ===== CONTEÚDO: Imagem + Texto no MESMO bloco (float funciona) ===== */}
+      {/* ===== CONTEÚDO: Imagem + Texto no MESMO bloco ===== */}
       <div className="px-3 sm:px-4 pb-3 flex-1 flex flex-col">
         
         {/* Bloco único com imagem flutuante + texto fluindo ao redor */}
@@ -136,7 +135,8 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
               <div className="w-full aspect-square overflow-hidden rounded-lg bg-gray-100">
                 <img src={imagens[imgIndex]} alt={prestador.nome_fantasia || prestador.nome} className="w-full h-full object-cover transition-opacity duration-500" />
               </div>
-              {imagens.length > 1 && (
+              {/* ✅ Dots do carrossel: SÓ aparecem quando NÃO é o dono (para não atrapalhar os botões) */}
+              {imagens.length > 1 && !canManage && (
                 <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
                   {imagens.map((_, i) => (
                     <button key={i} onClick={(e) => { e.stopPropagation(); setImgIndex(i) }} className={`h-1 rounded-full transition-all ${i === imgIndex ? 'bg-white w-2' : 'bg-white/60 w-1'}`} aria-label={`Ver imagem ${i + 1}`} />
@@ -148,7 +148,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
 
           {/* Texto flui ao redor da imagem flutuante */}
           {(prestador.descricao_comercial || prestador.descricao) && (
-            <p className={`text-[10px] sm:text-xs text-gray-600 leading-snug ${expanded ? '' : 'line-clamp-2'}`}>
+            <p className={`text-[10px] sm:text-xs text-gray-600 leading-snug ${expanded ? '' : 'line-clamp-5'}`}>
               {prestador.descricao_comercial || prestador.descricao}
             </p>
           )}
@@ -156,15 +156,10 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           {/* Limpa o float */}
           <div className="clear-both"></div>
 
-          {/* Link "leia mais" (só se houver texto longo) */}
-          {!expanded && (prestador.descricao_comercial || prestador.descricao)?.length > 100 && (
+          {/* Link "leia mais" / "ver menos" */}
+          {(prestador.descricao_comercial || prestador.descricao)?.length > 100 && (
             <button onClick={handleVerMais} className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-1">
-              leia mais
-            </button>
-          )}
-          {expanded && (
-            <button onClick={handleVerMais} className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-1">
-              ver menos
+              {expanded ? 'ver menos' : 'leia mais'}
             </button>
           )}
         </div>
@@ -176,30 +171,51 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           </div>
         )}
 
-        {/* Botões de contato */}
+        {/* ===== BOTÕES DE AÇÃO ===== */}
         {isFront && (
-          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-2 flex gap-1.5">
-            {whatsappLink ? (
-              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition">
-                💬 WhatsApp
-              </a>
+          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-2">
+            {canManage ? (
+              /* ✅ DONO/MASTER: 4 botões na mesma linha (WhatsApp, Insta, Site, Editar) + Lixeira separada */
+              <div className="flex gap-1.5 items-center">
+                {whatsappLink && (
+                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-2 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition flex-1">
+                    💬
+                  </a>
+                )}
+                {prestador.instagram_url && (
+                  <a href={prestador.instagram_url.startsWith('http') ? prestador.instagram_url : `https://instagram.com/${prestador.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center px-2 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline">
+                    📸
+                  </a>
+                )}
+                {prestador.site_url && (
+                  <a href={prestador.site_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition">
+                    🌐
+                  </a>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }} className="flex items-center justify-center px-2 py-1.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] sm:text-xs font-medium hover:bg-emerald-100 transition cursor-pointer flex-1">
+                  ✏️
+                </button>
+                <button onClick={handleDelete} className="flex items-center justify-center px-2 py-1.5 bg-red-50 text-red-600 rounded-md text-[10px] sm:text-xs font-medium hover:bg-red-100 transition cursor-pointer">
+                  🗑️
+                </button>
+              </div>
             ) : (
-              <div className="px-2.5 py-1.5 bg-gray-100 text-gray-400 rounded-md text-[10px]">Sem contato</div>
+              /* ✅ VISITANTE: Só 2 botões (WhatsApp + Site) com ícones */
+              <div className="flex gap-1.5">
+                {whatsappLink ? (
+                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition flex-1">
+                    💬 WhatsApp
+                  </a>
+                ) : (
+                  <div className="px-3 py-1.5 bg-gray-100 text-gray-400 rounded-md text-[10px] text-center flex-1">Sem contato</div>
+                )}
+                {prestador.site_url && (
+                  <a href={prestador.site_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition">
+                    🌐 Site
+                  </a>
+                )}
+              </div>
             )}
-            {prestador.instagram_url && (
-              <a href={prestador.instagram_url.startsWith('http') ? prestador.instagram_url : `https://instagram.com/${prestador.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline"></a>
-            )}
-            {prestador.site_url && (
-              <a href={prestador.site_url} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition"></a>
-            )}
-          </div>
-        )}
-
-        {/* Ações de gestão */}
-        {canManage && isFront && (
-          <div onClick={(e) => e.stopPropagation()} className="mt-1.5 pt-1.5 border-t border-dashed border-red-200 flex gap-1.5">
-            <button onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }} className="flex-1 py-1 text-[9px] sm:text-[10px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition cursor-pointer">✏️ Editar</button>
-            <button onClick={handleDelete} className="px-2 py-1 text-[9px] sm:text-[10px] font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition cursor-pointer">🗑️</button>
           </div>
         )}
       </div>
