@@ -41,9 +41,8 @@ const normTexto = (s) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
-/* ---------------- CARD INTERNO (Layout Otimizado) ---------------- */
-
 /* ---------------- CARD INTERNO (Layout Compacto - Imagem Reduzida) ---------------- */
+/* ---------------- CARD INTERNO (Layout Revista - Texto ao Redor da Imagem) ---------------- */
 
 const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
   const { user } = useAuth();
@@ -54,6 +53,8 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
   const isMaster = user?.id === MASTER_USER_ID;
   const isOwner = user?.id === prestador.usuario_id;
   const canManage = isMaster || isOwner;
+
+  const [expanded, setExpanded] = useState(false);
 
   const whatsappLink = useMemo(() => {
     if (!whatsapp) return null;
@@ -97,20 +98,25 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
     else onBringToFront();
   };
 
+  const handleVerMais = (e) => {
+    e.stopPropagation();
+    setExpanded(!expanded);
+  };
+
   return (
     <div
       onClick={handleCardClick}
       className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer"
     >
-      {/* 1️ CABEÇALHO: Avatar + Nome + Endereço (compacto) */}
+      {/* ===== CABEÇALHO: Avatar + Nome + Chips ===== */}
       <div className="p-3 sm:p-4 pb-2">
-        <div className="flex items-start gap-2 sm:gap-3">
+        <div className="flex items-start gap-2">
           <div className="relative shrink-0">
             {prestador.avatar_do_perfil ? (
               <img
                 src={prestador.avatar_do_perfil}
                 alt={prestador.nome}
-                className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl object-cover border-2 border-white shadow-sm"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border-2 border-white shadow-sm"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.style.display = "none";
@@ -119,7 +125,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
               />
             ) : null}
             <div
-              className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${prestador.avatar_do_perfil ? "hidden" : "flex"}`}
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${prestador.avatar_do_perfil ? "hidden" : "flex"}`}
             >
               <span className="text-emerald-700 font-bold text-xs sm:text-sm">
                 {nomeInicial}
@@ -136,7 +142,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
               </p>
             )}
             {prestador.casa_numero && (
-              <p className="text-[9px] sm:text-[10px] text-gray-500 truncate mt-0.5">
+              <p className="text-[9px] sm:text-[10px] text-gray-500 truncate">
                 {" "}
                 {prestador.casa_numero}
               </p>
@@ -144,7 +150,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           </div>
         </div>
 
-        {/* 2️⃣ CHIPS (compactos) */}
+        {/* Chips */}
         <div className="flex flex-wrap gap-1 mt-2">
           {prestador.destaque && (
             <span className="inline-flex px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[8px] sm:text-[10px] font-medium">
@@ -158,58 +164,74 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           )}
           {imagens.length > 0 && (
             <span className="inline-flex px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[8px] sm:text-[10px] font-medium">
-              {" "}
-              {imagens.length} {imagens.length === 1 ? "foto" : "fotos"}
+              📸 {imagens.length}
             </span>
           )}
         </div>
       </div>
 
-      {/* 3️⃣ GALERIA: Altura REDUZIDA (aspect-[16/9] ou menor) — ocupa só 1/3 do card */}
-      {imagens.length > 0 && (
-        <div className="relative w-full">
-          {/* ✅ IMAGEM COMPACTA: 16/9 no mobile, 2/1 no desktop (mais baixo ainda) */}
-          <div className="w-full aspect-[16/9] sm:aspect-[2/1] overflow-hidden bg-gray-100">
-            <img
-              src={imagens[imgIndex]}
-              alt={prestador.nome_fantasia || prestador.nome}
-              className="w-full h-full object-cover transition-opacity duration-500"
-            />
-          </div>
-          {imagens.length > 1 && (
-            <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1">
-              {imagens.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setImgIndex(i);
-                  }}
-                  className={`h-0.5 sm:h-1 rounded-full transition-all ${i === imgIndex ? "bg-white w-3 sm:w-4" : "bg-white/60 w-1 sm:w-2"}`}
-                  aria-label={`Ver imagem ${i + 1}`}
-                />
-              ))}
+      {/* ===== CONTEÚDO COM IMAGEM FLUTUANTE ===== */}
+      <div className="px-3 sm:px-4 pb-3 flex-1 flex flex-col">
+        {/* Imagem flutuante à esquerda (float: left) */}
+        {imagens.length > 0 && (
+          <div className="float-left mr-3 mb-2 w-[40%] sm:w-[45%] relative">
+            <div className="w-full aspect-square overflow-hidden rounded-lg bg-gray-100">
+              <img
+                src={imagens[imgIndex]}
+                alt={prestador.nome_fantasia || prestador.nome}
+                className="w-full h-full object-cover transition-opacity duration-500"
+              />
             </div>
-          )}
-        </div>
-      )}
-
-      {/* 4️⃣ DESCRIÇÃO + BENEFÍCIO (compacto) */}
-      <div className="p-3 sm:p-4 pt-2 flex-1 flex flex-col min-h-0">
-        {(prestador.descricao_comercial || prestador.descricao) && (
-          <p className="text-[10px] sm:text-xs text-gray-500 leading-snug line-clamp-2">
-            {prestador.descricao_comercial || prestador.descricao}
-          </p>
+            {imagens.length > 1 && (
+              <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
+                {imagens.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImgIndex(i);
+                    }}
+                    className={`h-1 rounded-full transition-all ${i === imgIndex ? "bg-white w-2" : "bg-white/60 w-1"}`}
+                    aria-label={`Ver imagem ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
+
+        {/* Descrição (flui ao redor da imagem) */}
+        {(prestador.descricao_comercial || prestador.descricao) && (
+          <div className="text-[10px] sm:text-xs text-gray-600 leading-snug">
+            <p className={expanded ? "" : "line-clamp-4"}>
+              {prestador.descricao_comercial || prestador.descricao}
+            </p>
+            {/* Link "leia mais" */}
+            {(prestador.descricao_comercial || prestador.descricao).length >
+              150 && (
+              <button
+                onClick={handleVerMais}
+                className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-0.5"
+              >
+                {expanded ? "ver menos" : "leia mais"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Limpa o float após a descrição */}
+        <div className="clear-both"></div>
+
+        {/* Benefício */}
         {prestador.condicoes_moradores && (
-          <div className="mt-2 bg-amber-50 border border-amber-100 rounded-md p-1.5">
+          <div className="mt-2 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
             <p className="text-[9px] sm:text-[10px] text-amber-700 font-medium line-clamp-1">
               ⭐ {prestador.condicoes_moradores}
             </p>
           </div>
         )}
 
-        {/* 5️⃣ BOTÕES DE CONTATO (Compactos - Só no card da frente) */}
+        {/* Botões de contato */}
         {isFront && (
           <div
             onClick={(e) => e.stopPropagation()}
@@ -220,12 +242,12 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
                 href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 text-center px-2 py-1.5 sm:px-3 sm:py-2 bg-green-500 text-white rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition"
+                className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition"
               >
                 💬 WhatsApp
               </a>
             ) : (
-              <div className="flex-1 text-center px-2 py-1.5 sm:px-3 sm:py-2 bg-gray-100 text-gray-400 rounded-md sm:rounded-lg text-[10px]">
+              <div className="px-2.5 py-1.5 bg-gray-100 text-gray-400 rounded-md text-[10px]">
                 Sem contato
               </div>
             )}
@@ -238,17 +260,15 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2 py-1.5 sm:px-3 sm:py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium no-underline"
-              >
-                📸
-              </a>
+                className="px-2 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline"
+              ></a>
             )}
             {prestador.site_url && (
               <a
                 href={prestador.site_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2 py-1.5 sm:px-3 sm:py-2 bg-gray-100 text-gray-700 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition"
+                className="px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition"
               >
                 🌐
               </a>
@@ -256,7 +276,7 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
           </div>
         )}
 
-        {/* Ações de gestão (Só no card da frente) */}
+        {/* Ações de gestão */}
         {canManage && isFront && (
           <div
             onClick={(e) => e.stopPropagation()}
@@ -269,11 +289,11 @@ const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
               }}
               className="flex-1 py-1 text-[9px] sm:text-[10px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition cursor-pointer"
             >
-              ️ Editar
+              ✏️ Editar
             </button>
             <button
               onClick={handleDelete}
-              className="flex-1 py-1 text-[9px] sm:text-[10px] font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition cursor-pointer"
+              className="px-2 py-1 text-[9px] sm:text-[10px] font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition cursor-pointer"
             >
               🗑️
             </button>
