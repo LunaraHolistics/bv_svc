@@ -45,264 +45,167 @@ const normTexto = (s) =>
 /* ---------------- CARD INTERNO (Layout Revista - Texto ao Redor da Imagem) ---------------- */
 
 const CardConteudo = ({ prestador, onDelete, isFront, onBringToFront }) => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const whatsapp = formatarWhatsapp(prestador.whatsapp);
-  const nomeInicial = prestador.nome?.charAt(0)?.toUpperCase() || "🏡";
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const whatsapp = formatarWhatsapp(prestador.whatsapp)
+  const nomeInicial = prestador.nome?.charAt(0)?.toUpperCase() || '🏡'
 
-  const isMaster = user?.id === MASTER_USER_ID;
-  const isOwner = user?.id === prestador.usuario_id;
-  const canManage = isMaster || isOwner;
+  const isMaster = user?.id === MASTER_USER_ID
+  const isOwner = user?.id === prestador.usuario_id
+  const canManage = isMaster || isOwner
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
 
   const whatsappLink = useMemo(() => {
-    if (!whatsapp) return null;
-    const servico =
-      prestador.categoria_nome || prestador.categoria || "serviço disponível";
-    return `https://wa.me/55${whatsapp}?text=${encodeURIComponent(`Olá, também sou morador do Bella Vittà e quero conversar sobre seu serviço de ${servico}`)}`;
-  }, [whatsapp, prestador]);
+    if (!whatsapp) return null
+    const servico = prestador.categoria_nome || prestador.categoria || 'serviço disponível'
+    return `https://wa.me/55${whatsapp}?text=${encodeURIComponent(`Olá, também sou morador do Bella Vittà e quero conversar sobre seu serviço de ${servico}`)}`
+  }, [whatsapp, prestador])
 
   const imagens = useMemo(() => {
-    if (!prestador.imagens_url) return [];
+    if (!prestador.imagens_url) return []
     try {
-      const parsed = JSON.parse(prestador.imagens_url);
-      return Array.isArray(parsed) ? parsed : [prestador.imagens_url];
+      const parsed = JSON.parse(prestador.imagens_url)
+      return Array.isArray(parsed) ? parsed : [prestador.imagens_url]
     } catch {
-      return [prestador.imagens_url];
+      return [prestador.imagens_url]
     }
-  }, [prestador.imagens_url]);
+  }, [prestador.imagens_url])
 
-  const [imgIndex, setImgIndex] = useState(0);
+  const [imgIndex, setImgIndex] = useState(0)
 
   useEffect(() => {
-    if (imagens.length <= 1) return;
-    const timer = setInterval(
-      () => setImgIndex((prev) => (prev + 1) % imagens.length),
-      4000,
-    );
-    return () => clearInterval(timer);
-  }, [imagens.length]);
+    if (imagens.length <= 1) return
+    const timer = setInterval(() => setImgIndex((prev) => (prev + 1) % imagens.length), 4000)
+    return () => clearInterval(timer)
+  }, [imagens.length])
 
   const handleDelete = async (e) => {
-    e.stopPropagation();
-    if (
-      window.confirm(`Deseja realmente excluir o serviço de ${prestador.nome}?`)
-    ) {
-      await onDelete(prestador.id);
+    e.stopPropagation()
+    if (window.confirm(`Deseja realmente excluir o serviço de ${prestador.nome}?`)) {
+      await onDelete(prestador.id)
     }
-  };
+  }
 
   const handleCardClick = () => {
-    if (isFront) navigate(`/servico/${prestador.id}`);
-    else onBringToFront();
-  };
+    if (isFront) navigate(`/servico/${prestador.id}`)
+    else onBringToFront()
+  }
 
   const handleVerMais = (e) => {
-    e.stopPropagation();
-    setExpanded(!expanded);
-  };
+    e.stopPropagation()
+    setExpanded(!expanded)
+  }
 
   return (
-    <div
-      onClick={handleCardClick}
-      className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-    >
+    <div onClick={handleCardClick} className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl transition-shadow duration-300 cursor-pointer">
+      
       {/* ===== CABEÇALHO: Avatar + Nome + Chips ===== */}
       <div className="p-3 sm:p-4 pb-2">
         <div className="flex items-start gap-2">
           <div className="relative shrink-0">
             {prestador.avatar_do_perfil ? (
-              <img
-                src={prestador.avatar_do_perfil}
-                alt={prestador.nome}
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border-2 border-white shadow-sm"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.style.display = "none";
-                  e.currentTarget.nextElementSibling.style.display = "flex";
-                }}
-              />
+              <img src={prestador.avatar_do_perfil} alt={prestador.nome} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border-2 border-white shadow-sm" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex' }} />
             ) : null}
-            <div
-              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${prestador.avatar_do_perfil ? "hidden" : "flex"}`}
-            >
-              <span className="text-emerald-700 font-bold text-xs sm:text-sm">
-                {nomeInicial}
-              </span>
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 flex items-center justify-center border-2 border-white shadow-sm ${prestador.avatar_do_perfil ? 'hidden' : 'flex'}`}>
+              <span className="text-emerald-700 font-bold text-xs sm:text-sm">{nomeInicial}</span>
             </div>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-gray-900 truncate text-xs sm:text-sm">
-              {prestador.nome || "Prestador"}
-            </h3>
-            {prestador.nome_fantasia && (
-              <p className="text-[10px] sm:text-xs text-emerald-600 truncate">
-                {prestador.nome_fantasia}
-              </p>
-            )}
-            {prestador.casa_numero && (
-              <p className="text-[9px] sm:text-[10px] text-gray-500 truncate">
-                {" "}
-                {prestador.casa_numero}
-              </p>
-            )}
+            <h3 className="font-bold text-gray-900 truncate text-xs sm:text-sm">{prestador.nome || 'Prestador'}</h3>
+            {prestador.nome_fantasia && <p className="text-[10px] sm:text-xs text-emerald-600 truncate">{prestador.nome_fantasia}</p>}
+            {prestador.casa_numero && <p className="text-[9px] sm:text-[10px] text-gray-500 truncate"> {prestador.casa_numero}</p>}
           </div>
         </div>
 
         {/* Chips */}
         <div className="flex flex-wrap gap-1 mt-2">
-          {prestador.destaque && (
-            <span className="inline-flex px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[8px] sm:text-[10px] font-medium">
-              ⭐ Destaque
-            </span>
-          )}
-          {(prestador.categoria_nome || prestador.categoria) && (
-            <span className="inline-flex px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8px] sm:text-[10px] font-medium">
-              {prestador.categoria_nome || prestador.categoria}
-            </span>
-          )}
-          {imagens.length > 0 && (
-            <span className="inline-flex px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[8px] sm:text-[10px] font-medium">
-              📸 {imagens.length}
-            </span>
-          )}
+          {prestador.destaque && <span className="inline-flex px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[8px] sm:text-[10px] font-medium">⭐ Destaque</span>}
+          {(prestador.categoria_nome || prestador.categoria) && <span className="inline-flex px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[8px] sm:text-[10px] font-medium">{prestador.categoria_nome || prestador.categoria}</span>}
+          {imagens.length > 0 && <span className="inline-flex px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[8px] sm:text-[10px] font-medium">📸 {imagens.length}</span>}
         </div>
       </div>
 
-      {/* ===== CONTEÚDO COM IMAGEM FLUTUANTE ===== */}
+      {/* ===== CONTEÚDO: Imagem + Texto no MESMO bloco (float funciona) ===== */}
       <div className="px-3 sm:px-4 pb-3 flex-1 flex flex-col">
-        {/* Imagem flutuante à esquerda (float: left) */}
-        {imagens.length > 0 && (
-          <div className="float-left mr-3 mb-2 w-[40%] sm:w-[45%] relative">
-            <div className="w-full aspect-square overflow-hidden rounded-lg bg-gray-100">
-              <img
-                src={imagens[imgIndex]}
-                alt={prestador.nome_fantasia || prestador.nome}
-                className="w-full h-full object-cover transition-opacity duration-500"
-              />
-            </div>
-            {imagens.length > 1 && (
-              <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
-                {imagens.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setImgIndex(i);
-                    }}
-                    className={`h-1 rounded-full transition-all ${i === imgIndex ? "bg-white w-2" : "bg-white/60 w-1"}`}
-                    aria-label={`Ver imagem ${i + 1}`}
-                  />
-                ))}
+        
+        {/* Bloco único com imagem flutuante + texto fluindo ao redor */}
+        <div className="mb-2">
+          {imagens.length > 0 && (
+            <div className="float-left mr-3 mb-1 w-[35%] sm:w-[40%] relative">
+              <div className="w-full aspect-square overflow-hidden rounded-lg bg-gray-100">
+                <img src={imagens[imgIndex]} alt={prestador.nome_fantasia || prestador.nome} className="w-full h-full object-cover transition-opacity duration-500" />
               </div>
-            )}
-          </div>
-        )}
+              {imagens.length > 1 && (
+                <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
+                  {imagens.map((_, i) => (
+                    <button key={i} onClick={(e) => { e.stopPropagation(); setImgIndex(i) }} className={`h-1 rounded-full transition-all ${i === imgIndex ? 'bg-white w-2' : 'bg-white/60 w-1'}`} aria-label={`Ver imagem ${i + 1}`} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Descrição (flui ao redor da imagem) */}
-        {(prestador.descricao_comercial || prestador.descricao) && (
-          <div className="text-[10px] sm:text-xs text-gray-600 leading-snug">
-            <p className={expanded ? "" : "line-clamp-4"}>
+          {/* Texto flui ao redor da imagem flutuante */}
+          {(prestador.descricao_comercial || prestador.descricao) && (
+            <p className={`text-[10px] sm:text-xs text-gray-600 leading-snug ${expanded ? '' : 'line-clamp-2'}`}>
               {prestador.descricao_comercial || prestador.descricao}
             </p>
-            {/* Link "leia mais" */}
-            {(prestador.descricao_comercial || prestador.descricao).length >
-              150 && (
-              <button
-                onClick={handleVerMais}
-                className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-0.5"
-              >
-                {expanded ? "ver menos" : "leia mais"}
-              </button>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* Limpa o float após a descrição */}
-        <div className="clear-both"></div>
+          {/* Limpa o float */}
+          <div className="clear-both"></div>
+
+          {/* Link "leia mais" (só se houver texto longo) */}
+          {!expanded && (prestador.descricao_comercial || prestador.descricao)?.length > 100 && (
+            <button onClick={handleVerMais} className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-1">
+              leia mais
+            </button>
+          )}
+          {expanded && (
+            <button onClick={handleVerMais} className="text-blue-600 hover:text-blue-700 font-medium text-[10px] sm:text-xs mt-1">
+              ver menos
+            </button>
+          )}
+        </div>
 
         {/* Benefício */}
         {prestador.condicoes_moradores && (
           <div className="mt-2 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
-            <p className="text-[9px] sm:text-[10px] text-amber-700 font-medium line-clamp-1">
-              ⭐ {prestador.condicoes_moradores}
-            </p>
+            <p className="text-[9px] sm:text-[10px] text-amber-700 font-medium line-clamp-1">⭐ {prestador.condicoes_moradores}</p>
           </div>
         )}
 
         {/* Botões de contato */}
         {isFront && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="mt-2 pt-2 flex gap-1.5"
-          >
+          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-2 flex gap-1.5">
             {whatsappLink ? (
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition"
-              >
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-green-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-green-600 transition">
                 💬 WhatsApp
               </a>
             ) : (
-              <div className="px-2.5 py-1.5 bg-gray-100 text-gray-400 rounded-md text-[10px]">
-                Sem contato
-              </div>
+              <div className="px-2.5 py-1.5 bg-gray-100 text-gray-400 rounded-md text-[10px]">Sem contato</div>
             )}
             {prestador.instagram_url && (
-              <a
-                href={
-                  prestador.instagram_url.startsWith("http")
-                    ? prestador.instagram_url
-                    : `https://instagram.com/${prestador.instagram_url.replace("@", "")}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline"
-              ></a>
+              <a href={prestador.instagram_url.startsWith('http') ? prestador.instagram_url : `https://instagram.com/${prestador.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md text-[10px] sm:text-xs font-medium no-underline"></a>
             )}
             {prestador.site_url && (
-              <a
-                href={prestador.site_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition"
-              >
-                🌐
-              </a>
+              <a href={prestador.site_url} target="_blank" rel="noopener noreferrer" className="px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md text-[10px] sm:text-xs font-medium no-underline hover:bg-gray-200 transition"></a>
             )}
           </div>
         )}
 
         {/* Ações de gestão */}
         {canManage && isFront && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="mt-1.5 pt-1.5 border-t border-dashed border-red-200 flex gap-1.5"
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/editar-servico/${prestador.id}`);
-              }}
-              className="flex-1 py-1 text-[9px] sm:text-[10px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition cursor-pointer"
-            >
-              ✏️ Editar
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-2 py-1 text-[9px] sm:text-[10px] font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition cursor-pointer"
-            >
-              🗑️
-            </button>
+          <div onClick={(e) => e.stopPropagation()} className="mt-1.5 pt-1.5 border-t border-dashed border-red-200 flex gap-1.5">
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/editar-servico/${prestador.id}`) }} className="flex-1 py-1 text-[9px] sm:text-[10px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition cursor-pointer">✏️ Editar</button>
+            <button onClick={handleDelete} className="px-2 py-1 text-[9px] sm:text-[10px] font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition cursor-pointer">🗑️</button>
           </div>
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
 /* ---------------- CARD AGRUPADO (PILHA) ---------------- */
 
